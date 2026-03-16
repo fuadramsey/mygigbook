@@ -6,6 +6,31 @@
 <title>MyGigBook</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyByVtL-2OYE_9v_7xZCoyBkFwLxSttox4o",
+    authDomain: "mygigbook-b0ddd.firebaseapp.com",
+    projectId: "mygigbook-b0ddd",
+    storageBucket: "mygigbook-b0ddd.firebasestorage.app",
+    messagingSenderId: "545541276003",
+    appId: "1:545541276003:web:44aefca76588fd05ced356"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const fbDb = getFirestore(fbApp);
+
+  // expose to global scope for use in main script
+  window._fb = {
+    db: fbDb,
+    collection, doc, setDoc, getDocs, deleteDoc, serverTimestamp, writeBatch
+  };
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
 :root {
   --bg: #0a0a0b;
@@ -100,6 +125,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 .sync-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
 .sync-pip.offline { background: var(--red); animation: blink 2s infinite; }
+.sync-pip.syncing { background: var(--accent); animation: blink 0.6s infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
 /* SETLISTS */
@@ -289,7 +316,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 .empty-view .big { font-size: 48px; margin-bottom: 14px; opacity: 0.25; }
 .empty-view h3 { font-size: 17px; color: var(--text2); margin-bottom: 6px; }
 
-.fab { position: fixed; bottom: calc(var(--nav-h) + 16px); right: 16px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #000; border: none; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(232,255,71,0.25); z-index: 40; transition: transform 0.15s; }
+.fab { position: fixed; bottom: calc(var(--nav-h) + 16px); right: 72px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #000; border: none; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(232,255,71,0.25); z-index: 40; transition: transform 0.15s; }
 .fab:active { transform: scale(0.93); }
 
 .toast { position: fixed; bottom: calc(var(--nav-h) + 12px); left: 50%; transform: translateX(-50%) translateY(8px); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 9px 16px; font-size: 13px; z-index: 300; opacity: 0; transition: all 0.25s; pointer-events: none; white-space: nowrap; }
@@ -478,7 +505,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   #page-area { flex: 1; min-width: 0; }
   .page-body { padding-bottom: 16px; }
   .page-body.no-nav { padding-bottom: 16px; }
-  .fab { bottom: 24px; right: 24px; }
+  .fab { bottom: 24px; right: 80px; }
   .toast { bottom: 20px; }
   .modal-overlay { align-items: center; }
   .modal-sheet { border-radius: var(--radius-lg); max-width: 560px; max-height: calc(100vh - 48px); margin: 24px; }
@@ -500,7 +527,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 <aside class="tab-sidebar" id="tabSidebar">
   <div class="tab-sidebar-logo">
     <div class="tab-sidebar-logo-text">MyGigBook</div>
-    <div class="tab-sidebar-logo-sub">Band Setlist Manager</div>
+    <div class="tab-sidebar-logo-sub">Band Setlist Manager · v1.0</div>
   </div>
   <nav class="tab-sidebar-nav">
     <button class="tab-sidebar-btn active" id="sb-setlists" onclick="navTo('setlists')">
@@ -552,7 +579,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <span id="groupFilterLabel">All</span>
       </button>
       <span style="flex:1"></span>
-      <div class="sync-pip" id="syncPip"></div>
+      <button class="top-action" id="syncBtn" onclick="manualSync()" title="Sync with cloud" style="display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:11px;">
+        <div class="sync-pip" id="syncPip"></div>
+        <span id="syncBtnLabel" style="color:var(--text3);">Sync</span>
+      </button>
       <button class="top-action" onclick="promptUserName()" title="Set your name" style="display:flex;align-items:center;gap:6px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:20px;height:20px;flex-shrink:0"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
         <span id="topbarNameLabel" style="font-size:13px;font-family:'DM Mono',monospace;letter-spacing:0.5px;color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
@@ -830,6 +860,23 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   </div>
 </div>
 
+<!-- CONFIRM LEAVE GROUP MODAL -->
+<div class="modal-overlay hidden" id="confirmLeaveGroupModal">
+  <div class="modal-sheet" style="max-height:auto;">
+    <div class="modal-header">
+      <span class="modal-title">Leave Group</span>
+      <div class="modal-close" onclick="closeConfirmLeaveGroup()">✕</div>
+    </div>
+    <div class="modal-body" style="padding:16px 16px 4px;">
+      <p style="color:var(--text2);font-size:15px;line-height:1.5;">Leave <strong id="confirmLeaveGroupName" style="color:var(--text)"></strong>? You'll lose access to this group's songs and sets.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" onclick="closeConfirmLeaveGroup()">Cancel</button>
+      <button class="btn danger" onclick="confirmLeaveGroup()">Leave</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM DELETE MODAL -->
 <div class="modal-overlay hidden" id="confirmDeleteModal">
   <div class="modal-sheet" style="max-height:auto;">
@@ -914,6 +961,12 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <div class="modal-close" onclick="closeGroupFilter()">✕</div>
     </div>
     <div class="modal-body" style="padding:0;" id="groupFilterList"></div>
+    <div class="modal-footer">
+      <button class="btn primary" style="width:100%;" onclick="closeGroupFilter();openNewGroupModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;margin-right:6px;"><path d="M12 5v14M5 12h14"/></svg>
+        Create Group
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1032,35 +1085,148 @@ const dbDel = (s,k) => new Promise((r,j) => { const q=txs(s,'readwrite').delete(
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2);
 
 // ── SYNC ──
-const SYNC_KEY = 'stageset_shared_v3';
+const SYNC_KEY = 'stageset_shared_v3'; // kept for BroadcastChannel cross-tab only
 let online = navigator.onLine;
 let bc; try { bc = new BroadcastChannel('stageset3'); } catch(e) {}
-window.addEventListener('online', () => { online=true; updateSyncUI(); syncIn(); });
+let fbReady = false;
+let syncInProgress = false;
+let lastSyncTime = null;
+
+window.addEventListener('firebase-ready', () => { fbReady = true; });
+window.addEventListener('online', () => { online=true; updateSyncUI(); });
 window.addEventListener('offline', () => { online=false; updateSyncUI(); });
+
 function updateSyncUI() {
-  const cls = 'sync-pip'+(online?'':' offline');
-  document.getElementById('syncPip').className = cls;
+  const pip = document.getElementById('syncPip');
+  const lbl = document.getElementById('syncBtnLabel');
   const sp = document.getElementById('syncPipSidebar');
-  if (sp) { sp.className = cls; }
   const sl = document.getElementById('syncLabelSidebar');
-  if (sl) sl.textContent = online ? 'Online' : 'Local only';
+
+  if (syncInProgress) {
+    if (pip) pip.className = 'sync-pip syncing';
+    if (lbl) lbl.textContent = 'Syncing…';
+  } else if (!online) {
+    if (pip) pip.className = 'sync-pip offline';
+    if (lbl) lbl.textContent = 'Offline';
+  } else {
+    if (pip) pip.className = 'sync-pip';
+    if (lbl) lbl.textContent = lastSyncTime ? fmtSyncTime(lastSyncTime) : 'Sync';
+  }
+  if (sp) sp.className = pip?.className || 'sync-pip';
+  if (sl) sl.textContent = online ? (lastSyncTime ? 'Synced ' + fmtSyncTime(lastSyncTime) : 'Online') : 'Offline';
 }
+
+function fmtSyncTime(ts) {
+  const diff = Math.round((Date.now() - ts) / 1000);
+  if (diff < 10) return 'Just now';
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.round(diff/60) + 'm ago';
+  return 'Synced';
+}
+
+// ── FIREBASE FIRESTORE SYNC ──
+// Syncs: songs, setlists, groups (shared band data)
+// Does NOT sync: notes, pdfs, audio, images (personal / too large)
+
+async function fbPushAll() {
+  if (!fbReady || !online) return;
+  const fb = window._fb;
+  if (!fb) return;
+  try {
+    const [songs, sets, groups] = await Promise.all([
+      dbAll('songs'), dbAll('setlists'), dbAll('groups')
+    ]);
+    const batch = fb.writeBatch(fb.db);
+    songs.forEach(s => batch.set(fb.doc(fb.collection(fb.db,'songs'), s.id), s));
+    sets.forEach(s => batch.set(fb.doc(fb.collection(fb.db,'setlists'), s.id), s));
+    groups.forEach(g => batch.set(fb.doc(fb.collection(fb.db,'groups'), g.id), g));
+    await batch.commit();
+  } catch(e) { console.warn('Firebase push error:', e); throw e; }
+}
+
+async function fbPullAll() {
+  if (!fbReady || !online) return;
+  const fb = window._fb;
+  if (!fb) return;
+  try {
+    const [songSnap, setSnap, groupSnap] = await Promise.all([
+      fb.getDocs(fb.collection(fb.db,'songs')),
+      fb.getDocs(fb.collection(fb.db,'setlists')),
+      fb.getDocs(fb.collection(fb.db,'groups'))
+    ]);
+    // merge by updatedAt — most recent wins
+    const merge = async (snap, store) => {
+      for (const d of snap.docs) {
+        const remote = d.data();
+        if (!remote.id) remote.id = d.id;
+        const local = await dbGet(store, remote.id);
+        if (!local || (remote.updatedAt||0) > (local.updatedAt||0)) {
+          await dbPut(store, remote);
+        }
+      }
+    };
+    await merge(songSnap, 'songs');
+    await merge(setSnap, 'setlists');
+    await merge(groupSnap, 'groups');
+  } catch(e) { console.warn('Firebase pull error:', e); throw e; }
+}
+
 async function syncOut() {
-  if (!online) return;
-  const [songs,sets] = await Promise.all([dbAll('songs'),dbAll('setlists')]);
-  const b = JSON.parse(localStorage.getItem(SYNC_KEY)||'{"s":{},"l":{}}');
-  songs.forEach(x=>b.s[x.id]=x); sets.forEach(x=>b.l[x.id]=x); b.ts=Date.now();
-  localStorage.setItem(SYNC_KEY,JSON.stringify(b));
-  if(bc) bc.postMessage({type:'u',b});
+  // cross-tab sync via BroadcastChannel (always)
+  if (bc) {
+    const [songs, sets] = await Promise.all([dbAll('songs'), dbAll('setlists')]);
+    const b = {s:{}, l:{}, ts:Date.now()};
+    songs.forEach(x=>b.s[x.id]=x); sets.forEach(x=>b.l[x.id]=x);
+    localStorage.setItem(SYNC_KEY, JSON.stringify(b));
+    bc.postMessage({type:'u', b});
+  }
+  // Firebase push (when online)
+  if (online && fbReady) {
+    try { await fbPushAll(); } catch(e) {}
+  }
 }
+
 async function syncIn() {
+  // cross-tab pull
   try {
     const b = JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');
     if(b.s) for(const x of Object.values(b.s)) await dbPut('songs',x);
     if(b.l) for(const x of Object.values(b.l)) await dbPut('setlists',x);
-    renderAll();
   } catch(e) {}
 }
+
+async function manualSync() {
+  if (!online) { showToast('No internet connection', 'err'); return; }
+  if (syncInProgress) return;
+  if (!fbReady) {
+    // wait up to 10 seconds for Firebase to initialize
+    showToast('Connecting to cloud…');
+    let waited = 0;
+    await new Promise(resolve => {
+      const check = setInterval(() => {
+        waited += 300;
+        if (fbReady || waited >= 10000) { clearInterval(check); resolve(); }
+      }, 300);
+    });
+    if (!fbReady) { showToast('Cloud unavailable — try again', 'err'); return; }
+  }
+  syncInProgress = true;
+  updateSyncUI();
+  try {
+    await fbPullAll();   // pull remote changes first
+    await fbPushAll();   // then push our local state
+    await renderAll();
+    lastSyncTime = Date.now();
+    showToast('Synced with cloud', 'ok');
+  } catch(e) {
+    showToast('Sync failed — check connection', 'err');
+  } finally {
+    syncInProgress = false;
+    updateSyncUI();
+  }
+}
+
+// cross-tab BroadcastChannel
 if(bc) bc.onmessage = async e => {
   if(e.data?.type==='u') {
     const b=e.data.b;
@@ -2997,6 +3163,18 @@ async function postLoginInit() {
   await renderDB();
   await renderGroups();
   updateGroupFilterChips();
+  // auto-sync from Firebase on startup if online
+  if (online) {
+    const trySync = async (attempts) => {
+      attempts = attempts || 0;
+      if (fbReady) {
+        await manualSync();
+      } else if (attempts < 30) {
+        setTimeout(function() { trySync(attempts + 1); }, 500);
+      }
+    };
+    setTimeout(function() { trySync(0); }, 1500);
+  }
 }
 
 // ── GROUP FILTER ──
@@ -3011,13 +3189,17 @@ async function openGroupFilter() {
       <span class="settings-row-label">All my songs &amp; sets</span>
       ${activeGroupFilter===null ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;color:var(--accent)"><path d="M5 12l5 5 9-9"/></svg>' : ''}
     </div>`,
-    ...(all.length ? all.map(g => `
-      <div class="settings-row" style="cursor:pointer;" onclick="setGroupFilter('${g.id}')">
-        <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg></div>
-        <span class="settings-row-label">${esc(g.name)}</span>
-        ${activeGroupFilter===g.id ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;color:var(--accent)"><path d="M5 12l5 5 9-9"/></svg>' : ''}
-      </div>`) :
-    [`<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">No groups yet. Create one in the Groups tab.</div>`])
+    ...(all.length ? all.map(g => {
+      const isOwner = g.createdBy === currentUser;
+      return `
+      <div class="settings-row" style="cursor:pointer;">
+        <div class="settings-row-icon" onclick="setGroupFilter('${g.id}')" style="cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg></div>
+        <span class="settings-row-label" onclick="setGroupFilter('${g.id}')" style="flex:1;cursor:pointer;">${esc(g.name)}</span>
+        ${activeGroupFilter===g.id ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M5 12l5 5 9-9"/></svg>' : ''}
+        ${!isOwner ? `<button onclick="event.stopPropagation();closeGroupFilter();confirmLeaveGroupPrompt('${g.id}','${esc(g.name)}')" style="flex-shrink:0;background:none;border:1px solid rgba(255,68,68,0.4);border-radius:20px;padding:3px 9px;font-size:11px;color:var(--red);cursor:pointer;font-family:inherit;margin-left:6px;">Leave</button>` : ''}
+      </div>`;
+    }) :
+    [`<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">No groups yet.<br>Create one using the button below.</div>`])
   ].join('');
   document.getElementById('groupFilterModal').classList.remove('hidden');
 }
@@ -3091,7 +3273,7 @@ function renderGroupMembersStrip(group) {
       }).join('')}
       ${group.createdBy === currentUser
         ? `<button onclick="openGroup('${group.id}')" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;margin-left:4px;">Manage</button>`
-        : `<button onclick="leaveGroup('${group.id}')" style="flex-shrink:0;background:none;border:1px solid rgba(255,68,68,0.4);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--red);cursor:pointer;font-family:inherit;margin-left:4px;">Leave</button>`
+        : ''
       }
     `;
   }
@@ -3299,6 +3481,21 @@ async function removeMember(username) {
   await syncOut();
   await renderGroupDetail();
   showToast(`${username} removed`);
+}
+
+let _pendingLeaveGroupId = null;
+function confirmLeaveGroupPrompt(groupId, groupName) {
+  _pendingLeaveGroupId = groupId;
+  document.getElementById('confirmLeaveGroupName').textContent = groupName;
+  document.getElementById('confirmLeaveGroupModal').classList.remove('hidden');
+}
+function closeConfirmLeaveGroup() {
+  _pendingLeaveGroupId = null;
+  document.getElementById('confirmLeaveGroupModal').classList.add('hidden');
+}
+async function confirmLeaveGroup() {
+  closeConfirmLeaveGroup();
+  if (_pendingLeaveGroupId) await leaveGroup(_pendingLeaveGroupId);
 }
 
 async function leaveGroup(groupId) {
@@ -3921,7 +4118,7 @@ init().catch(console.error);
 <!-- ── LOGIN SCREEN ── -->
 <div id="loginScreen">
   <div class="login-logo">MyGigBook</div>
-  <div class="login-sub">Band Setlist Manager</div>
+  <div class="login-sub">Band Setlist Manager · v1.0</div>
 
   <!-- SIGN IN PANEL -->
   <div class="login-card" id="signInPanel">
@@ -3949,9 +4146,6 @@ init().catch(console.error);
     <div class="login-error" id="siError"></div>
     <button class="btn primary" onclick="doLogin()" style="width:100%;padding:12px;">Sign In</button>
     <div class="login-link" onclick="showPanel('register')">Create new account</div>
-    <div style="text-align:center;margin-top:4px;">
-      <span onclick="resetAdmin()" style="font-size:11px;color:var(--text3);cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:0.5px;">reset admin</span>
-    </div>
   </div>
 
   <!-- REGISTER PANEL -->
