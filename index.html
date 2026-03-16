@@ -3277,7 +3277,9 @@ function renderSETab() {
   const s = window._seCurrentSong || {};
 
   if (seTab === 'details') {
+    const sePlayer = (id && window._audioCache?.[`audio_${id}`]) ? buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0) : '';
     body.innerHTML = `
+      ${sePlayer}
       <div class="form-row">
         <div class="form-group"><label class="form-label">Title *</label><input class="form-input" id="fTitle" placeholder="Song name" value="${esc(s.title||'')}" oninput="document.getElementById('sePageTitle').textContent=this.value||'New Song'"></div>
         <div class="form-group"><label class="form-label">Artist</label><input class="form-input" id="fArtist" placeholder="Original artist" value="${esc(s.artist||'')}"></div>
@@ -3318,9 +3320,25 @@ function renderSETab() {
       const keyEl = document.getElementById('fKey');
       if (keyEl && s.key) keyEl.value = s.key;
     });
+    // if audio not yet cached, load it async and inject player
+    if (id && !window._audioCache?.[`audio_${id}`]) {
+      dbGet('audio', `audio_${id}`).then(entry => {
+        if (!entry) return;
+        if (!window._audioCache) window._audioCache = {};
+        const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
+        window._audioCache[`audio_${id}`] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType };
+        // inject player at top of tab body
+        const playerHtml = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
+        const wrap = document.createElement('div');
+        wrap.innerHTML = playerHtml;
+        body.insertBefore(wrap.firstChild, body.firstChild);
+      });
+    }
   } else if (seTab === 'mynotes') {
     const myNoteHtml = window._seMyNotesHtml || '';
+    const sePlayer = (id && window._audioCache?.[`audio_${id}`]) ? buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0) : '';
     body.innerHTML = `
+      ${sePlayer}
       <div class="rte-toolbar">
         <button class="rte-btn" onclick="rteCmd3('bold')" title="Bold"><strong>B</strong></button>
         <button class="rte-btn" onclick="rteCmd3('italic')" title="Italic"><em>I</em></button>
@@ -3341,6 +3359,19 @@ function renderSETab() {
         <button class="rte-btn" onclick="rteClearFormat3()" title="Clear" style="font-size:11px;">Aa</button>
       </div>
       <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
+    // if audio not yet cached, load it async and inject player
+    if (id && !window._audioCache?.[`audio_${id}`]) {
+      dbGet('audio', `audio_${id}`).then(entry => {
+        if (!entry) return;
+        if (!window._audioCache) window._audioCache = {};
+        const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
+        window._audioCache[`audio_${id}`] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType };
+        const playerHtml = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
+        const wrap = document.createElement('div');
+        wrap.innerHTML = playerHtml;
+        body.insertBefore(wrap.firstChild, body.firstChild);
+      });
+    }
   } else if (seTab === 'links') {
     body.innerHTML = `
       <div class="form-group" style="margin-bottom:14px;">
@@ -5636,7 +5667,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 22:03</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 22:09</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
