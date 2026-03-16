@@ -1310,12 +1310,35 @@ async function fbPushAll() {
     const [songs, sets, groups] = await Promise.all([
       dbAll('songs'), dbAll('setlists'), dbAll('groups')
     ]);
-    const batch = fb.writeBatch(fb.db);
-    songs.forEach(s => batch.set(fb.doc(fb.collection(fb.db,'songs'), s.id), s));
-    sets.forEach(s => batch.set(fb.doc(fb.collection(fb.db,'setlists'), s.id), s));
-    groups.forEach(g => batch.set(fb.doc(fb.collection(fb.db,'groups'), g.id), g));
-    await batch.commit();
+
+    // For each collection, get what's in Firestore and delete anything not in local DB
+    const syncCollection = async (collName, localItems) => {
+      const snap = await fb.getDocs(fb.collection(fb.db, collName));
+      const localIds = new Set(localItems.map(x => x.id));
+      const batch = fb.writeBatch(fb.db);
+      // delete remote records not in local
+      snap.docs.forEach(d => {
+        if (!localIds.has(d.id)) batch.delete(fb.doc(fb.collection(fb.db, collName), d.id));
+      });
+      // upsert all local records
+      localItems.forEach(item => batch.set(fb.doc(fb.collection(fb.db, collName), item.id), item));
+      await batch.commit();
+    };
+
+    await syncCollection('songs', songs);
+    await syncCollection('setlists', sets);
+    await syncCollection('groups', groups);
   } catch(e) { console.warn('Firebase push error:', e); throw e; }
+}
+
+// Immediately delete a single doc from Firestore when deleted locally
+async function fbDeleteDoc(collName, id) {
+  if (!fbReady || !online) return;
+  const fb = window._fb;
+  if (!fb) return;
+  try {
+    await fb.deleteDoc(fb.doc(fb.collection(fb.db, collName), id));
+  } catch(e) { console.warn('Firestore delete error:', e); }
 }
 
 async function fbPullAll() {
@@ -1653,7 +1676,10 @@ async function executeBulkDelete() {
   closeBulkDeleteModal();
   if (type === 'sets') {
     const count = selectedSetIds.size;
-    for (const id of selectedSetIds) await dbDel('setlists', id);
+    for (const id of selectedSetIds) {
+      await dbDel('setlists', id);
+      await fbDeleteDoc('setlists', id);
+    }
     selectedSetIds.clear();
     await syncOut();
     exitEditSets();
@@ -1669,6 +1695,7 @@ async function executeBulkDelete() {
         if (!isCreator) { blocked++; continue; }
       }
       await dbDel('songs', id);
+      await fbDeleteDoc('songs', id);
     }
     selectedSongIds.clear();
     await syncOut();
@@ -1724,6 +1751,7 @@ async function confirmDeleteSet() {
   const id = pendingDeleteSetId;
   closeConfirmDelete();
   await dbDel('setlists', id);
+  await fbDeleteDoc('setlists', id);
   if (currentSetId === id) currentSetId = null;
   await renderSetsList();
   await syncOut();
@@ -3080,6 +3108,7 @@ async function confirmDeleteSong() {
   const id = pendingDeleteSongId;
   closeConfirmDeleteSong();
   await dbDel('songs', id);
+  await fbDeleteDoc('songs', id);
   // remove from all setlists — filter both string entries and note objects (leave notes intact)
   const sets = await dbAll('setlists');
   for (const s of sets) {
