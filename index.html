@@ -666,9 +666,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         </div>
         <span id="syncBtnLabel" style="color:var(--text3);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.3px;white-space:nowrap;">Never synced</span>
       </button>
-      <button class="top-action" onclick="promptUserName()" title="Set your name" style="display:flex;align-items:center;gap:6px;">
+      <button class="top-action" onclick="promptUserName()" title="Set your name" style="display:flex;align-items:center;gap:6px;position:relative;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:20px;height:20px;flex-shrink:0"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
         <span id="topbarNameLabel" style="font-size:13px;font-family:'DM Mono',monospace;letter-spacing:0.5px;color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <span id="bugIndicator" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--surface);"></span>
       </button>
       <button class="top-action" id="editSetsBtn" onclick="toggleEditSets()" title="Edit setlists">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1225,9 +1226,19 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <div class="settings-section-label" style="margin-top:8px">Support</div>
       <button class="settings-row" onclick="closeSettings();openBugReport()">
         <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg></div>
-        <span class="settings-row-label">Submit a Bug Report</span>
+        <span class="settings-row-label">Submit a Bug</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
       </button>
+      <div id="bugLogSettingsRow" style="display:none;">
+        <button class="settings-row" onclick="closeSettings();openBugLog()">
+          <div class="settings-row-icon" style="position:relative;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span id="bugLogBadgeSettings" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:center;"></span>
+          </div>
+          <span class="settings-row-label">View Bug Log</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
 
     </div>
   </div>
@@ -3222,6 +3233,9 @@ function updateSettingsUI() {
   if (nameLabel) nameLabel.textContent = currentUser ? `Signed in as ${currentUser}` : 'Not signed in';
   const adminRow = document.getElementById('adminSettingsRow');
   if (adminRow) adminRow.style.display = currentIsAdmin ? 'block' : 'none';
+  const bugLogRow = document.getElementById('bugLogSettingsRow');
+  if (bugLogRow) bugLogRow.style.display = currentIsAdmin ? 'block' : 'none';
+  if (currentIsAdmin) updateBugBadge();
   updateSidebarName();
 }
 function settingsChangeName() { /* identity is login username */ }
@@ -4792,11 +4806,21 @@ async function updateBugBadge() {
   if (!currentIsAdmin) return;
   const reports = await dbAll('bugreports');
   const newCount = reports.filter(r => r.status === 'new').length;
+  // admin modal badge
   const badge = document.getElementById('bugLogBadge');
   if (badge) {
     badge.textContent = newCount;
     badge.style.display = newCount ? 'inline' : 'none';
   }
+  // settings badge
+  const settingsBadge = document.getElementById('bugLogBadgeSettings');
+  if (settingsBadge) {
+    settingsBadge.textContent = newCount;
+    settingsBadge.style.display = newCount ? 'flex' : 'none';
+  }
+  // topbar indicator dot
+  const indicator = document.getElementById('bugIndicator');
+  if (indicator) indicator.style.display = newCount ? 'block' : 'none';
 }
 
 function openImport() {
@@ -5064,14 +5088,12 @@ init().catch(console.error);
   <div class="modal-sheet" style="max-height:80vh;">
     <div class="modal-header">
       <span class="modal-title">Admin — Manage Users</span>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn ghost" style="padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:5px;" onclick="openBugLog()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
-          Bug Log
-          <span id="bugLogBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-family:'DM Mono',monospace;"></span>
-        </button>
-        <div class="modal-close" onclick="closeAdmin()">✕</div>
-      </div>
+      <button class="btn ghost" style="padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:5px;flex-shrink:0;" onclick="openBugLog()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+        Bug Log
+        <span id="bugLogBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-family:'DM Mono',monospace;"></span>
+      </button>
+      <div class="modal-close" onclick="closeAdmin()">✕</div>
     </div>
     <div class="modal-body" style="padding:0">
       <div id="adminUserList"></div>
@@ -5255,7 +5277,7 @@ init().catch(console.error);
 <div class="modal-overlay hidden" id="bugReportModal" onclick="if(event.target===this)closeBugReport()">
   <div class="modal-sheet">
     <div class="modal-header">
-      <span class="modal-title">Submit a Bug Report</span>
+      <span class="modal-title">Submit a Bug</span>
       <div class="modal-close" onclick="closeBugReport()">✕</div>
     </div>
     <div class="modal-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
@@ -5293,7 +5315,7 @@ init().catch(console.error);
 <div class="modal-overlay hidden" id="bugLogModal" onclick="if(event.target===this)closeBugLog()">
   <div class="modal-sheet" style="max-height:85vh;">
     <div class="modal-header">
-      <span class="modal-title">Bug Reports</span>
+      <span class="modal-title">Bug Log</span>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--red);" onclick="clearAllBugs()">Clear All</button>
         <div class="modal-close" onclick="closeBugLog()">✕</div>
