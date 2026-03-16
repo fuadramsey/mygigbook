@@ -3920,7 +3920,7 @@ function renderAdminUsers() {
         </div>
       </div>
       ${u.mustChangePassword && u.tempPassword ? `
-        <div style="margin:0 16px 12px;padding:10px 12px;background:rgba(232,255,71,0.06);border:1px solid rgba(232,255,71,0.2);border-radius:var(--radius);display:flex;align-items:center;gap:10px;">
+        <div style="margin:0 16px 12px;padding:10px 12px;background:rgba(232,255,71,0.06);border:1px solid rgba(232,255,71,0.2);border-radius:var(--radius);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--accent);flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
           <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0;">Temp password:</span>
           <code id="tmpPw_${esc(u.username)}" style="flex:1;font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--accent);letter-spacing:1px;filter:blur(6px);transition:filter 0.2s;">••••••••</code>
@@ -3928,6 +3928,10 @@ function renderAdminUsers() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
           <button onclick="copyTempPass('${esc(u.tempPassword)}',this)" style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2);font-size:11px;padding:2px 7px;font-family:inherit;">Copy</button>
+          <button onclick="emailLoginDetails('${esc(u.username)}','${esc(u.email||'')}','${esc(u.tempPassword)}')" style="background:var(--accent);border:none;border-radius:4px;cursor:pointer;color:#000;font-size:11px;padding:3px 10px;font-family:inherit;font-weight:600;display:flex;align-items:center;gap:4px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email
+          </button>
         </div>` : ''}
     </div>`).join('');
 }
@@ -3946,6 +3950,26 @@ function toggleTempPwView(username, tempPass) {
   }
 }
 
+function emailLoginDetails(username, email, tempPassword) {
+  const appUrl = window.location.href.split('?')[0];
+  const subject = encodeURIComponent('Your MyGigBook Login');
+  const body = encodeURIComponent(
+`Hi ${username},
+
+You've been added to MyGigBook. Here are your login details:
+
+  App: ${appUrl}
+  Username: ${username}
+  Temporary Password: ${tempPassword}
+
+Please log in and change your password when prompted.
+
+See you at rehearsal!`
+  );
+  const to = email || '';
+  window.open(`mailto:${to}?subject=${subject}&body=${body}`, '_blank');
+}
+
 async function adminAddUser() {
   const name  = document.getElementById('newUserName').value.trim();
   const email = document.getElementById('newUserEmail').value.trim();
@@ -3961,6 +3985,10 @@ async function adminAddUser() {
   document.getElementById('newUserPass').value = '';
   renderAdminUsers();
   showToast(`User "${name}" added`, 'ok');
+  // offer to email login details immediately
+  if (email) {
+    emailLoginDetails(name, email, pass);
+  }
 }
 
 async function adminResetPassword(username) {
@@ -3985,6 +4013,10 @@ async function adminResetPassword(username) {
     <div style="display:flex;align-items:center;gap:10px;">
       <code style="flex:1;font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--accent);letter-spacing:2px;background:var(--surface2);padding:8px 12px;border-radius:6px;border:1px solid var(--border);">${esc(tempPass)}</code>
       <button class="btn ghost" style="padding:6px 12px;font-size:12px;white-space:nowrap;" onclick="copyTempPass('${esc(tempPass)}',this)">Copy</button>
+      <button class="btn primary" style="padding:6px 12px;font-size:12px;white-space:nowrap;display:flex;align-items:center;gap:5px;" onclick="emailLoginDetails('${esc(username)}','${esc(u.email||'')}','${esc(tempPass)}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Email
+      </button>
     </div>
     <div style="font-size:12px;color:var(--text3);">Share this with ${esc(username)}. They will be asked to change it on next login.</div>
     <button onclick="this.parentElement.remove()" style="align-self:flex-end;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0;">Dismiss ✕</button>`;
@@ -5407,7 +5439,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:09</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:16</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
