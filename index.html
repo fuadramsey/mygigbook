@@ -145,7 +145,7 @@ body.dim .markup-tool-btn.active { background: rgba(167,139,250,0.12); border-co
 html { height: 100%; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; height: 100%; overflow: hidden; }
 
-#app { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; }
+#app { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
 .page {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   background: var(--bg); transform: translateX(100%);
@@ -154,7 +154,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .page.active { transform: translateX(0); }
 .page.behind  { transform: translateX(-22%); }
 
-#page-area { position: relative; flex: 1; overflow: hidden; }
+#page-area { position: relative; flex: 1; overflow: hidden; width: 100%; }
 
 .topbar {
   height: var(--top-h); min-height: var(--top-h); flex-shrink: 0;
@@ -576,40 +576,27 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
 /* Landscape phone */
 @media (max-height: 500px) and (orientation: landscape) {
-  .bottom-nav { display: none !important; }
-  .side-rail { display: flex !important; }
-  .page-body { padding-bottom: 8px; padding-left: 54px; }
-  .page-body.no-nav { padding-bottom: 8px; padding-left: 54px; }
-  .topbar { padding-left: calc(54px + 12px); }
-  .songs-toolbar { padding-left: calc(54px + 16px); }
-  .sort-bar { padding-left: calc(54px + 16px); }
-  .note-area { padding-left: calc(54px + 16px); }
-  .note-tab-bar { padding-left: 54px; }
   .fab { bottom: 12px; right: 12px; width: 46px; height: 46px; font-size: 22px; }
-  .toast { bottom: 12px; }
+  .toast { bottom: calc(var(--nav-h) + 12px); }
   .modal-sheet { max-height: 96vh; }
 }
 
-/* Tablet portrait & landscape (700px+) */
-@media (min-width: 700px) and (min-height: 501px) {
-  .bottom-nav { display: none !important; }
+/* Tablet & Desktop — keep bottom nav, hide sidebars */
+@media (min-width: 700px) {
+  .tab-sidebar { display: none !important; }
   .side-rail { display: none !important; }
-  .tab-sidebar { display: flex !important; }
-  #app { flex-direction: row; }
-  #page-area { flex: 1; min-width: 0; }
-  .page-body { padding-bottom: 16px; }
-  .page-body.no-nav { padding-bottom: 16px; }
-  .fab { bottom: 24px; right: 80px; }
-  .toast { bottom: 20px; }
+  .bottom-nav { display: flex !important; }
+  .page-body { padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 8px); }
+  .fab { bottom: calc(var(--nav-h) + 16px); right: 24px; }
+  .toast { bottom: calc(var(--nav-h) + 16px); }
   .modal-overlay { align-items: center; }
-  .modal-sheet { border-radius: var(--radius-lg); max-width: 560px; max-height: calc(100vh - 48px); margin: 24px; }
+  .modal-sheet { border-radius: var(--radius-lg); max-width: 560px; max-height: calc(100vh - 48px); margin: 24px auto; }
   .song-page-title { font-size: 44px; }
   .note-edit-area { min-height: 220px; }
 }
 
 /* Desktop (1100px+) */
 @media (min-width: 1100px) {
-  .tab-sidebar { width: 240px; min-width: 240px; }
   .song-page-title { font-size: 52px; }
 }
 </style>
@@ -886,7 +873,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   <!-- Tab bar -->
   <div class="note-tab-bar" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
     <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" style="border-radius:0;">Details</button>
-    <button class="note-tab" id="se-tab-lyrics" onclick="switchSETab('lyrics')" style="border-radius:0;">Lyrics</button>
+    <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" style="border-radius:0;">My Notes</button>
     <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
     <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
   </div>
@@ -1471,7 +1458,10 @@ function showPage(id) {
   if (current === 'pg-song' && editingNote) {
     editingNote = false;
   }
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active','behind'));
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.remove('active','behind');
+    p.style.transform = '';
+  });
   if (pageStack.length) document.getElementById(pageStack[pageStack.length-1]).classList.add('behind');
   pageStack.push(id);
   document.getElementById(id).classList.add('active');
@@ -1493,8 +1483,10 @@ function goBack() {
   lp.style.transform = 'translateX(100%)';
   setTimeout(() => { lp.style.transform=''; lp.classList.remove('active','behind'); }, 320);
   const ret = pageStack[pageStack.length-1];
-  document.getElementById(ret).classList.remove('behind');
-  document.getElementById(ret).classList.add('active');
+  const rp = document.getElementById(ret);
+  rp.style.transform = ''; // clear any residual transform before activating
+  rp.classList.remove('behind');
+  rp.classList.add('active');
 }
 function exitEditSets() {
   if (!editingSets) return;
@@ -2662,6 +2654,34 @@ function rtePaste2(e) {
   document.execCommand('insertText', false, text);
 }
 
+// RTE helpers for song editor My Notes tab (seMyNotes)
+function rteCmd3(cmd) {
+  document.getElementById('seMyNotes')?.focus();
+  document.execCommand(cmd, false, null);
+}
+function rteHighlight3(color) {
+  document.getElementById('seMyNotes')?.focus();
+  if (color === 'none') document.execCommand('removeFormat', false, null);
+  else document.execCommand('hiliteColor', false, color);
+}
+function rteFontSize3(size) {
+  document.getElementById('seMyNotes')?.focus();
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.getRangeAt(0).collapsed) return;
+  const span = document.createElement('span');
+  span.style.fontSize = size;
+  try { sel.getRangeAt(0).surroundContents(span); } catch(e) {}
+}
+function rteClearFormat3() {
+  document.getElementById('seMyNotes')?.focus();
+  document.execCommand('removeFormat', false, null);
+}
+function rtePaste3(e) {
+  e.preventDefault();
+  const text = e.clipboardData?.getData('text/plain') || '';
+  document.execCommand('insertText', false, text);
+}
+
 // ── PDF ATTACHMENTS ──
 function handlePdfDrop(e, idx, pdfKey) {
   e.preventDefault();
@@ -3028,10 +3048,9 @@ async function renderDB() {
 let seTab = 'details';
 
 function switchSETab(tab) {
-  // save current tab values before switching
   sePersistCurrentTab();
   seTab = tab;
-  ['details','lyrics','links','attachments'].forEach(t => {
+  ['details','mynotes','links','attachments'].forEach(t => {
     const btn = document.getElementById(`se-tab-${t}`);
     if (btn) btn.classList.toggle('active', t === tab);
   });
@@ -3047,10 +3066,11 @@ function sePersistCurrentTab() {
     s.key      = document.getElementById('fKey')?.value || s.key;
     s.bpm      = document.getElementById('fBpm')?.value || s.bpm;
     s.duration = document.getElementById('fDuration')?.value.trim() || s.duration;
+    s.notes    = document.getElementById('fNotes')?.innerHTML || s.notes;
     const titleEl = document.getElementById('sePageTitle');
     if (titleEl && s.title) titleEl.textContent = s.title;
-  } else if (seTab === 'lyrics') {
-    s.notes = document.getElementById('fNotes')?.innerHTML || s.notes;
+  } else if (seTab === 'mynotes') {
+    window._seMyNotesHtml = document.getElementById('seMyNotes')?.innerHTML || window._seMyNotesHtml || '';
   } else if (seTab === 'links') {
     s.spotifyUrl = document.getElementById('fSpotify')?.value.trim() || null;
     s.youtubeUrl = document.getElementById('fYoutube')?.value.trim() || null;
@@ -3078,14 +3098,8 @@ function renderSETab() {
       <div class="form-row">
         <div class="form-group"><label class="form-label">Duration</label><input class="form-input" id="fDuration" placeholder="3:30" value="${esc(s.duration||'')}"></div>
         <div class="form-group"></div>
-      </div>`;
-    // set key select after render
-    requestAnimationFrame(() => {
-      const keyEl = document.getElementById('fKey');
-      if (keyEl && s.key) keyEl.value = s.key;
-    });
-  } else if (seTab === 'lyrics') {
-    body.innerHTML = `
+      </div>
+      <div class="form-label" style="margin-bottom:6px;">Lyrics</div>
       <div class="rte-toolbar">
         <button class="rte-btn" onclick="rteCmd2('bold')" title="Bold"><strong>B</strong></button>
         <button class="rte-btn" onclick="rteCmd2('italic')" title="Italic"><em>I</em></button>
@@ -3105,7 +3119,35 @@ function renderSETab() {
         <button class="rte-btn" onclick="rteCmd2('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
         <button class="rte-btn" onclick="rteClearFormat2()" title="Clear" style="font-size:11px;">Aa</button>
       </div>
-      <div class="rte-body" id="fNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste2(event)">${s.notes||''}</div>`;
+      <div class="rte-body" id="fNotes" contenteditable="true" style="min-height:200px;" onpaste="rtePaste2(event)">${s.notes||''}</div>`;
+    // set key select after render
+    requestAnimationFrame(() => {
+      const keyEl = document.getElementById('fKey');
+      if (keyEl && s.key) keyEl.value = s.key;
+    });
+  } else if (seTab === 'mynotes') {
+    const myNoteHtml = window._seMyNotesHtml || '';
+    body.innerHTML = `
+      <div class="rte-toolbar">
+        <button class="rte-btn" onclick="rteCmd3('bold')" title="Bold"><strong>B</strong></button>
+        <button class="rte-btn" onclick="rteCmd3('italic')" title="Italic"><em>I</em></button>
+        <button class="rte-btn" onclick="rteCmd3('underline')" title="Underline" style="text-decoration:underline;">U</button>
+        <div class="rte-divider"></div>
+        <button class="rte-highlight-btn" onclick="rteHighlight3('#ffff00')" title="Yellow"><div style="width:18px;height:18px;background:#ffff00;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+        <button class="rte-highlight-btn" onclick="rteHighlight3('#ff9999')" title="Red"><div style="width:18px;height:18px;background:#ff9999;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+        <button class="rte-highlight-btn" onclick="rteHighlight3('#99ff99')" title="Green"><div style="width:18px;height:18px;background:#99ff99;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+        <button class="rte-highlight-btn" onclick="rteHighlight3('#99ccff')" title="Blue"><div style="width:18px;height:18px;background:#99ccff;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+        <button class="rte-btn" onclick="rteHighlight3('none')" title="Remove highlight" style="font-size:11px;">✕</button>
+        <div class="rte-divider"></div>
+        <select class="rte-select" onchange="rteFontSize3(this.value)" title="Font size">
+          <option value="12px">12</option><option value="14px" selected>14</option><option value="16px">16</option>
+          <option value="18px">18</option><option value="22px">22</option><option value="28px">28</option>
+        </select>
+        <div class="rte-divider"></div>
+        <button class="rte-btn" onclick="rteCmd3('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
+        <button class="rte-btn" onclick="rteClearFormat3()" title="Clear" style="font-size:11px;">Aa</button>
+      </div>
+      <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
   } else if (seTab === 'links') {
     body.innerHTML = `
       <div class="form-group" style="margin-bottom:14px;">
@@ -3176,8 +3218,9 @@ function openSongModal(id) {
   seTab = 'details';
   window._seCurrentSong = null;
   window._modalPendingAudio = null;
+  window._seMyNotesHtml = '';
   document.getElementById('editSongId').value = id||'';
-  ['details','lyrics','links','attachments'].forEach(t => {
+  ['details','mynotes','links','attachments'].forEach(t => {
     const btn = document.getElementById(`se-tab-${t}`);
     if (btn) btn.classList.toggle('active', t === 'details');
   });
@@ -3186,6 +3229,11 @@ function openSongModal(id) {
       window._seCurrentSong = s || {};
       const titleEl = document.getElementById('sePageTitle');
       if (titleEl) titleEl.textContent = s?.title || 'Edit Song';
+      // load My Notes for this user
+      const noteKey = `${currentUser||'me'}_${id}`;
+      dbGet('notes', noteKey).then(n => {
+        window._seMyNotesHtml = n?.text || '';
+      });
       renderSETab();
     });
   } else {
@@ -3319,6 +3367,12 @@ async function saveSong() {
   const duration = (s.duration || document.getElementById('fDuration')?.value || '').trim();
   const artist = (s.artist || document.getElementById('fArtist')?.value || '').trim();
   await dbPut('songs',{id,title,artist,key,bpm,duration,notes,spotifyUrl,youtubeUrl,createdBy,updatedAt:Date.now()});
+  // save My Notes if any content
+  const myNotesHtml = window._seMyNotesHtml || document.getElementById('seMyNotes')?.innerHTML || '';
+  if (myNotesHtml.trim() && myNotesHtml.trim() !== '<br>') {
+    const noteKey = `${currentUser||'me'}_${id}`;
+    await dbPut('notes', { id: noteKey, text: myNotesHtml, updatedAt: Date.now() });
+  }
   // save pending audio if any
   if (window._modalPendingAudio) {
     const audioKey = `audio_${id}`;
@@ -5353,7 +5407,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 20:40</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:09</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
