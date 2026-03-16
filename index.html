@@ -2044,6 +2044,8 @@ async function renderSongPage(idx) {
   if (songScrollSpeeds[s.id] !== undefined) scrollSpeed = songScrollSpeeds[s.id];
   document.getElementById('songPageTopTitle').textContent = s.title;
 
+  const audioKey = `audio_${s.id}`;
+
   const userKey = `${currentUser||'me'}_${s.id}`;
   const myNote = await dbGet('notes', userKey);
 
@@ -2088,7 +2090,6 @@ async function renderSongPage(idx) {
     } catch(e) { delete window._pdfCache[key]; }
   }
   // load song audio (keyed by song id — one audio file per song, shared)
-  const audioKey = `audio_${s.id}`;
   try {
     const entry = await dbGet('audio', audioKey);
     if (entry) {
@@ -2100,6 +2101,9 @@ async function renderSongPage(idx) {
       delete window._audioCache[audioKey];
     }
   } catch(e) { delete window._audioCache[audioKey]; }
+
+  // re-read audioEntry now that cache is populated
+  const audioEntry = window._audioCache?.[audioKey] || null;
 
   // load note images for this song/tab
   window._imageCache = window._imageCache || {};
@@ -3050,11 +3054,12 @@ function updateAudioPlayIcons(playing) {
   const playIcon = `<path d="M8 5v14l11-7z"/>`;
   const pauseIcon = `<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>`;
   const icon = playing ? pauseIcon : playIcon;
-  ['audioPlayIcon','audioCompactIcon'].forEach(id => {
+  ['audioPlayIcon','audioPlayBtn'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.innerHTML = icon;
+    if (el && el.tagName !== 'BUTTON') el.innerHTML = icon;
+    if (el && el.tagName === 'BUTTON') { const svg = el.querySelector('svg'); if(svg) svg.innerHTML = icon; }
   });
-  // also update topbar play button
+  // topbar play button
   const songPlayIcon = document.getElementById('songPlayIcon');
   if (songPlayIcon) songPlayIcon.innerHTML = icon;
 }
@@ -3076,11 +3081,6 @@ function updateAudioUI() {
   const fp = document.getElementById('audioProgressFill');
   if (ft) ft.textContent = timeStr;
   if (fp) fp.style.width = pct;
-  // compact player (legacy)
-  const ct = document.getElementById('audioCompactTime');
-  const cp = document.getElementById('audioCompactFill');
-  if (ct) ct.textContent = timeStr;
-  if (cp) cp.style.width = pct;
   // restore loop button state after re-render
   const loopBtn = document.getElementById('loopToggleBtn');
   if (loopBtn) loopBtn.classList.toggle('active', _loopActive);
@@ -3386,13 +3386,17 @@ function renderSETab() {
       <input type="file" id="fImgInput" accept="image/*" multiple style="display:none" onchange="handleModalImgFile(event)">
       <div id="fImgGrid" style="margin-top:8px;"></div>`;
     if (id) {
-      dbGet('audio', `audio_${id}`).then(entry => {
+      dbGet('audio', `audio_${id}`).then(async entry => {
         const el = document.getElementById('fAudioStatus');
-        if (el && entry) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
-          <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemoveAudio('${id}')">Remove</button>
-        </div>`;
+        if (el && entry) {
+          // load into cache so buildFullAudioPlayer can use it
+          if (!window._audioCache) window._audioCache = {};
+          if (!window._audioCache[`audio_${id}`]) {
+            const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
+            window._audioCache[`audio_${id}`] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType };
+          }
+          el.innerHTML = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
+        }
       });
       dbGet('pdfs', `default_${id}`).then(entry => {
         const el = document.getElementById('fPdfStatus');
@@ -5632,7 +5636,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:52</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 22:03</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
