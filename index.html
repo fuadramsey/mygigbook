@@ -581,6 +581,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .page-body { padding-bottom: 8px; padding-left: 54px; }
   .page-body.no-nav { padding-bottom: 8px; padding-left: 54px; }
   .topbar { padding-left: calc(54px + 12px); }
+  .songs-toolbar { padding-left: calc(54px + 16px); }
+  .sort-bar { padding-left: calc(54px + 16px); }
+  .note-area { padding-left: calc(54px + 16px); }
+  .note-tab-bar { padding-left: 54px; }
   .fab { bottom: 12px; right: 12px; width: 46px; height: 46px; font-size: 22px; }
   .toast { bottom: 12px; }
   .modal-sheet { max-height: 96vh; }
@@ -795,7 +799,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option>
       </select>
     </div>
-    <div style="display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;">
+    <div class="sort-bar" style="display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;">
       <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);align-self:center;font-family:'DM Mono',monospace;margin-right:2px;">Sort:</span>
       <button class="sort-btn active" id="sort-title" onclick="setSort('title')">Title</button>
       <button class="sort-btn" id="sort-key" onclick="setSort('key')">Key</button>
@@ -869,90 +873,25 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 </nav>
 
 <!-- SONG EDIT MODAL -->
-<div class="modal-overlay hidden" id="songModal">
-  <div class="modal-sheet">
-    <div class="modal-header">
-      <span class="modal-title" id="songModalTitle">Add Song</span>
-      <div class="modal-close" onclick="closeSongModal()">✕</div>
+<div class="page" id="pg-song-edit">
+  <div class="topbar" style="gap:6px;">
+    <button class="back-btn" onclick="closeSongPage()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div style="flex:1;min-width:0;">
+      <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text)">New Song</div>
     </div>
-    <div class="modal-body">
-      <input type="hidden" id="editSongId">
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Title *</label><input class="form-input" id="fTitle" placeholder="Song name"></div>
-        <div class="form-group"><label class="form-label">Artist</label><input class="form-input" id="fArtist" placeholder="Original artist"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Key</label>
-          <select class="form-input" id="fKey"><option value="">—</option><option>A</option><option>A#/Bb</option><option>B</option><option>C</option><option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option><option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">BPM</label><input class="form-input" id="fBpm" type="number" placeholder=""></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Duration</label><input class="form-input" id="fDuration" placeholder="3:30"></div>
-        
-      </div>
-      <div class="form-group"><label class="form-label">Lyrics (all members see this)</label><textarea class="form-input" id="fNotes" placeholder="Chords, cues, arrangement notes…"></textarea></div>
-
-      <div class="settings-section-label" style="margin-top:4px;margin-bottom:8px;">Listen Links</div>
-      <div class="form-group" style="margin-bottom:10px;">
-        <label class="form-label" style="display:flex;align-items:center;gap:8px;">
-          <div style="width:18px;height:18px;background:#1DB954;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg>
-          </div>
-          Spotify URL
-          <button type="button" onclick="openModalPlatformSearch('spotify')" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            Search
-          </button>
-        </label>
-        <input class="form-input" id="fSpotify" placeholder="Paste Spotify URL here…" type="url">
-      </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label" style="display:flex;align-items:center;gap:8px;">
-          <div style="width:18px;height:18px;background:#FF0000;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-          </div>
-          YouTube URL
-          <button type="button" onclick="openModalPlatformSearch('youtube')" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            Search
-          </button>
-        </label>
-        <input class="form-input" id="fYoutube" placeholder="Paste YouTube URL here…" type="url">
-      </div>
-
-      <div class="settings-section-label" style="margin-top:8px;margin-bottom:8px;">Audio File</div>
-      <div id="fAudioStatus" style="margin-bottom:8px;"></div>
-      <button type="button" class="edit-note-btn" onclick="modalAttachAudio()" style="margin-top:0;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        Attach audio file <span style="font-size:11px;color:var(--text3);margin-left:4px;">Max 10 MB</span>
-      </button>
-      <input type="file" id="fAudioInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleModalAudioFile(event)">
-
-      <div class="settings-section-label" style="margin-top:12px;margin-bottom:8px;">Attachments</div>
-      <div id="fPdfStatus" style="margin-bottom:8px;"></div>
-      <div id="fImgStatus" style="margin-bottom:8px;"></div>
-      <div style="display:flex;gap:8px;">
-        <div class="pdf-upload-zone" style="flex:1;" onclick="document.getElementById('fPdfInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Attach PDF</div>
-          <div style="font-size:11px;color:var(--text3);">Max 10 MB</div>
-        </div>
-        <div class="pdf-upload-zone" style="flex:1;" onclick="document.getElementById('fImgInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Attach Image</div>
-          <div style="font-size:11px;color:var(--text3);">Max 10 MB</div>
-        </div>
-      </div>
-      <input type="file" id="fPdfInput" accept="application/pdf,.pdf" style="display:none" onchange="handleModalPdfFile(event)">
-      <input type="file" id="fImgInput" accept="image/*" multiple style="display:none" onchange="handleModalImgFile(event)">
-      <div id="fImgGrid" style="margin-top:8px;"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn ghost" onclick="closeSongModal()">Cancel</button>
-      <button class="btn primary" onclick="saveSong()">Save Song</button>
-    </div>
+    <button class="btn primary" style="padding:6px 16px;font-size:13px;flex-shrink:0;" onclick="saveSong()">Save</button>
   </div>
+  <!-- Tab bar -->
+  <div class="note-tab-bar" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+    <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" style="border-radius:0;">Details</button>
+    <button class="note-tab" id="se-tab-lyrics" onclick="switchSETab('lyrics')" style="border-radius:0;">Lyrics</button>
+    <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
+    <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
+  </div>
+  <div class="note-area" id="seTabBody" style="padding:16px;overflow-y:auto;"></div>
+  <input type="hidden" id="editSongId">
 </div>
 
 <!-- PICKER MODAL -->
@@ -2195,7 +2134,7 @@ async function renderSongPage(idx) {
           </div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);">
+      <div class="note-tab-bar" style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);">
         <div class="note-tabs" style="border-bottom:none;flex:1;padding-bottom:0;">
           <button class="note-tab ${noteTab==='default'?'active':''}" onclick="switchNoteTab('default',${idx})">Lyrics</button>
           <button class="note-tab ${noteTab==='mine'?'active':''}" onclick="switchNoteTab('mine',${idx})">My Notes</button>
@@ -2695,6 +2634,34 @@ function rtePaste(e) {
   document.execCommand('insertText', false, text);
 }
 
+// RTE helpers for song modal lyrics editor (fNotes)
+function rteCmd2(cmd) {
+  document.getElementById('fNotes')?.focus();
+  document.execCommand(cmd, false, null);
+}
+function rteHighlight2(color) {
+  document.getElementById('fNotes')?.focus();
+  if (color === 'none') document.execCommand('removeFormat', false, null);
+  else document.execCommand('hiliteColor', false, color);
+}
+function rteFontSize2(size) {
+  document.getElementById('fNotes')?.focus();
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.getRangeAt(0).collapsed) return;
+  const span = document.createElement('span');
+  span.style.fontSize = size;
+  try { sel.getRangeAt(0).surroundContents(span); } catch(e) {}
+}
+function rteClearFormat2() {
+  document.getElementById('fNotes')?.focus();
+  document.execCommand('removeFormat', false, null);
+}
+function rtePaste2(e) {
+  e.preventDefault();
+  const text = e.clipboardData?.getData('text/plain') || '';
+  document.execCommand('insertText', false, text);
+}
+
 // ── PDF ATTACHMENTS ──
 function handlePdfDrop(e, idx, pdfKey) {
   e.preventDefault();
@@ -3058,62 +3025,191 @@ async function renderDB() {
   }
 }
 
-function openSongModal(id) {
-  document.getElementById('editSongId').value=id||'';
-  document.getElementById('songModalTitle').textContent=id?'Edit Song':'Add Song';
-  window._modalPendingAudio = null;
-  window._modalPendingPdf = null;
-  window._modalPendingImgs = [];
-  document.getElementById('fAudioInput').value = '';
-  document.getElementById('fPdfInput').value = '';
-  document.getElementById('fImgInput').value = '';
-  document.getElementById('fPdfStatus').innerHTML = '';
-  document.getElementById('fImgStatus').innerHTML = '';
-  document.getElementById('fImgGrid').innerHTML = '';
-  if(id){
-    dbGet('songs',id).then(s=>{
-      if(!s)return;
-      document.getElementById('fTitle').value=s.title||'';
-      document.getElementById('fArtist').value=s.artist||'';
-      document.getElementById('fKey').value=s.key||'';
-      document.getElementById('fBpm').value=s.bpm||'';
-      document.getElementById('fDuration').value=s.duration||'';
-      document.getElementById('fNotes').value=s.notes||'';
-      document.getElementById('fSpotify').value=s.spotifyUrl||'';
-      document.getElementById('fYoutube').value=s.youtubeUrl||'';
-    });
-    // load existing audio
-    dbGet('audio', `audio_${id}`).then(entry => {
-      const el = document.getElementById('fAudioStatus');
-      if (el) el.innerHTML = entry
-        ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-            <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
-            <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemoveAudio('${id}')">Remove</button>
-           </div>` : '';
-    });
-    // load existing PDF (default key)
-    dbGet('pdfs', `default_${id}`).then(entry => {
-      const el = document.getElementById('fPdfStatus');
-      if (el && entry) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--red);flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
-        <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemovePdf('${id}')">Remove</button>
-      </div>`;
-    });
-    // load existing images
-    dbAll('images').then(imgs => {
-      const songImgs = imgs.filter(e => e.id.startsWith(`img_default_${id}_`));
-      refreshModalImgGrid(id, songImgs);
-    });
-  } else {
-    ['fTitle','fArtist','fBpm','fDuration','fNotes','fSpotify','fYoutube'].forEach(i=>document.getElementById(i).value='');
-    document.getElementById('fKey').value='';
-    document.getElementById('fAudioStatus').innerHTML = '';
-  }
-  document.getElementById('songModal').classList.remove('hidden');
+let seTab = 'details';
+
+function switchSETab(tab) {
+  // save current tab values before switching
+  sePersistCurrentTab();
+  seTab = tab;
+  ['details','lyrics','links','attachments'].forEach(t => {
+    const btn = document.getElementById(`se-tab-${t}`);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  renderSETab();
 }
 
+function sePersistCurrentTab() {
+  const s = window._seCurrentSong;
+  if (!s) return;
+  if (seTab === 'details') {
+    s.title    = document.getElementById('fTitle')?.value.trim() || s.title;
+    s.artist   = document.getElementById('fArtist')?.value.trim() || s.artist;
+    s.key      = document.getElementById('fKey')?.value || s.key;
+    s.bpm      = document.getElementById('fBpm')?.value || s.bpm;
+    s.duration = document.getElementById('fDuration')?.value.trim() || s.duration;
+    const titleEl = document.getElementById('sePageTitle');
+    if (titleEl && s.title) titleEl.textContent = s.title;
+  } else if (seTab === 'lyrics') {
+    s.notes = document.getElementById('fNotes')?.innerHTML || s.notes;
+  } else if (seTab === 'links') {
+    s.spotifyUrl = document.getElementById('fSpotify')?.value.trim() || null;
+    s.youtubeUrl = document.getElementById('fYoutube')?.value.trim() || null;
+  }
+}
+
+function renderSETab() {
+  const body = document.getElementById('seTabBody');
+  if (!body) return;
+  const id = document.getElementById('editSongId')?.value || '';
+  const s = window._seCurrentSong || {};
+
+  if (seTab === 'details') {
+    body.innerHTML = `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Title *</label><input class="form-input" id="fTitle" placeholder="Song name" value="${esc(s.title||'')}" oninput="document.getElementById('sePageTitle').textContent=this.value||'New Song'"></div>
+        <div class="form-group"><label class="form-label">Artist</label><input class="form-input" id="fArtist" placeholder="Original artist" value="${esc(s.artist||'')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Key</label>
+          <select class="form-input" id="fKey"><option value="">—</option><option>A</option><option>A#/Bb</option><option>B</option><option>C</option><option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option><option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">BPM</label><input class="form-input" id="fBpm" type="number" placeholder="" value="${esc(s.bpm||'')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Duration</label><input class="form-input" id="fDuration" placeholder="3:30" value="${esc(s.duration||'')}"></div>
+        <div class="form-group"></div>
+      </div>`;
+    // set key select after render
+    requestAnimationFrame(() => {
+      const keyEl = document.getElementById('fKey');
+      if (keyEl && s.key) keyEl.value = s.key;
+    });
+  } else if (seTab === 'lyrics') {
+    body.innerHTML = `
+      <div class="rte-toolbar">
+        <button class="rte-btn" onclick="rteCmd2('bold')" title="Bold"><strong>B</strong></button>
+        <button class="rte-btn" onclick="rteCmd2('italic')" title="Italic"><em>I</em></button>
+        <button class="rte-btn" onclick="rteCmd2('underline')" title="Underline" style="text-decoration:underline;">U</button>
+        <div class="rte-divider"></div>
+        <button class="rte-highlight-btn" onclick="rteHighlight2('#ffff00')" title="Yellow"><div style="width:18px;height:18px;background:#ffff00;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+        <button class="rte-highlight-btn" onclick="rteHighlight2('#ff9999')" title="Red"><div style="width:18px;height:18px;background:#ff9999;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+        <button class="rte-highlight-btn" onclick="rteHighlight2('#99ff99')" title="Green"><div style="width:18px;height:18px;background:#99ff99;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+        <button class="rte-highlight-btn" onclick="rteHighlight2('#99ccff')" title="Blue"><div style="width:18px;height:18px;background:#99ccff;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+        <button class="rte-btn" onclick="rteHighlight2('none')" title="Remove highlight" style="font-size:11px;">✕</button>
+        <div class="rte-divider"></div>
+        <select class="rte-select" onchange="rteFontSize2(this.value)" title="Font size">
+          <option value="12px">12</option><option value="14px" selected>14</option><option value="16px">16</option>
+          <option value="18px">18</option><option value="22px">22</option><option value="28px">28</option>
+        </select>
+        <div class="rte-divider"></div>
+        <button class="rte-btn" onclick="rteCmd2('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
+        <button class="rte-btn" onclick="rteClearFormat2()" title="Clear" style="font-size:11px;">Aa</button>
+      </div>
+      <div class="rte-body" id="fNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste2(event)">${s.notes||''}</div>`;
+  } else if (seTab === 'links') {
+    body.innerHTML = `
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px;">
+          <div style="width:18px;height:18px;background:#1DB954;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg></div>
+          Spotify URL
+          <button type="button" onclick="openModalPlatformSearch('spotify')" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Search</button>
+        </label>
+        <input class="form-input" id="fSpotify" placeholder="Paste Spotify URL here…" type="url" value="${esc(s.spotifyUrl||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px;">
+          <div style="width:18px;height:18px;background:#FF0000;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>
+          YouTube URL
+          <button type="button" onclick="openModalPlatformSearch('youtube')" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Search</button>
+        </label>
+        <input class="form-input" id="fYoutube" placeholder="Paste YouTube URL here…" type="url" value="${esc(s.youtubeUrl||'')}">
+      </div>`;
+  } else if (seTab === 'attachments') {
+    body.innerHTML = `
+      <div class="settings-section-label" style="margin-bottom:8px;">Audio</div>
+      <div id="fAudioStatus" style="margin-bottom:8px;"></div>
+      <button type="button" class="edit-note-btn" onclick="modalAttachAudio()" style="margin-top:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        Attach audio file <span style="font-size:11px;color:var(--text3);margin-left:4px;">Max 10 MB</span>
+      </button>
+      <input type="file" id="fAudioInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleModalAudioFile(event)">
+      <div class="settings-section-label" style="margin-top:16px;margin-bottom:8px;">Files</div>
+      <div id="fPdfStatus" style="margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div class="pdf-upload-zone" style="flex:1;" onclick="document.getElementById('fPdfInput').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Attach PDF</div>
+          <div style="font-size:11px;color:var(--text3);">Max 10 MB</div>
+        </div>
+        <div class="pdf-upload-zone" style="flex:1;" onclick="document.getElementById('fImgInput').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Attach Image</div>
+          <div style="font-size:11px;color:var(--text3);">Max 10 MB</div>
+        </div>
+      </div>
+      <input type="file" id="fPdfInput" accept="application/pdf,.pdf" style="display:none" onchange="handleModalPdfFile(event)">
+      <input type="file" id="fImgInput" accept="image/*" multiple style="display:none" onchange="handleModalImgFile(event)">
+      <div id="fImgGrid" style="margin-top:8px;"></div>`;
+    if (id) {
+      dbGet('audio', `audio_${id}`).then(entry => {
+        const el = document.getElementById('fAudioStatus');
+        if (el && entry) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
+          <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemoveAudio('${id}')">Remove</button>
+        </div>`;
+      });
+      dbGet('pdfs', `default_${id}`).then(entry => {
+        const el = document.getElementById('fPdfStatus');
+        if (el && entry) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--red);flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
+          <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemovePdf('${id}')">Remove</button>
+        </div>`;
+      });
+      dbAll('images').then(imgs => refreshModalImgGrid(id, imgs.filter(e => e.id.startsWith(`img_default_${id}_`))));
+    }
+  }
+}
+
+function openSongModal(id) {
+  seTab = 'details';
+  window._seCurrentSong = null;
+  window._modalPendingAudio = null;
+  document.getElementById('editSongId').value = id||'';
+  ['details','lyrics','links','attachments'].forEach(t => {
+    const btn = document.getElementById(`se-tab-${t}`);
+    if (btn) btn.classList.toggle('active', t === 'details');
+  });
+  if (id) {
+    dbGet('songs', id).then(s => {
+      window._seCurrentSong = s || {};
+      const titleEl = document.getElementById('sePageTitle');
+      if (titleEl) titleEl.textContent = s?.title || 'Edit Song';
+      renderSETab();
+    });
+  } else {
+    window._seCurrentSong = {};
+    const titleEl = document.getElementById('sePageTitle');
+    if (titleEl) titleEl.textContent = 'New Song';
+    renderSETab();
+  }
+  showPage('pg-song-edit');
+}
+
+function closeSongPage() { goBack(); }
+function closeSongModal() { goBack(); }
+
+function openModalPlatformSearch(platform) {
+  const title  = document.getElementById('fTitle')?.value.trim() || '';
+  const artist = document.getElementById('fArtist')?.value.trim() || '';
+  if (!title && !artist) return;
+  const query = encodeURIComponent([title, artist].filter(Boolean).join(' '));
+  const url = platform === 'spotify'
+    ? `https://open.spotify.com/search/${query}`
+    : `https://www.youtube.com/results?search_query=${query}`;
+  window.open(url, '_blank', 'noopener');
+}
 function refreshModalImgGrid(songId, imgs) {
   const grid = document.getElementById('fImgGrid');
   if (!grid || !imgs.length) { if(grid) grid.innerHTML=''; return; }
@@ -3173,18 +3269,6 @@ async function modalRemoveImg(imageId, songId) {
   refreshModalImgGrid(songId, imgs);
   showToast('Image removed');
 }
-function closeSongModal(){document.getElementById('songModal').classList.add('hidden');}
-
-function openModalPlatformSearch(platform) {
-  const title  = document.getElementById('fTitle').value.trim();
-  const artist = document.getElementById('fArtist').value.trim();
-  if (!title && !artist) return;
-  const query = encodeURIComponent([title, artist].filter(Boolean).join(' '));
-  const url = platform === 'spotify'
-    ? `https://open.spotify.com/search/${query}`
-    : `https://www.youtube.com/results?search_query=${query}`;
-  window.open(url, '_blank', 'noopener');
-}
 
 function modalAttachAudio() { document.getElementById('fAudioInput').click(); }
 
@@ -3215,19 +3299,26 @@ async function modalRemoveAudio(songId) {
 }
 
 async function saveSong() {
-  const title=document.getElementById('fTitle').value.trim();
-  if(!title){showToast('Title required','err');return;}
-  const existingId=document.getElementById('editSongId').value;
-  const id=existingId||uid();
-  const spotifyUrl=document.getElementById('fSpotify').value.trim()||null;
-  const youtubeUrl=document.getElementById('fYoutube').value.trim()||null;
-  // preserve createdBy on edit; set it on new songs
+  // persist whatever tab is currently shown
+  sePersistCurrentTab();
+  const s = window._seCurrentSong || {};
+  const title = (s.title || document.getElementById('fTitle')?.value || '').trim();
+  if (!title) { showToast('Title required','err'); switchSETab('details'); return; }
+  const existingId = document.getElementById('editSongId').value;
+  const id = existingId || uid();
   let createdBy = currentUser;
   if (existingId) {
     const existing = await dbGet('songs', existingId);
     if (existing?.createdBy) createdBy = existing.createdBy;
   }
-  await dbPut('songs',{id,title,artist:document.getElementById('fArtist').value.trim(),key:document.getElementById('fKey').value,bpm:parseInt(document.getElementById('fBpm').value)||null,duration:document.getElementById('fDuration').value.trim(),notes:document.getElementById('fNotes').value.trim(),spotifyUrl,youtubeUrl,createdBy,updatedAt:Date.now()});
+  const spotifyUrl = (s.spotifyUrl || document.getElementById('fSpotify')?.value || '').trim() || null;
+  const youtubeUrl = (s.youtubeUrl || document.getElementById('fYoutube')?.value || '').trim() || null;
+  const notes = s.notes || document.getElementById('fNotes')?.innerHTML || '';
+  const key = s.key || document.getElementById('fKey')?.value || '';
+  const bpm = parseInt(s.bpm || document.getElementById('fBpm')?.value) || null;
+  const duration = (s.duration || document.getElementById('fDuration')?.value || '').trim();
+  const artist = (s.artist || document.getElementById('fArtist')?.value || '').trim();
+  await dbPut('songs',{id,title,artist,key,bpm,duration,notes,spotifyUrl,youtubeUrl,createdBy,updatedAt:Date.now()});
   // save pending audio if any
   if (window._modalPendingAudio) {
     const audioKey = `audio_${id}`;
@@ -3235,7 +3326,7 @@ async function saveSong() {
     await dbPut('audio', { id: audioKey, name: window._modalPendingAudio.name, data: ab, mimeType: window._modalPendingAudio.type || 'audio/mpeg', updatedAt: Date.now() });
     window._modalPendingAudio = null;
   }
-  closeSongModal(); await renderDB(); await syncOut(); showToast('Song saved','ok');
+  goBack(); await renderDB(); await syncOut(); showToast('Song saved','ok');
 }
 
 let pendingDeleteSongId = null;
@@ -5262,7 +5353,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.2 · 2026-03-16 20:19</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 20:40</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
