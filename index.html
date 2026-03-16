@@ -249,7 +249,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .chip.accent { background: rgba(220,38,38,0.1); border-color: rgba(220,38,38,0.3); color: var(--accent); font-size: 13px; font-weight: 500; }
 .chip svg { width: 12px; height: 12px; }
 
-.note-tabs { display: flex; padding: 12px 16px 0; gap: 4px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.note-tabs { display: flex; padding: 12px 16px 0; gap: 4px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.note-tabs::-webkit-scrollbar { display: none; }
 .note-tab { padding: 7px 16px; border-radius: 8px 8px 0 0; font-size: 13px; border: 1px solid transparent; cursor: pointer; background: none; color: var(--text3); font-family: inherit; transition: all 0.15s; }
 .note-tab.active { background: var(--surface2); color: var(--text); border-color: var(--border); border-bottom-color: var(--surface2); }
 
@@ -426,6 +427,9 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 .toast.ok { border-color: rgba(45,219,118,0.4); }
 .toast.err { border-color: rgba(255,68,68,0.4); }
 
+.note-tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
+.note-tab-bar::-webkit-scrollbar { display: none; }
+
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-thumb { background: var(--surface3); }
 
@@ -556,6 +560,70 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 }
 
 /* ── RESPONSIVE BREAKPOINTS ── */
+
+/* ── MOBILE (480px and below) ── */
+@media (max-width: 480px) {
+  /* Stack form rows on small screens */
+  .form-row { grid-template-columns: 1fr; }
+
+  /* Shrink note tabs to fit 4 on screen */
+  .note-tab { padding: 7px 10px; font-size: 12px; }
+
+  /* Topbar tighter on mobile */
+  .topbar { padding: 0 10px; gap: 6px; }
+  .topbar-logo { font-size: 20px; }
+
+  /* Song title smaller on phones */
+  .song-page-title { font-size: 26px !important; }
+
+  /* Loop controls wrap nicely */
+  .loop-controls { gap: 4px; }
+  .loop-btn { padding: 0 8px; font-size: 10px; }
+  .loop-time-label { font-size: 9px; }
+
+  /* RTE toolbar wraps better */
+  .rte-toolbar { gap: 3px; padding: 6px 8px; }
+  .rte-btn { width: 26px; height: 26px; font-size: 12px; }
+  .rte-select { font-size: 11px; padding: 2px 4px; }
+
+  /* Modal fills screen on mobile */
+  .modal-sheet { border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin: 0; max-height: 92vh; }
+  .modal-overlay { align-items: flex-end; }
+
+  /* FAB position */
+  .fab { right: 16px; bottom: calc(var(--nav-h) + 12px); width: 48px; height: 48px; font-size: 24px; }
+
+  /* Song page header more compact */
+  .song-page-header { padding: 10px 14px; }
+
+  /* Audio player tighter */
+  .audio-player { padding: 10px 12px; }
+  .audio-name { font-size: 12px; }
+
+  /* Settings rows touch-friendly */
+  .settings-row { padding: 14px; font-size: 14px; }
+
+  /* Chips wrap */
+  .song-chips { flex-wrap: wrap; }
+
+  /* Bottom nav labels smaller */
+  .nav-btn span { font-size: 9px; }
+  .nav-btn svg { width: 20px; height: 20px; }
+
+  /* DB song card */
+  .db-song-title { font-size: 14px; }
+  .db-song-meta { font-size: 11px; }
+
+  /* Page body padding */
+  .page-body { padding-left: 0; padding-right: 0; }
+
+  /* Bulk action bar fits screen */
+  .bulk-action-bar { left: 12px; right: 12px; transform: none; width: auto; }
+
+  /* Toast fits screen */
+  .toast { left: 12px; right: 12px; transform: none; white-space: normal; text-align: center; }
+  .toast.show { transform: none; }
+}
 
 /* ── LOGIN SCREEN ── */
 #loginScreen {
@@ -5667,7 +5735,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 22:09</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 22:27</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
