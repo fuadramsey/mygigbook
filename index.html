@@ -2709,19 +2709,44 @@ function renderAll(){renderSetsList();renderDB();renderGroups();}
 
 // ── SEED ──
 async function seed(){
-  const s=await dbAll('songs');if(s.length)return;
-  const songs=[
-    {id:uid(),title:'Superstition',artist:'Stevie Wonder',key:'Eb',bpm:100,duration:'4:02',genre:'Funk',notes:'Verse: Ebm7. Watch the clavinet intro cue from the drummer.\nOutro vamp repeats x3 — drummer calls it.',updatedAt:Date.now()},
-    {id:uid(),title:'September',artist:'Earth, Wind & Fire',key:'G',bpm:126,duration:'3:35',genre:'Funk',notes:'Horns kick in bar 9. Key change to Ab in the bridge.\nBa-dee-ya hook: guitars play stabs on 2 and 4.',updatedAt:Date.now()},
-    {id:uid(),title:'Everlong',artist:'Foo Fighters',key:'D',bpm:158,duration:'4:10',genre:'Rock',notes:'Drop D tuning required.\nVerse: quiet/clean. Chorus: full distortion.\nLive ending extends — follow guitarist for cutoff.',updatedAt:Date.now()},
-    {id:uid(),title:'Pride (In the Name of Love)',artist:'U2',key:'B',bpm:108,duration:'3:48',genre:'Rock',notes:'Edge-style delay: dotted quarter note at 108 BPM.\nVerse entry is on the "and" of 2 — count carefully.',updatedAt:Date.now()},
-    {id:uid(),title:'Sir Duke',artist:'Stevie Wonder',key:'B',bpm:100,duration:'3:52',genre:'Funk',notes:'Horn section unison melody — must be tight.\nBreakdown tutti hits: rehearse until locked.',updatedAt:Date.now()},
-    {id:uid(),title:'Valerie',artist:'Amy Winehouse',key:'F',bpm:109,duration:'3:57',genre:'Soul',notes:'Steady pocket groove under the verse.\nBrass stabs on chorus. Watch singer for end cue.',updatedAt:Date.now()},
-  ];
-  for(const s of songs) await dbPut('songs',s);
-  await dbPut('setlists',{id:uid(),name:'Friday Night Set',songs:[songs[0].id,songs[1].id,songs[5].id,songs[4].id,songs[2].id],createdAt:Date.now(),updatedAt:Date.now()});
-  await dbPut('setlists',{id:uid(),name:'Saturday Acoustic',songs:[songs[3].id,songs[5].id,songs[1].id],createdAt:Date.now()-86400000,updatedAt:Date.now()-86400000});
-  await syncOut();
+  // seed disabled — app has real data
+  return;
+}
+
+async function deduplicateLocalDB() {
+  // Remove duplicate songs by title+artist — keep the one with the latest updatedAt
+  const songs = await dbAll('songs');
+  const seen = {};
+  for (const s of songs) {
+    const key = (s.title||'').toLowerCase().trim() + '|' + (s.artist||'').toLowerCase().trim();
+    if (seen[key]) {
+      // keep the newer one, delete the older
+      if ((s.updatedAt||0) > (seen[key].updatedAt||0)) {
+        await dbDel('songs', seen[key].id);
+        seen[key] = s;
+      } else {
+        await dbDel('songs', s.id);
+      }
+    } else {
+      seen[key] = s;
+    }
+  }
+  // Remove duplicate setlists by name — keep the one with the latest updatedAt
+  const sets = await dbAll('setlists');
+  const seenSets = {};
+  for (const s of sets) {
+    const key = (s.name||'').toLowerCase().trim();
+    if (seenSets[key]) {
+      if ((s.updatedAt||0) > (seenSets[key].updatedAt||0)) {
+        await dbDel('setlists', seenSets[key].id);
+        seenSets[key] = s;
+      } else {
+        await dbDel('setlists', s.id);
+      }
+    } else {
+      seenSets[key] = s;
+    }
+  }
 }
 
 function updateSidebarName() {
@@ -3147,6 +3172,7 @@ function adminRemoveUser(username) {
 async function postLoginInit() {
   updateSyncUI();
   await syncIn();
+  await deduplicateLocalDB();
   await seed();
   // reset page stack to setlists
   pageStack.length = 0;
