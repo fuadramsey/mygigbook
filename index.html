@@ -2143,10 +2143,7 @@ async function renderSongPage(idx) {
           <button class="note-tab ${noteTab==='default'?'active':''}" onclick="switchNoteTab('default',${idx})">Lyrics</button>
           <button class="note-tab ${noteTab==='mine'?'active':''}" onclick="switchNoteTab('mine',${idx})">My Notes</button>
           <button class="note-tab ${noteTab==='all'?'active':''}" onclick="switchNoteTab('all',${idx})">All Notes</button>
-          <button class="note-tab ${noteTab==='listen'?'active':''}" onclick="switchNoteTab('listen',${idx})" style="display:flex;align-items:center;gap:5px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;flex-shrink:0;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
-            Listen
-          </button>
+          <button class="note-tab ${noteTab==='listen'?'active':''}" onclick="switchNoteTab('listen',${idx})">Links</button>
         </div>
         <div class="scroll-toolbar" id="scrollToolbar" style="margin-left:12px;${noteTab==='listen'?'visibility:hidden;':''}">
           <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
@@ -2162,7 +2159,11 @@ async function renderSongPage(idx) {
       </div>
     </div>
     <div class="note-area" id="noteArea">
-      ${noteTab === 'all' ? allNotesHtml : noteTab === 'listen' ? buildListenContent(s) : buildNoteContent(activeNote, idx)}
+      ${noteTab === 'all'
+        ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + allNotesHtml
+        : noteTab === 'listen'
+        ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + buildListenContent(s)
+        : buildNoteContent(activeNote, idx)}
     </div>`;
 
   setupSwipe(idx);
@@ -2253,51 +2254,57 @@ function buildListenContent(s) {
     </div>`;
 }
 
+function buildFullAudioPlayer(audioKey, idx) {
+  const entry = window._audioCache?.[audioKey];
+  if (!entry) return '';
+  return `<div class="audio-player" id="audioPlayer">
+    <div class="audio-player-top">
+      <button class="audio-play-btn" id="audioPlayBtn" onclick="toggleAudio('${audioKey}',${idx})">
+        <svg viewBox="0 0 24 24" id="audioPlayIcon"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="audio-info">
+        <div class="audio-name">${esc(entry.name)}</div>
+        <div class="audio-time" id="audioTime">0:00 / 0:00</div>
+      </div>
+      <button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeAudio('${audioKey}',${idx})" title="Remove audio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="audio-progress-wrap" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
+      <div class="audio-progress-fill" id="audioProgressFill"></div>
+      <div class="audio-loop-region" id="audioLoopRegion" style="display:none;left:0%;width:0%;"></div>
+      <div class="audio-loop-marker start" id="audioLoopMarkerStart" style="display:none;left:0%;"></div>
+      <div class="audio-loop-marker end" id="audioLoopMarkerEnd" style="display:none;left:0%;"></div>
+    </div>
+    <div class="loop-controls">
+      <button class="loop-btn set-start" onclick="setLoopStart()" title="Set loop start">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><line x1="5" y1="4" x2="5" y2="20"/><polyline points="5,4 15,12 5,20"/></svg>
+        Set Start
+      </button>
+      <span class="loop-time-label" id="loopStartLabel">—</span>
+      <button class="loop-btn set-end" onclick="setLoopEnd()" title="Set loop end" style="border-color:rgba(255,153,0,0.4);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;color:#ff9900;"><line x1="19" y1="4" x2="19" y2="20"/><polyline points="19,4 9,12 19,20"/></svg>
+        Set End
+      </button>
+      <span class="loop-time-label" id="loopEndLabel">—</span>
+      <div style="flex:1;"></div>
+      <button class="loop-btn" id="loopToggleBtn" onclick="toggleLoop()" title="Toggle loop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+        Loop
+      </button>
+      <button class="loop-btn" onclick="clearLoop()" title="Clear loop markers" style="color:var(--red);border-color:rgba(255,68,68,0.3);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        Clear
+      </button>
+    </div>
+  </div>`;
+}
+
 function buildAudioSection(s) {
   const audioKey = `audio_${s?.id}`;
   const audioEntry = s ? window._audioCache?.[audioKey] : null;
   if (audioEntry) {
-    return `<div class="audio-player" id="audioPlayer">
-      <div class="audio-player-top">
-        <button class="audio-play-btn" id="audioPlayBtn" onclick="toggleAudio('${audioKey}',${currentSongIdx})">
-          <svg viewBox="0 0 24 24" id="audioPlayIcon"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <div class="audio-info">
-          <div class="audio-name">${esc(audioEntry.name)}</div>
-          <div class="audio-time" id="audioTime">0:00 / 0:00</div>
-        </div>
-        <button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeAudio('${audioKey}',${currentSongIdx})" title="Remove audio">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
-      </div>
-      <div class="audio-progress-wrap" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
-        <div class="audio-progress-fill" id="audioProgressFill"></div>
-        <div class="audio-loop-region" id="audioLoopRegion" style="display:none;left:0%;width:0%;"></div>
-        <div class="audio-loop-marker start" id="audioLoopMarkerStart" style="display:none;left:0%;"></div>
-        <div class="audio-loop-marker end" id="audioLoopMarkerEnd" style="display:none;left:0%;"></div>
-      </div>
-      <div class="loop-controls">
-        <button class="loop-btn set-start" onclick="setLoopStart()" title="Set loop start to current position">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><line x1="5" y1="4" x2="5" y2="20"/><polyline points="5,4 15,12 5,20"/></svg>
-          Set Start
-        </button>
-        <span class="loop-time-label" id="loopStartLabel">—</span>
-        <button class="loop-btn set-end" onclick="setLoopEnd()" title="Set loop end to current position" style="border-color:rgba(255,153,0,0.4);">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;color:#ff9900;"><line x1="19" y1="4" x2="19" y2="20"/><polyline points="19,4 9,12 19,20"/></svg>
-          Set End
-        </button>
-        <span class="loop-time-label" id="loopEndLabel">—</span>
-        <div style="flex:1;"></div>
-        <button class="loop-btn" id="loopToggleBtn" onclick="toggleLoop()" title="Toggle loop">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-          Loop
-        </button>
-        <button class="loop-btn" onclick="clearLoop()" title="Clear loop markers" style="color:var(--red);border-color:rgba(255,68,68,0.3);">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><path d="M6 6l12 12M18 6L6 18"/></svg>
-          Clear
-        </button>
-      </div>
-    </div>`;
+    return buildFullAudioPlayer(audioKey, currentSongIdx);
   }
   return `<div class="audio-upload-zone" onclick="document.getElementById('audioFileInput').click()"
     ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
@@ -2450,22 +2457,7 @@ function buildNoteContent(text, idx) {
   const imgEntries = s ? Object.entries(window._imageCache || {}).filter(([k]) => k.startsWith(imgPrefix + '_')) : [];
 
   // compact audio player shown at top of notes when audio is attached
-  const audioBar = audioEntry ? `
-    <div class="audio-compact" id="audioCompact">
-      <button class="audio-compact-play" id="audioCompactBtn" onclick="toggleAudio('${audioKey}',${idx})">
-        <svg viewBox="0 0 24 24" fill="currentColor" id="audioCompactIcon"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-      <div class="audio-compact-info">
-        <div class="audio-compact-name">${esc(audioEntry.name)}</div>
-        <div class="audio-compact-time" id="audioCompactTime">0:00 / 0:00</div>
-        <div class="audio-compact-progress" onclick="seekAudio(event,'${audioKey}')">
-          <div class="audio-compact-fill" id="audioCompactFill"></div>
-        </div>
-      </div>
-      <button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3);flex-shrink:0;" onclick="removeAudio('${audioKey}',${idx})" title="Remove audio">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>` : '';
+  const audioBar = audioEntry ? buildFullAudioPlayer(audioKey, idx) : '';
 
   const textSection = editingNote
     ? `<div>
@@ -3080,16 +3072,18 @@ function updateAudioUI() {
   const dur = _audioEl.duration || 0;
   const pct = dur ? (cur / dur * 100).toFixed(1) + '%' : '0%';
   const timeStr = `${fmtAudioTime(cur)} / ${fmtAudioTime(dur)}`;
-  // full player
   const ft = document.getElementById('audioTime');
   const fp = document.getElementById('audioProgressFill');
   if (ft) ft.textContent = timeStr;
   if (fp) fp.style.width = pct;
-  // compact player
+  // compact player (legacy)
   const ct = document.getElementById('audioCompactTime');
   const cp = document.getElementById('audioCompactFill');
   if (ct) ct.textContent = timeStr;
   if (cp) cp.style.width = pct;
+  // restore loop button state after re-render
+  const loopBtn = document.getElementById('loopToggleBtn');
+  if (loopBtn) loopBtn.classList.toggle('active', _loopActive);
   // loop markers
   updateLoopUI();
 }
@@ -5638,7 +5632,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:41</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:52</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
