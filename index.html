@@ -270,6 +270,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .note-display.empty { color: var(--text3); font-style: italic; }
 .note-edit-area { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; resize: none; min-height: 200px; }
 .note-edit-area:focus { outline: none; border-color: rgba(220,38,38,0.4); }
+/* ── RICH TEXT EDITOR ── */
+.rte-toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border2); border-bottom: none; border-radius: var(--radius) var(--radius) 0 0; }
+.rte-btn { width: 30px; height: 28px; border: 1px solid transparent; border-radius: 6px; background: none; cursor: pointer; color: var(--text2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-family: inherit; transition: all 0.12s; flex-shrink: 0; }
+.rte-btn:hover { background: var(--surface3); color: var(--text); }
+.rte-btn.active { background: rgba(220,38,38,0.15); border-color: rgba(220,38,38,0.3); color: var(--accent); }
+.rte-divider { width: 1px; height: 20px; background: var(--border2); margin: 0 2px; flex-shrink: 0; }
+.rte-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); font-size: 12px; font-family: 'DM Mono', monospace; padding: 2px 6px; cursor: pointer; height: 28px; }
+.rte-highlight-btn { width: 30px; height: 28px; border: 1px solid transparent; border-radius: 6px; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; flex-shrink: 0; }
+.rte-highlight-btn:hover { background: var(--surface3); }
+.rte-body { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 12px; min-height: 200px; outline: none; word-break: break-word; }
 .edit-note-btn { margin-top: 12px; width: 100%; padding: 11px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface2); color: var(--text2); font-family: inherit; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .save-btn { margin-top: 10px; width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: var(--radius); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .save-btn:active { opacity: 0.85; }
@@ -2109,7 +2119,7 @@ async function renderSongPage(idx) {
         const isMe = noteUser === (currentUser || 'me');
         return `<div style="margin-bottom:18px;">
           <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:'DM Mono',monospace;color:${isMe?'var(--accent)':'var(--text3)'};margin-bottom:6px;">${esc(noteUser)}${isMe?' (you)':''}</div>
-          <div class="note-display">${n.text ? esc(n.text) : '<span style="color:var(--text3);font-style:italic">No notes.</span>'}</div>
+          <div class="note-display">${n.text ? n.text : '<span style="color:var(--text3);font-style:italic">No notes.</span>'}</div>
         </div>`;
       }).join('<hr style="border:none;border-top:1px solid var(--border);margin:14px 0">');
     }
@@ -2491,9 +2501,47 @@ function buildNoteContent(text, idx) {
     </div>` : '';
 
   const textSection = editingNote
-    ? `<textarea class="note-edit-area" id="noteEditArea" placeholder="Add notes…">${esc(text)}</textarea>
-       <button class="save-btn" onclick="saveCurrentNote(${idx})">Save Notes</button>`
-    : `<div class="note-display${text?'':' empty'}">${text ? esc(text) : 'No notes yet.'}</div>
+    ? `<div>
+        <div class="rte-toolbar" id="rteToolbar">
+          <button class="rte-btn" onclick="rteCmd('bold')" title="Bold" id="rteB"><strong>B</strong></button>
+          <button class="rte-btn" onclick="rteCmd('italic')" title="Italic" id="rteI"><em>I</em></button>
+          <button class="rte-btn" onclick="rteCmd('underline')" title="Underline" id="rteU" style="text-decoration:underline;">U</button>
+          <div class="rte-divider"></div>
+          <button class="rte-highlight-btn" onclick="rteHighlight('#ffff00')" title="Yellow highlight" style="padding:0;">
+            <div style="width:18px;height:18px;background:#ffff00;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div>
+          </button>
+          <button class="rte-highlight-btn" onclick="rteHighlight('#ff9999')" title="Red highlight" style="padding:0;">
+            <div style="width:18px;height:18px;background:#ff9999;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div>
+          </button>
+          <button class="rte-highlight-btn" onclick="rteHighlight('#99ff99')" title="Green highlight" style="padding:0;">
+            <div style="width:18px;height:18px;background:#99ff99;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div>
+          </button>
+          <button class="rte-highlight-btn" onclick="rteHighlight('#99ccff')" title="Blue highlight" style="padding:0;">
+            <div style="width:18px;height:18px;background:#99ccff;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div>
+          </button>
+          <button class="rte-btn" onclick="rteHighlight('none')" title="Remove highlight" style="font-size:11px;">✕</button>
+          <div class="rte-divider"></div>
+          <select class="rte-select" onchange="rteFontSize(this.value)" title="Font size" id="rteFontSize">
+            <option value="12px">12</option>
+            <option value="14px" selected>14</option>
+            <option value="16px">16</option>
+            <option value="18px">18</option>
+            <option value="22px">22</option>
+            <option value="28px">28</option>
+          </select>
+          <div class="rte-divider"></div>
+          <button class="rte-btn" onclick="rteCmd('insertUnorderedList')" title="Bullet list" style="font-size:16px;">≡</button>
+          <button class="rte-btn" onclick="rteClearFormat()" title="Clear formatting" style="font-size:11px;">Aa</button>
+        </div>
+        <div class="rte-body" id="noteEditArea" contenteditable="true"
+          oninput="rteUpdateToolbar()"
+          onkeyup="rteUpdateToolbar()"
+          onmouseup="rteUpdateToolbar()"
+          onpaste="rtePaste(event)"
+          >${text ? text : ''}</div>
+        <button class="save-btn" onclick="saveCurrentNote(${idx})">Save Notes</button>
+       </div>`
+    : `<div class="note-display${text?'':' empty'}">${text ? text : 'No notes yet.'}</div>
        <button class="edit-note-btn" onclick="startEditNote(${idx})">
          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
          ${text ? 'Edit notes' : 'Add notes'}
@@ -2586,7 +2634,8 @@ async function switchNoteTab(tab, idx) { noteTab=tab; editingNote=false; await r
 function startEditNote(idx) { editingNote=true; renderSongPage(idx); }
 
 async function saveCurrentNote(idx) {
-  const text = document.getElementById('noteEditArea')?.value||'';
+  const el = document.getElementById('noteEditArea');
+  const text = el ? el.innerHTML : '';
   const s = currentSetSongs[idx]; if (!s) return;
   if (noteTab==='default') {
     const song=await dbGet('songs',s.id); song.notes=text; song.updatedAt=Date.now();
@@ -2595,6 +2644,55 @@ async function saveCurrentNote(idx) {
     await dbPut('notes',{id:`${currentUser||'me'}_${s.id}`,text,updatedAt:Date.now()});
   }
   editingNote=false; await renderSongPage(idx); showToast('Saved','ok');
+}
+
+// ── RICH TEXT EDITOR ──
+function rteCmd(cmd) {
+  document.execCommand(cmd, false, null);
+  document.getElementById('noteEditArea')?.focus();
+  rteUpdateToolbar();
+}
+
+function rteHighlight(color) {
+  if (color === 'none') {
+    document.execCommand('removeFormat', false, null);
+  } else {
+    document.execCommand('hiliteColor', false, color);
+  }
+  document.getElementById('noteEditArea')?.focus();
+}
+
+function rteFontSize(size) {
+  // wrap selection in a span with font-size
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) return;
+  const span = document.createElement('span');
+  span.style.fontSize = size;
+  range.surroundContents(span);
+  document.getElementById('noteEditArea')?.focus();
+}
+
+function rteClearFormat() {
+  document.execCommand('removeFormat', false, null);
+  document.getElementById('noteEditArea')?.focus();
+}
+
+function rteUpdateToolbar() {
+  const boldBtn = document.getElementById('rteB');
+  const italicBtn = document.getElementById('rteI');
+  const underlineBtn = document.getElementById('rteU');
+  if (boldBtn) boldBtn.classList.toggle('active', document.queryCommandState('bold'));
+  if (italicBtn) italicBtn.classList.toggle('active', document.queryCommandState('italic'));
+  if (underlineBtn) underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
+}
+
+function rtePaste(e) {
+  // paste as plain text to avoid bringing in external styles
+  e.preventDefault();
+  const text = e.clipboardData?.getData('text/plain') || '';
+  document.execCommand('insertText', false, text);
 }
 
 // ── PDF ATTACHMENTS ──
@@ -5164,7 +5262,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.1 · 2026-03-16 18:17</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.2 · 2026-03-16 20:19</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
