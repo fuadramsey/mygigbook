@@ -300,7 +300,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .audio-progress-wrap { position: relative; height: 4px; background: var(--surface3); border-radius: 2px; cursor: pointer; }
 .audio-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; pointer-events: none; transition: width 0.1s linear; }
 .audio-loop-region { position: absolute; top: 0; height: 100%; background: rgba(232,255,71,0.35); pointer-events: none; border-radius: 2px; }
-.audio-loop-marker { position: absolute; top: -4px; width: 3px; height: 12px; border-radius: 2px; pointer-events: none; }
+.audio-loop-marker { position: absolute; top: -8px; width: 4px; height: 20px; border-radius: 2px; cursor: ew-resize; touch-action: none; z-index: 10; }
+.audio-loop-marker::after { content: ''; position: absolute; top: 0; left: -8px; right: -8px; bottom: 0; } /* expand hit area */
 .audio-loop-marker.start { background: var(--accent); }
 .audio-loop-marker.end { background: #ff9900; }
 .loop-controls { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
@@ -2926,6 +2927,11 @@ function clearLoop() {
   _loopEnd   = null;
   _loopActive = false;
   stopLoopCheck();
+  // reset drag flags so they re-attach after next render
+  const mStart = document.getElementById('audioLoopMarkerStart');
+  const mEnd   = document.getElementById('audioLoopMarkerEnd');
+  if (mStart) mStart._dragAttached = false;
+  if (mEnd)   mEnd._dragAttached   = false;
   updateLoopUI();
   const btn = document.getElementById('loopToggleBtn');
   if (btn) btn.classList.remove('active');
@@ -2969,11 +2975,63 @@ function updateLoopUI() {
   if (mStart) {
     mStart.style.display = _loopStart !== null ? 'block' : 'none';
     if (_loopStart !== null) mStart.style.left = (_loopStart / dur * 100).toFixed(2) + '%';
+    attachMarkerDrag(mStart, 'start');
   }
   if (mEnd) {
     mEnd.style.display = _loopEnd !== null ? 'block' : 'none';
     if (_loopEnd !== null) mEnd.style.left = (_loopEnd / dur * 100).toFixed(2) + '%';
+    attachMarkerDrag(mEnd, 'end');
   }
+}
+
+function attachMarkerDrag(marker, type) {
+  // avoid re-attaching
+  if (marker._dragAttached) return;
+  marker._dragAttached = true;
+
+  function getPctFromEvent(e) {
+    const wrap = document.getElementById('audioProgressWrap');
+    if (!wrap) return null;
+    const rect = wrap.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return pct;
+  }
+
+  function onMove(e) {
+    e.preventDefault();
+    const pct = getPctFromEvent(e);
+    if (pct === null || !_audioEl?.duration) return;
+    const t = pct * _audioEl.duration;
+    if (type === 'start') {
+      _loopStart = Math.min(t, _loopEnd !== null ? _loopEnd - 0.1 : t);
+    } else {
+      _loopEnd = Math.max(t, _loopStart !== null ? _loopStart + 0.1 : t);
+    }
+    updateLoopUI();
+  }
+
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onUp);
+    // show toast with updated time
+    const t = type === 'start' ? _loopStart : _loopEnd;
+    if (t !== null) showToast(`Loop ${type} → ${fmtAudioTime(t)}`);
+  }
+
+  marker.addEventListener('mousedown', e => {
+    e.stopPropagation(); // prevent seek
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  marker.addEventListener('touchstart', e => {
+    e.stopPropagation();
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+  }, { passive: true });
 }
 
 function toggleAudio(audioKey, idx) {
@@ -5580,7 +5638,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:35</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:41</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
