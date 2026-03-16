@@ -1349,7 +1349,6 @@ async function manualSync() {
   if (!online) { showToast('No internet connection', 'err'); return; }
   if (syncInProgress) return;
   if (!fbReady) {
-    // wait up to 10 seconds for Firebase to initialize
     showToast('Connecting to cloud…');
     let waited = 0;
     await new Promise(resolve => {
@@ -1363,18 +1362,58 @@ async function manualSync() {
   syncInProgress = true;
   updateSyncUI();
   try {
-    await fbPullAll();   // pull remote changes first
-    await fbPushAll();   // then push our local state
+    await fbPullAll();              // pull remote first
+    await deduplicateLocalDB();     // clean local dupes after pull
+    await cleanFirestoreDupes();    // clean Firestore dupes
+    await fbPushAll();              // push clean local state up
     await renderAll();
     lastSyncTime = Date.now();
     localStorage.setItem('mgb_last_sync', lastSyncTime);
     showToast('Synced with cloud', 'ok');
   } catch(e) {
+    console.warn('Sync error:', e);
     showToast('Sync failed — check connection', 'err');
   } finally {
     syncInProgress = false;
     updateSyncUI();
   }
+}
+
+// Remove duplicate docs from Firestore — keeps most recently updated
+async function cleanFirestoreDupes() {
+  if (!fbReady || !online) return;
+  const fb = window._fb;
+  if (!fb) return;
+  try {
+    const dedupe = async (collName, keyFn) => {
+      const snap = await fb.getDocs(fb.collection(fb.db, collName));
+      const seen = {};
+      const toDelete = [];
+      for (const d of snap.docs) {
+        const data = d.data();
+        const key = keyFn(data);
+        if (!key) continue;
+        if (seen[key]) {
+          // keep newer, delete older
+          if ((data.updatedAt||0) > (seen[key].updatedAt||0)) {
+            toDelete.push(seen[key].docId);
+            seen[key] = { ...data, docId: d.id };
+          } else {
+            toDelete.push(d.id);
+          }
+        } else {
+          seen[key] = { ...data, docId: d.id };
+        }
+      }
+      if (toDelete.length) {
+        const batch = fb.writeBatch(fb.db);
+        toDelete.forEach(id => batch.delete(fb.doc(fb.collection(fb.db, collName), id)));
+        await batch.commit();
+      }
+    };
+    await dedupe('songs', d => ((d.title||'').toLowerCase().trim() + '|' + (d.artist||'').toLowerCase().trim()));
+    await dedupe('setlists', d => (d.name||'').toLowerCase().trim());
+  } catch(e) { console.warn('Firestore dedup error:', e); }
 }
 
 // cross-tab BroadcastChannel
