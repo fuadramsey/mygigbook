@@ -2183,7 +2183,7 @@ function buildListenContent(s) {
 
   const spotifyCard = spotify
     ? `<div style="display:flex;align-items:center;gap:0;margin-bottom:10px;">
-        <a href="${esc(spotify)}" class="listen-platform-card" style="flex:1;margin-bottom:0;border-radius:var(--radius) 0 0 var(--radius);">
+        <a href="${esc(spotify)}" class="listen-platform-card" target="_blank" rel="noopener" style="flex:1;margin-bottom:0;border-radius:var(--radius) 0 0 var(--radius);">
           <div class="listen-platform-logo" style="background:#1DB954;">
             <svg viewBox="0 0 24 24" fill="white" style="width:20px;height:20px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg>
           </div>
@@ -2197,7 +2197,7 @@ function buildListenContent(s) {
         </button>
       </div>`
     : `<div style="margin-bottom:10px;">
-        <a href="${spotifySearch}" class="listen-search-btn">
+        <a href="${spotifySearch}" class="listen-search-btn" target="_blank" rel="noopener">
           <div style="width:28px;height:28px;background:#1DB954;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg viewBox="0 0 24 24" fill="white" style="width:16px;height:16px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg>
           </div>
@@ -2209,7 +2209,7 @@ function buildListenContent(s) {
 
   const youtubeCard = youtube
     ? `<div style="display:flex;align-items:center;gap:0;margin-bottom:10px;">
-        <a href="${esc(youtube)}" class="listen-platform-card" style="flex:1;margin-bottom:0;border-radius:var(--radius) 0 0 var(--radius);">
+        <a href="${esc(youtube)}" class="listen-platform-card" target="_blank" rel="noopener" style="flex:1;margin-bottom:0;border-radius:var(--radius) 0 0 var(--radius);">
           <div class="listen-platform-logo" style="background:#FF0000;">
             <svg viewBox="0 0 24 24" fill="white" style="width:20px;height:20px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
           </div>
@@ -2223,7 +2223,7 @@ function buildListenContent(s) {
         </button>
       </div>`
     : `<div style="margin-bottom:10px;">
-        <a href="${youtubeSearch}" class="listen-search-btn">
+        <a href="${youtubeSearch}" class="listen-search-btn" target="_blank" rel="noopener">
           <div style="width:28px;height:28px;background:#FF0000;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg viewBox="0 0 24 24" fill="white" style="width:16px;height:16px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
           </div>
@@ -2878,8 +2878,8 @@ async function renderDB() {
         </div>
       </div>
       ${!editingSongs ? `<div class="db-song-actions">
-        ${s.spotifyUrl?`<a href="${esc(s.spotifyUrl)}" title="Open Spotify" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#1DB954;border-radius:6px;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:14px;height:14px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg></a>`:''}
-        ${s.youtubeUrl?`<a href="${esc(s.youtubeUrl)}" title="Open YouTube" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#FF0000;border-radius:6px;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:14px;height:14px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>`:''}
+        ${s.spotifyUrl?`<a href="${esc(s.spotifyUrl)}" title="Open Spotify" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#1DB954;border-radius:6px;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:14px;height:14px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg></a>`:''}
+        ${s.youtubeUrl?`<a href="${esc(s.youtubeUrl)}" title="Open YouTube" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#FF0000;border-radius:6px;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:14px;height:14px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>`:''}
         <div id="audioind_${s.id}" style="display:none;width:28px;height:28px;background:var(--surface3);border-radius:6px;align-items:center;justify-content:center;flex-shrink:0;" title="Audio attached">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--accent);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         </div>
@@ -3029,9 +3029,7 @@ function openModalPlatformSearch(platform) {
   const url = platform === 'spotify'
     ? `https://open.spotify.com/search/${query}`
     : `https://www.youtube.com/results?search_query=${query}`;
-  const a = document.createElement('a');
-  a.href = url;
-  a.click();
+  window.open(url, '_blank', 'noopener');
 }
 
 function modalAttachAudio() { document.getElementById('fAudioInput').click(); }
