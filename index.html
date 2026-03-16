@@ -299,6 +299,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .audio-time { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; }
 .audio-progress-wrap { position: relative; height: 4px; background: var(--surface3); border-radius: 2px; cursor: pointer; }
 .audio-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; pointer-events: none; transition: width 0.1s linear; }
+.audio-loop-region { position: absolute; top: 0; height: 100%; background: rgba(232,255,71,0.35); pointer-events: none; border-radius: 2px; }
+.audio-loop-marker { position: absolute; top: -4px; width: 3px; height: 12px; border-radius: 2px; pointer-events: none; }
+.audio-loop-marker.start { background: var(--accent); }
+.audio-loop-marker.end { background: #ff9900; }
+.loop-controls { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.loop-btn { height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 11px; font-family: 'DM Mono', monospace; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: all 0.15s; }
+.loop-btn:hover { border-color: var(--accent); color: var(--text); }
+.loop-btn.active { background: rgba(232,255,71,0.12); border-color: rgba(232,255,71,0.5); color: var(--accent); }
+.loop-btn.set-start { border-color: rgba(232,255,71,0.4); }
+.loop-btn.set-end { border-color: rgba(255,153,0,0.4); color: #ff9900; }
+.loop-time-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); }
 .audio-upload-zone { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.15s; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .audio-upload-zone:hover { border-color: var(--accent); }
 .audio-compact { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 12px; }
@@ -2260,6 +2271,30 @@ function buildAudioSection(s) {
       </div>
       <div class="audio-progress-wrap" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
         <div class="audio-progress-fill" id="audioProgressFill"></div>
+        <div class="audio-loop-region" id="audioLoopRegion" style="display:none;left:0%;width:0%;"></div>
+        <div class="audio-loop-marker start" id="audioLoopMarkerStart" style="display:none;left:0%;"></div>
+        <div class="audio-loop-marker end" id="audioLoopMarkerEnd" style="display:none;left:0%;"></div>
+      </div>
+      <div class="loop-controls">
+        <button class="loop-btn set-start" onclick="setLoopStart()" title="Set loop start to current position">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><line x1="5" y1="4" x2="5" y2="20"/><polyline points="5,4 15,12 5,20"/></svg>
+          Set Start
+        </button>
+        <span class="loop-time-label" id="loopStartLabel">—</span>
+        <button class="loop-btn set-end" onclick="setLoopEnd()" title="Set loop end to current position" style="border-color:rgba(255,153,0,0.4);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;color:#ff9900;"><line x1="19" y1="4" x2="19" y2="20"/><polyline points="19,4 9,12 19,20"/></svg>
+          Set End
+        </button>
+        <span class="loop-time-label" id="loopEndLabel">—</span>
+        <div style="flex:1;"></div>
+        <button class="loop-btn" id="loopToggleBtn" onclick="toggleLoop()" title="Toggle loop">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+          Loop
+        </button>
+        <button class="loop-btn" onclick="clearLoop()" title="Clear loop markers" style="color:var(--red);border-color:rgba(255,68,68,0.3);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          Clear
+        </button>
       </div>
     </div>`;
   }
@@ -2841,6 +2876,106 @@ function getOrCreateAudio(audioKey) {
   return audio;
 }
 
+// ── AUDIO LOOP ──
+let _loopStart = null;   // seconds
+let _loopEnd   = null;   // seconds
+let _loopActive = false;
+let _loopCheckInterval = null;
+
+function setLoopStart() {
+  if (!_audioEl) return;
+  _loopStart = _audioEl.currentTime;
+  // if end is before new start, clear end
+  if (_loopEnd !== null && _loopEnd <= _loopStart) { _loopEnd = null; }
+  updateLoopUI();
+  showToast('Loop start set — ' + fmtAudioTime(_loopStart));
+}
+
+function setLoopEnd() {
+  if (!_audioEl) return;
+  _loopEnd = _audioEl.currentTime;
+  // if start is after new end, clear start
+  if (_loopStart !== null && _loopStart >= _loopEnd) { _loopStart = null; }
+  updateLoopUI();
+  showToast('Loop end set — ' + fmtAudioTime(_loopEnd));
+}
+
+function toggleLoop() {
+  if (_loopStart === null || _loopEnd === null) {
+    showToast('Set both start and end markers first', 'err');
+    return;
+  }
+  _loopActive = !_loopActive;
+  const btn = document.getElementById('loopToggleBtn');
+  if (btn) btn.classList.toggle('active', _loopActive);
+  if (_loopActive) {
+    // jump to start of loop when activating
+    if (_audioEl && (_audioEl.currentTime < _loopStart || _audioEl.currentTime >= _loopEnd)) {
+      _audioEl.currentTime = _loopStart;
+    }
+    startLoopCheck();
+    showToast('Loop on');
+  } else {
+    stopLoopCheck();
+    showToast('Loop off');
+  }
+}
+
+function clearLoop() {
+  _loopStart = null;
+  _loopEnd   = null;
+  _loopActive = false;
+  stopLoopCheck();
+  updateLoopUI();
+  const btn = document.getElementById('loopToggleBtn');
+  if (btn) btn.classList.remove('active');
+}
+
+function startLoopCheck() {
+  stopLoopCheck();
+  _loopCheckInterval = setInterval(() => {
+    if (!_loopActive || !_audioEl || _loopStart === null || _loopEnd === null) return;
+    if (_audioEl.currentTime >= _loopEnd) {
+      _audioEl.currentTime = _loopStart;
+    }
+  }, 50);
+}
+
+function stopLoopCheck() {
+  if (_loopCheckInterval) { clearInterval(_loopCheckInterval); _loopCheckInterval = null; }
+}
+
+function updateLoopUI() {
+  const dur = _audioEl?.duration || 0;
+  // labels
+  const startLbl = document.getElementById('loopStartLabel');
+  const endLbl   = document.getElementById('loopEndLabel');
+  if (startLbl) startLbl.textContent = _loopStart !== null ? fmtAudioTime(_loopStart) : '—';
+  if (endLbl)   endLbl.textContent   = _loopEnd   !== null ? fmtAudioTime(_loopEnd)   : '—';
+  if (!dur) return;
+  // region highlight
+  const region = document.getElementById('audioLoopRegion');
+  const mStart = document.getElementById('audioLoopMarkerStart');
+  const mEnd   = document.getElementById('audioLoopMarkerEnd');
+  if (_loopStart !== null && _loopEnd !== null && region) {
+    const left  = (_loopStart / dur * 100).toFixed(2) + '%';
+    const width = ((_loopEnd - _loopStart) / dur * 100).toFixed(2) + '%';
+    region.style.left    = left;
+    region.style.width   = width;
+    region.style.display = 'block';
+  } else if (region) {
+    region.style.display = 'none';
+  }
+  if (mStart) {
+    mStart.style.display = _loopStart !== null ? 'block' : 'none';
+    if (_loopStart !== null) mStart.style.left = (_loopStart / dur * 100).toFixed(2) + '%';
+  }
+  if (mEnd) {
+    mEnd.style.display = _loopEnd !== null ? 'block' : 'none';
+    if (_loopEnd !== null) mEnd.style.left = (_loopEnd / dur * 100).toFixed(2) + '%';
+  }
+}
+
 function toggleAudio(audioKey, idx) {
   const audio = getOrCreateAudio(audioKey);
   if (!audio) return;
@@ -2855,6 +2990,10 @@ function toggleAudio(audioKey, idx) {
 
 function stopAudio() {
   if (_audioEl) { _audioEl.pause(); _audioEl.currentTime = 0; updateAudioPlayIcons(false); }
+  stopLoopCheck();
+  _loopActive = false;
+  const btn = document.getElementById('loopToggleBtn');
+  if (btn) btn.classList.remove('active');
 }
 
 function updateAudioPlayIcons(playing) {
@@ -2893,6 +3032,8 @@ function updateAudioUI() {
   const cp = document.getElementById('audioCompactFill');
   if (ct) ct.textContent = timeStr;
   if (cp) cp.style.width = pct;
+  // loop markers
+  updateLoopUI();
 }
 
 function seekAudio(e, audioKey) {
@@ -5439,7 +5580,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:16</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.3 · 2026-03-16 21:35</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
