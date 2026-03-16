@@ -1194,6 +1194,11 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
           <span class="settings-row-label">Manage Users</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
         </button>
+        <button class="settings-row" onclick="closeSettings();openBackup()">
+          <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/><path d="M3 7h3a2 2 0 002-2V2"/></svg></div>
+          <span class="settings-row-label">Backup & Restore</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
       </div>
 
       <div class="settings-section-label" style="margin-top:8px">Data</div>
@@ -4481,6 +4486,169 @@ function downloadImportTemplate() {
   }
 }
 
+// ── BACKUP & RESTORE ──
+async function openBackup() {
+  // populate group options
+  const groups = await dbAll('groups');
+  const mine = groups.filter(g => g.createdBy === currentUser);
+  const el = document.getElementById('backupGroupOptions');
+  el.innerHTML = mine.map(g => `
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+      <input type="radio" name="backupScope" value="group_${g.id}" style="accent-color:var(--accent);">
+      <div>
+        <div style="font-size:13px;font-weight:600;">${esc(g.name)}</div>
+        <div style="font-size:11px;color:var(--text3);">Songs and setlists in this group</div>
+      </div>
+    </label>`).join('');
+  document.getElementById('backupProgress').style.display = 'none';
+  document.getElementById('restoreStatus').innerHTML = '';
+  document.getElementById('backupModal').classList.remove('hidden');
+}
+function closeBackup() { document.getElementById('backupModal').classList.add('hidden'); }
+
+async function createBackup() {
+  const scopeEl = document.querySelector('input[name="backupScope"]:checked');
+  const scope = scopeEl ? scopeEl.value : 'all';
+  const includeMedia = document.getElementById('backupIncludeMedia').checked;
+  const prog = document.getElementById('backupProgress');
+  prog.style.display = 'block';
+  prog.textContent = 'Gathering data…';
+
+  try {
+    let songs = await dbAll('songs');
+    let sets  = await dbAll('setlists');
+    let groups = await dbAll('groups');
+
+    if (scope.startsWith('group_')) {
+      const groupId = scope.replace('group_', '');
+      songs  = songs.filter(s => (s.groupIds||[]).includes(groupId));
+      sets   = sets.filter(s => (s.groupIds||[]).includes(groupId));
+      groups = groups.filter(g => g.id === groupId);
+    }
+
+    const bundle = {
+      version: '1.0',
+      app: 'MyGigBook',
+      exportedAt: new Date().toISOString(),
+      scope,
+      songs,
+      setlists: sets,
+      groups,
+      media: {}
+    };
+
+    if (includeMedia) {
+      prog.textContent = 'Packing media files…';
+      const songIds = songs.map(s => s.id);
+      // PDFs
+      const allPdfs = await dbAll('pdfs');
+      for (const entry of allPdfs) {
+        const songId = entry.id.replace(/^(default_|[^_]+_)/, '');
+        if (songIds.includes(songId) || songIds.some(id => entry.id.includes(id))) {
+          const arr = Array.from(new Uint8Array(entry.data));
+          bundle.media[entry.id] = { type: 'pdf', name: entry.name, mimeType: 'application/pdf', data: btoa(String.fromCharCode(...arr)), updatedAt: entry.updatedAt };
+        }
+      }
+      // Images
+      const allImgs = await dbAll('images');
+      for (const entry of allImgs) {
+        if (songIds.some(id => entry.id.includes(id))) {
+          const arr = Array.from(new Uint8Array(entry.data));
+          bundle.media[entry.id] = { type: 'image', name: entry.name, mimeType: entry.mimeType, data: btoa(String.fromCharCode(...arr)), updatedAt: entry.updatedAt };
+        }
+      }
+      // Audio
+      const allAudio = await dbAll('audio');
+      for (const entry of allAudio) {
+        const songId = entry.id.replace('audio_', '');
+        if (songIds.includes(songId)) {
+          const arr = Array.from(new Uint8Array(entry.data));
+          bundle.media[entry.id] = { type: 'audio', name: entry.name, mimeType: entry.mimeType, data: btoa(String.fromCharCode(...arr)), updatedAt: entry.updatedAt };
+        }
+      }
+    }
+
+    prog.textContent = 'Creating file…';
+    const json = JSON.stringify(bundle);
+    const date = new Date().toISOString().slice(0,10);
+    const scopeName = scope === 'all' ? 'full' : scope.startsWith('group_') ? 'group' : scope;
+    const filename = `MyGigBook-backup-${scopeName}-${date}.mgb`;
+
+    try {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      prog.textContent = `✓ Backup saved: ${filename}`;
+    } catch(e) {
+      // fallback for blocked downloads
+      prog.innerHTML = `Backup ready — copy and save as <strong>${filename}</strong>:<br><textarea style="width:100%;height:80px;font-size:10px;font-family:monospace;margin-top:6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px;color:var(--text);" readonly>${json.substring(0,500)}…</textarea>`;
+    }
+  } catch(e) {
+    prog.textContent = '✗ Backup failed: ' + e.message;
+  }
+}
+
+function handleBackupDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) processBackupFile(file);
+}
+function handleBackupFile(e) {
+  const file = e.target.files[0];
+  if (file) processBackupFile(file);
+}
+
+async function processBackupFile(file) {
+  const status = document.getElementById('restoreStatus');
+  status.textContent = 'Reading backup file…';
+  try {
+    const text = await file.text();
+    const bundle = JSON.parse(text);
+    if (bundle.app !== 'MyGigBook' || !bundle.songs) {
+      status.textContent = '✗ Invalid backup file.'; return;
+    }
+    const mode = document.querySelector('input[name="restoreMode"]:checked')?.value || 'merge';
+    status.textContent = `Restoring ${bundle.songs.length} songs, ${bundle.setlists?.length||0} setlists…`;
+
+    if (mode === 'replace') {
+      // clear existing
+      const existing = await Promise.all([dbAll('songs'), dbAll('setlists'), dbAll('groups')]);
+      for (const s of existing[0]) await dbDel('songs', s.id);
+      for (const s of existing[1]) await dbDel('setlists', s.id);
+      for (const g of existing[2]) if (g.id !== 'admin') await dbDel('groups', g.id);
+    }
+
+    // restore songs, setlists, groups
+    for (const s of bundle.songs||[]) await dbPut('songs', s);
+    for (const s of bundle.setlists||[]) await dbPut('setlists', s);
+    for (const g of bundle.groups||[]) await dbPut('groups', g);
+
+    // restore media
+    const mediaEntries = Object.entries(bundle.media||{});
+    if (mediaEntries.length) {
+      status.textContent = `Restoring ${mediaEntries.length} media files…`;
+      for (const [id, entry] of mediaEntries) {
+        const binary = atob(entry.data);
+        const arr = new Uint8Array(binary.length);
+        for (let i=0; i<binary.length; i++) arr[i] = binary.charCodeAt(i);
+        const store = entry.type === 'pdf' ? 'pdfs' : entry.type === 'audio' ? 'audio' : 'images';
+        await dbPut(store, { id, name: entry.name, data: arr.buffer, mimeType: entry.mimeType, updatedAt: entry.updatedAt });
+      }
+    }
+
+    await renderAll();
+    await syncOut();
+    status.textContent = `✓ Restored successfully! ${bundle.songs.length} songs, ${bundle.setlists?.length||0} setlists${mediaEntries.length ? `, ${mediaEntries.length} media files` : ''}.`;
+    showToast('Backup restored', 'ok');
+  } catch(e) {
+    status.textContent = '✗ Restore failed: ' + e.message;
+  }
+}
+
 function openImport() {
   importParsedSongs = [];
   document.getElementById('importFileInput').value = '';
@@ -4839,6 +5007,89 @@ init().catch(console.error);
     <div class="modal-footer">
       <button class="btn ghost" onclick="closeImport()">Cancel</button>
       <button class="btn primary" id="importConfirmBtn" onclick="confirmImport()" style="display:none;">Import Songs</button>
+    </div>
+  </div>
+</div>
+
+<!-- BACKUP & RESTORE MODAL -->
+<div class="modal-overlay hidden" id="backupModal" onclick="if(event.target===this)closeBackup()">
+  <div class="modal-sheet" style="max-height:85vh;">
+    <div class="modal-header">
+      <span class="modal-title">Backup & Restore</span>
+      <div class="modal-close" onclick="closeBackup()">✕</div>
+    </div>
+    <div class="modal-body" style="padding:16px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;">
+
+      <!-- BACKUP SECTION -->
+      <div>
+        <div class="settings-section-label">Create Backup</div>
+        <div style="font-size:13px;color:var(--text2);margin:8px 0 12px;line-height:1.5;">Creates a <code style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:4px;">.mgb</code> file containing songs, setlists and groups. Restore it anytime to recover your data.</div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <!-- Scope -->
+          <div style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;">Scope</div>
+          <div style="display:flex;flex-direction:column;gap:6px;" id="backupScopeList">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+              <input type="radio" name="backupScope" value="all" checked style="accent-color:var(--accent);">
+              <div>
+                <div style="font-size:13px;font-weight:600;">Entire Database</div>
+                <div style="font-size:11px;color:var(--text3);">All songs, setlists and groups</div>
+              </div>
+            </label>
+            <div id="backupGroupOptions"></div>
+          </div>
+
+          <!-- Media option -->
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);margin-top:4px;">
+            <input type="checkbox" id="backupIncludeMedia" style="accent-color:var(--accent);width:16px;height:16px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;">Include media files</div>
+              <div style="font-size:11px;color:var(--text3);">PDFs, images and audio files (may create a large file)</div>
+            </div>
+          </label>
+
+          <button class="btn primary" onclick="createBackup()" style="width:100%;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Backup
+          </button>
+          <div id="backupProgress" style="display:none;font-size:12px;color:var(--text3);text-align:center;font-family:'DM Mono',monospace;"></div>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:0;">
+
+      <!-- RESTORE SECTION -->
+      <div>
+        <div class="settings-section-label">Restore from Backup</div>
+        <div style="font-size:13px;color:var(--text2);margin:8px 0 12px;line-height:1.5;">Upload a <code style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:4px;">.mgb</code> backup file to restore songs, setlists and groups.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+            <input type="radio" name="restoreMode" value="merge" checked style="accent-color:var(--accent);">
+            <div>
+              <div style="font-size:13px;font-weight:600;">Merge</div>
+              <div style="font-size:11px;color:var(--text3);">Add backup data alongside existing data</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--radius);border:1px solid var(--border);">
+            <input type="radio" name="restoreMode" value="replace" style="accent-color:var(--accent);">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--red);">Replace All</div>
+              <div style="font-size:11px;color:var(--text3);">Delete everything and restore from backup</div>
+            </div>
+          </label>
+        </div>
+        <div style="border:2px dashed var(--border2);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;transition:border-color 0.15s;margin-top:12px;"
+          onclick="document.getElementById('backupFileInput').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="handleBackupDrop(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--text3);margin-bottom:8px;display:block;margin-left:auto;margin-right:auto;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="17"/></svg>
+          <div style="font-size:14px;color:var(--text2);">Click to choose a .mgb file</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px;">or drag and drop here</div>
+          <input type="file" id="backupFileInput" accept=".mgb,application/json" style="display:none" onchange="handleBackupFile(event)">
+        </div>
+        <div id="restoreStatus" style="margin-top:8px;font-size:12px;color:var(--text3);text-align:center;font-family:'DM Mono',monospace;"></div>
+      </div>
     </div>
   </div>
 </div>
