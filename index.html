@@ -205,6 +205,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* SETLISTS */
 .set-list-item { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
 .set-list-item:active { background: var(--surface2); }
+/* ── MULTI-SELECT ── */
+.select-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border2); background: var(--surface2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all 0.15s; }
+.select-checkbox.checked { background: var(--accent); border-color: var(--accent); }
+.select-checkbox.checked svg { display: block; }
+.select-checkbox svg { display: none; width: 13px; height: 13px; stroke: #000; stroke-width: 3; }
+.bulk-action-bar { position: fixed; bottom: calc(var(--nav-h) + 8px); left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border2); border-radius: 40px; padding: 8px 8px 8px 16px; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 24px rgba(0,0,0,0.3); z-index: 50; white-space: nowrap; }
+.bulk-action-bar .count { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--text2); }
 .set-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .set-icon svg { width: 20px; height: 20px; color: var(--accent); opacity: 0.8; }
 .set-item-info { flex: 1; min-width: 0; }
@@ -267,9 +274,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .save-btn { margin-top: 10px; width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: var(--radius); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .save-btn:active { opacity: 0.85; }
 .pdf-viewer { width: 100%; flex: 1; border: none; border-radius: var(--radius); min-height: 500px; background: var(--surface2); }
-.pdf-upload-zone { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 32px 24px; text-align: center; cursor: pointer; transition: border-color 0.15s; }
+.pdf-upload-zone { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 20px 12px; text-align: center; cursor: pointer; transition: border-color 0.15s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 .pdf-upload-zone:hover { border-color: var(--accent); }
-.pdf-upload-zone svg { width: 36px; height: 36px; color: var(--text3); margin-bottom: 10px; }
+.pdf-upload-zone svg { width: 28px; height: 28px; color: var(--text3); }
 .pdf-bar { display: flex; align-items: center; gap: 10px; padding: 10px 0 12px; }
 /* ── AUDIO PLAYER ── */
 .audio-player { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -751,6 +758,9 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <span id="groupFilterLabelDb">All</span>
       </button>
       <span style="flex:1;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;padding-left:8px;letter-spacing:2px">DATABASE</span>
+      <button class="top-action" id="editSongsBtn" onclick="toggleEditSongs()" title="Edit songs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
     </div>
     <div class="songs-toolbar">
       <div class="search-wrap">
@@ -854,7 +864,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <div class="form-group"><label class="form-label">Key</label>
           <select class="form-input" id="fKey"><option value="">—</option><option>A</option><option>A#/Bb</option><option>B</option><option>C</option><option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option><option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option></select>
         </div>
-        <div class="form-group"><label class="form-label">BPM</label><input class="form-input" id="fBpm" type="number" placeholder="120"></div>
+        <div class="form-group"><label class="form-label">BPM</label><input class="form-input" id="fBpm" type="number" placeholder=""></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Duration</label><input class="form-input" id="fDuration" placeholder="3:30"></div>
@@ -888,9 +898,28 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <div id="fAudioStatus" style="margin-bottom:8px;"></div>
       <button type="button" class="edit-note-btn" onclick="modalAttachAudio()" style="margin-top:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        Attach audio file
+        Attach audio file <span style="font-size:11px;color:var(--text3);margin-left:4px;">Max 10 MB</span>
       </button>
       <input type="file" id="fAudioInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleModalAudioFile(event)">
+
+      <div class="settings-section-label" style="margin-top:12px;margin-bottom:8px;">Attachments</div>
+      <div id="fPdfStatus" style="margin-bottom:8px;"></div>
+      <div id="fImgStatus" style="margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;">
+        <div class="pdf-upload-zone" style="flex:1;" onclick="document.getElementById('fPdfInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Attach PDF</div>
+          <div style="font-size:11px;color:var(--text3);">Max 10 MB</div>
+        </div>
+        <div class="pdf-upload-zone" style="flex:1;" onclick="document.getElementById('fImgInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Attach Image</div>
+          <div style="font-size:11px;color:var(--text3);">Max 10 MB</div>
+        </div>
+      </div>
+      <input type="file" id="fPdfInput" accept="application/pdf,.pdf" style="display:none" onchange="handleModalPdfFile(event)">
+      <input type="file" id="fImgInput" accept="image/*" multiple style="display:none" onchange="handleModalImgFile(event)">
+      <div id="fImgGrid" style="margin-top:8px;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn ghost" onclick="closeSongModal()">Cancel</button>
@@ -983,6 +1012,23 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <div class="modal-footer">
       <button class="btn ghost" onclick="closeConfirmDeleteSong()">Cancel</button>
       <button class="btn danger" onclick="confirmDeleteSong()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK DELETE CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="bulkDeleteModal">
+  <div class="modal-sheet" style="max-height:auto;">
+    <div class="modal-header">
+      <span class="modal-title" id="bulkDeleteTitle">Delete Items</span>
+      <div class="modal-close" onclick="closeBulkDeleteModal()">✕</div>
+    </div>
+    <div class="modal-body" style="padding:16px 16px 4px;">
+      <p style="color:var(--text2);font-size:15px;line-height:1.5;" id="bulkDeleteMsg"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" onclick="closeBulkDeleteModal()">Cancel</button>
+      <button class="btn danger" id="bulkDeleteConfirmBtn" onclick="executeBulkDelete()">Delete</button>
     </div>
   </div>
 </div>
@@ -1345,6 +1391,9 @@ if(bc) bc.onmessage = async e => {
 let currentUser = '';
 let currentIsAdmin = false;
 let editingSets = false;
+let selectedSetIds = new Set();
+let selectedSongIds = new Set();
+let editingSongs = false;
 let currentSetId = null;
 let currentSetSongs = [];
 let noteTab = 'default';
@@ -1357,6 +1406,7 @@ function showPage(id) {
   // reset edit modes on the page being pushed behind
   const current = pageStack.length ? pageStack[pageStack.length-1] : null;
   if (current === 'pg-setlists' && editingSets) exitEditSets();
+  if (current === 'pg-db' && editingSongs) exitEditSongs();
   if (current === 'pg-song' && editingNote) {
     editingNote = false;
   }
@@ -1388,14 +1438,17 @@ function goBack() {
 function exitEditSets() {
   if (!editingSets) return;
   editingSets = false;
+  selectedSetIds.clear();
   const btn = document.getElementById('editSetsBtn');
   if (btn) btn.style.color = '';
+  removeBulkBar('sets');
   renderSetsList();
 }
 
 function navTo(tab) {
   // always exit edit mode when navigating away from setlists
   if (editingSets) exitEditSets();
+  if (editingSongs) exitEditSongs();
   // bottom nav
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   const nb = document.getElementById('nav-'+tab);
@@ -1422,31 +1475,31 @@ function navTo(tab) {
 // ── SETLISTS ──
 async function renderSetsList() {
   let sets = await dbAll('setlists');
-  // show: sets user created, plus legacy sets (no createdBy)
   sets = sets.filter(s => !s.createdBy || s.createdBy === currentUser);
-  // if a group filter is active, narrow to only sets assigned to that group
   if (activeGroupFilter) sets = sets.filter(s => (s.groupIds||[]).includes(activeGroupFilter));
   sets.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   const el = document.getElementById('setsList');
   const emp = document.getElementById('setsEmpty');
-  if (!sets.length) { emp.style.display='flex'; el.innerHTML=''; return; }
+  if (!sets.length) { emp.style.display='flex'; el.innerHTML=''; removeBulkBar('sets'); return; }
   emp.style.display='none';
   el.innerHTML = sets.map(s=>{
     const groupBadges = s.groupIds?.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;" id="gbadge_${s.id}"></div>` : '';
+    const isSelected = selectedSetIds.has(s.id);
     return `
-    <div class="set-list-item" onclick="${editingSets ? '' : `openSet('${s.id}')`}" style="${editingSets ? 'cursor:default;' : ''}">
-      <div class="set-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="12" height="4" rx="1"/></svg></div>
+    <div class="set-list-item" onclick="${editingSets ? `toggleSelectSet('${s.id}')` : `openSet('${s.id}')`}" style="${editingSets ? 'cursor:pointer;' + (isSelected ? 'background:var(--surface2);' : '') : ''}">
+      ${editingSets
+        ? `<div class="select-checkbox ${isSelected?'checked':''}" onclick="event.stopPropagation();toggleSelectSet('${s.id}')">
+            <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
+           </div>`
+        : `<div class="set-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="12" height="4" rx="1"/></svg></div>`
+      }
       <div class="set-item-info">
         <div class="set-item-name">${esc(s.name)}</div>
         <div class="set-item-meta">${s.songs.length} song${s.songs.length!==1?'s':''} · ${fmtDate(s.updatedAt)}${s.createdBy && s.createdBy!==currentUser ? ` · <span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}</div>
         ${groupBadges}
       </div>
-      ${editingSets
-        ? `<div class="set-delete-btn" onclick="event.stopPropagation();deleteSet('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></div>`
-        : `<div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>`
-      }
+      ${!editingSets ? `<div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>` : ''}
     </div>`}).join('');
-  // fill in group badges asynchronously
   sets.forEach(async s => {
     if (!s.groupIds?.length) return;
     const el2 = document.getElementById('gbadge_'+s.id);
@@ -1454,13 +1507,131 @@ async function renderSetsList() {
     const groups = await Promise.all(s.groupIds.map(id => dbGet('groups',id)));
     el2.innerHTML = groups.filter(Boolean).map(g => `<span class="admin-badge" style="font-size:10px;">${esc(g.name)}</span>`).join('');
   });
+  // bulk action bar
+  if (editingSets) {
+    showBulkBar('sets', selectedSetIds.size, sets.length, 'setlist');
+  } else {
+    removeBulkBar('sets');
+  }
 }
 
 function toggleEditSets() {
   editingSets = !editingSets;
+  if (!editingSets) { selectedSetIds.clear(); removeBulkBar('sets'); }
   const btn = document.getElementById('editSetsBtn');
   if (btn) btn.style.color = editingSets ? 'var(--accent)' : '';
   renderSetsList();
+}
+
+function toggleSelectSet(id) {
+  if (selectedSetIds.has(id)) selectedSetIds.delete(id);
+  else selectedSetIds.add(id);
+  renderSetsList();
+}
+
+async function bulkDeleteSets() {
+  if (!selectedSetIds.size) return;
+  const count = selectedSetIds.size;
+  document.getElementById('bulkDeleteTitle').textContent = `Delete ${count} Setlist${count!==1?'s':''}`;
+  document.getElementById('bulkDeleteMsg').innerHTML = `Permanently delete <strong style="color:var(--text)">${count} setlist${count!==1?'s':''}</strong>? This can't be undone.`;
+  document.getElementById('bulkDeleteConfirmBtn').textContent = `Delete ${count}`;
+  window._pendingBulkDelete = 'sets';
+  document.getElementById('bulkDeleteModal').classList.remove('hidden');
+}
+
+async function selectAllSets() {
+  let sets = await dbAll('setlists');
+  sets = sets.filter(s => !s.createdBy || s.createdBy === currentUser);
+  sets.forEach(s => selectedSetIds.add(s.id));
+  renderSetsList();
+}
+
+function toggleEditSongs() {
+  editingSongs = !editingSongs;
+  if (!editingSongs) { selectedSongIds.clear(); removeBulkBar('songs'); }
+  const btn = document.getElementById('editSongsBtn');
+  if (btn) btn.style.color = editingSongs ? 'var(--accent)' : '';
+  renderDB();
+}
+
+function exitEditSongs() {
+  if (!editingSongs) return;
+  editingSongs = false;
+  selectedSongIds.clear();
+  const btn = document.getElementById('editSongsBtn');
+  if (btn) btn.style.color = '';
+  removeBulkBar('songs');
+  renderDB();
+}
+
+function toggleSelectSong(id) {
+  if (selectedSongIds.has(id)) selectedSongIds.delete(id);
+  else selectedSongIds.add(id);
+  renderDB();
+}
+
+async function bulkDeleteSongs() {
+  if (!selectedSongIds.size) return;
+  const count = selectedSongIds.size;
+  document.getElementById('bulkDeleteTitle').textContent = `Delete ${count} Song${count!==1?'s':''}`;
+  document.getElementById('bulkDeleteMsg').innerHTML = `Permanently delete <strong style="color:var(--text)">${count} song${count!==1?'s':''}</strong>? They will be removed from all setlists. This can't be undone.`;
+  document.getElementById('bulkDeleteConfirmBtn').textContent = `Delete ${count}`;
+  window._pendingBulkDelete = 'songs';
+  document.getElementById('bulkDeleteModal').classList.remove('hidden');
+}
+
+function closeBulkDeleteModal() {
+  window._pendingBulkDelete = null;
+  document.getElementById('bulkDeleteModal').classList.add('hidden');
+}
+
+async function executeBulkDelete() {
+  const type = window._pendingBulkDelete;
+  closeBulkDeleteModal();
+  if (type === 'sets') {
+    const count = selectedSetIds.size;
+    for (const id of selectedSetIds) await dbDel('setlists', id);
+    selectedSetIds.clear();
+    await syncOut();
+    exitEditSets();
+    showToast(`${count} setlist${count!==1?'s':''} deleted`);
+  } else if (type === 'songs') {
+    const count = selectedSongIds.size;
+    for (const id of selectedSongIds) await dbDel('songs', id);
+    selectedSongIds.clear();
+    await syncOut();
+    exitEditSongs();
+    showToast(`${count} song${count!==1?'s':''} deleted`);
+  }
+}
+
+async function selectAllSongs() {
+  let songs = await dbAll('songs');
+  songs = songs.filter(s => !s.createdBy || s.createdBy === currentUser);
+  songs.forEach(s => selectedSongIds.add(s.id));
+  renderDB();
+}
+
+function showBulkBar(type, selected, total, label) {
+  removeBulkBar(type);
+  const bar = document.createElement('div');
+  bar.className = 'bulk-action-bar';
+  bar.id = `bulkBar_${type}`;
+  const deleteFn = type === 'sets' ? 'bulkDeleteSets()' : 'bulkDeleteSongs()';
+  const selectAllFn = type === 'sets' ? 'selectAllSets()' : 'selectAllSongs()';
+  bar.innerHTML = `
+    <span class="count">${selected} of ${total} selected</span>
+    <button class="btn ghost" style="padding:5px 12px;font-size:12px;border-radius:20px;" onclick="${selectAllFn}">All</button>
+    <button class="btn danger" style="padding:5px 12px;font-size:12px;border-radius:20px;opacity:${selected?1:0.4};" ${selected?'':'disabled'} onclick="${deleteFn}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-right:4px;"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+      Delete${selected ? ' ' + selected : ''}
+    </button>`;
+  document.body.appendChild(bar);
+}
+
+function removeBulkBar(type) {
+  const bar = document.getElementById(`bulkBar_${type}`);
+  if (bar) bar.remove();
 }
 
 let pendingDeleteSetId = null;
@@ -2000,7 +2171,7 @@ function buildAudioSection(s) {
       <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
     </svg>
     <div style="font-size:14px;color:var(--text2);">Attach audio file</div>
-    <div style="font-size:12px;color:var(--text3);">MP3, WAV, M4A, AAC, OGG · Click or drag & drop</div>
+    <div style="font-size:12px;color:var(--text3);">MP3, WAV, M4A, AAC, OGG · Max 10 MB</div>
   </div>
   <input type="file" id="audioFileInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleAudioFile(event,${currentSongIdx})">`;
 }
@@ -2139,6 +2310,8 @@ function buildNoteContent(text, idx) {
   const pdfEntry = s ? window._pdfCache?.[pdfKey] : null;
   const audioKey = `audio_${s?.id}`;
   const audioEntry = s ? window._audioCache?.[audioKey] : null;
+  const imgPrefix = noteTab === 'default' ? `img_default_${s?.id}` : `img_${currentUser||'me'}_${s?.id}`;
+  const imgEntries = s ? Object.entries(window._imageCache || {}).filter(([k]) => k.startsWith(imgPrefix + '_')) : [];
 
   // compact audio player shown at top of notes when audio is attached
   const audioBar = audioEntry ? `
@@ -2221,36 +2394,31 @@ function buildNoteContent(text, idx) {
         </div>
       </div>`
     : `<div style="margin-top:16px;">
-        <div class="pdf-upload-zone" onclick="document.getElementById('pdfInput_${idx}').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="handlePdfDrop(event,${idx},'${pdfKey}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
-          <div style="font-size:14px;color:var(--text2);margin-bottom:4px;">Attach a PDF</div>
-          <div style="font-size:12px;color:var(--text3);">Click or drag & drop a PDF file</div>
+        <div style="display:flex;gap:8px;">
+          <div class="pdf-upload-zone" style="flex:1;" onclick="document.getElementById('pdfInput_${idx}').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="handlePdfDrop(event,${idx},'${pdfKey}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Attach PDF</div>
+            <div style="font-size:11px;color:var(--text3);">Max 10 MB</div>
+          </div>
+          <div class="pdf-upload-zone" style="flex:1;" onclick="document.getElementById('noteImgInput_${idx}').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="handleNoteImgDrop(event,${idx},'${imgPrefix}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:2px;">Attach Image</div>
+            <div style="font-size:11px;color:var(--text3);">Max 10 MB</div>
+          </div>
         </div>
         <input type="file" id="pdfInput_${idx}" accept="application/pdf,.pdf" style="display:none" onchange="handlePdfFile(event,${idx},'${pdfKey}')">
+        <input type="file" id="noteImgInput_${idx}" accept="image/*" multiple style="display:none" onchange="handleImageFile(event,${idx},'${imgPrefix}')">
       </div>`;
 
-  const imgPrefix = noteTab === 'default' ? `img_default_${s?.id}` : `img_${currentUser||'me'}_${s?.id}`;
-  const imgEntries = s ? Object.entries(window._imageCache || {}).filter(([k]) => k.startsWith(imgPrefix + '_')) : [];
-
-  const imageSection = `<div style="margin-top:12px;">
-    ${imgEntries.length ? `<div class="note-image-grid">
+  const imageSection = imgEntries.length ? `<div style="margin-top:12px;">
+    <div class="note-image-grid">
       ${imgEntries.map(([key, img]) => `
         <div class="note-image-item">
           <img src="${esc(img.blobUrl)}" alt="${esc(img.name)}" onclick="viewFullImage('${esc(img.blobUrl)}')">
           <button class="img-remove" onclick="removeNoteImage('${esc(key)}',${idx})" title="Remove image">✕</button>
         </div>`).join('')}
-    </div>` : ''}
-    <div class="img-upload-zone" style="margin-top:${imgEntries.length?'8px':'0'};"
-      onclick="document.getElementById('imgInput_${idx}').click()"
-      ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-      ondragleave="this.style.borderColor=''"
-      ondrop="handleImageDrop(event,${idx},'${imgPrefix}')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:var(--text3);"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      <div style="font-size:13px;color:var(--text2);">${imgEntries.length ? 'Add another image' : 'Attach an image'}</div>
-      <div style="font-size:11px;color:var(--text3);">JPG, PNG, GIF, WebP · Click or drag & drop</div>
     </div>
-    <input type="file" id="imgInput_${idx}" accept="image/*" multiple style="display:none" onchange="handleImageFile(event,${idx},'${imgPrefix}')">
-  </div>`;
+  </div>` : '';
 
   return audioBar + textSection + pdfSection + imageSection;
 }
@@ -2292,8 +2460,8 @@ async function processPdfFile(file, idx, pdfKey) {
   if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
     showToast('Please upload a PDF file', 'err'); return;
   }
-  if (file.size > 20 * 1024 * 1024) {
-    showToast('PDF must be under 20 MB', 'err'); return;
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('PDF must be under 10 MB', 'err'); return;
   }
   showToast('Uploading PDF…');
   const arrayBuffer = await file.arrayBuffer();
@@ -2316,13 +2484,14 @@ function handleImageDrop(e, idx, imgPrefix) {
   e.currentTarget.style.borderColor = '';
   Array.from(e.dataTransfer.files).forEach(f => processImageFile(f, idx, imgPrefix));
 }
+function handleNoteImgDrop(e, idx, imgPrefix) { handleImageDrop(e, idx, imgPrefix); }
 function handleImageFile(e, idx, imgPrefix) {
   Array.from(e.target.files).forEach(f => processImageFile(f, idx, imgPrefix));
 }
 
 async function processImageFile(file, idx, imgPrefix) {
   if (!file.type.startsWith('image/')) { showToast('Please upload an image file', 'err'); return; }
-  if (file.size > 20 * 1024 * 1024) { showToast('Image must be under 20 MB', 'err'); return; }
+  if (file.size > 10 * 1024 * 1024) { showToast('Image must be under 10 MB', 'err'); return; }
   const id = `${imgPrefix}_${uid()}`;
   const arrayBuffer = await file.arrayBuffer();
   await dbPut('images', { id, name: file.name, data: arrayBuffer, mimeType: file.type, updatedAt: Date.now() });
@@ -2390,7 +2559,7 @@ async function processAudioFile(file, idx) {
   if (!allowed.includes(file.type) && !allowedExts.includes(ext)) {
     showToast('Unsupported audio format', 'err'); return;
   }
-  if (file.size > 100 * 1024 * 1024) { showToast('File must be under 100 MB', 'err'); return; }
+  if (file.size > 10 * 1024 * 1024) { showToast('Audio must be under 10 MB', 'err'); return; }
   showToast('Uploading audio…');
   const s = currentSetSongs[idx];
   if (!s) return;
@@ -2581,11 +2750,18 @@ async function renderDB() {
   });
 
   const el = document.getElementById('dbList');
-  if (!songs.length) { el.innerHTML=`<div class="empty-view"><div class="big">♫</div><h3>${q||key?'No matches':'No songs yet'}</h3><p>${q||key?'Try a different search':'Tap + to add your first song'}</p></div>`; return; }
-  el.innerHTML = songs.map(s => `
-    <div class="db-song-card">
-      <div class="db-song-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="18" r="3"/><path d="M11 18V7l9-2v11"/></svg></div>
-      <div class="db-song-info" onclick="openSongModal('${s.id}')">
+  if (!songs.length) { el.innerHTML=`<div class="empty-view"><div class="big">♫</div><h3>${q||key?'No matches':'No songs yet'}</h3><p>${q||key?'Try a different search':'Tap + to add your first song'}</p></div>`; removeBulkBar('songs'); return; }
+  el.innerHTML = songs.map(s => {
+    const isSelected = selectedSongIds.has(s.id);
+    return `
+    <div class="db-song-card" style="${editingSongs && isSelected ? 'background:var(--surface2);' : ''}">
+      ${editingSongs
+        ? `<div class="select-checkbox ${isSelected?'checked':''}" onclick="toggleSelectSong('${s.id}')">
+            <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
+           </div>`
+        : `<div class="db-song-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="18" r="3"/><path d="M11 18V7l9-2v11"/></svg></div>`
+      }
+      <div class="db-song-info" onclick="${editingSongs ? `toggleSelectSong('${s.id}')` : `openSongModal('${s.id}')`}" style="cursor:pointer;">
         <div class="db-song-title">${esc(s.title)}</div>
         <div class="db-song-meta">
           ${s.artist ? `<span>${esc(s.artist)}</span>` : ''}
@@ -2595,7 +2771,7 @@ async function renderDB() {
           ${s.createdBy && s.createdBy !== currentUser ? `<span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}
         </div>
       </div>
-      <div class="db-song-actions">
+      ${!editingSongs ? `<div class="db-song-actions">
         ${s.spotifyUrl?`<a href="${esc(s.spotifyUrl)}" title="Open Spotify" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#1DB954;border-radius:6px;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:14px;height:14px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg></a>`:''}
         ${s.youtubeUrl?`<a href="${esc(s.youtubeUrl)}" title="Open YouTube" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#FF0000;border-radius:6px;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:14px;height:14px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>`:''}
         <div id="audioind_${s.id}" style="display:none;width:28px;height:28px;background:var(--surface3);border-radius:6px;align-items:center;justify-content:center;flex-shrink:0;" title="Audio attached">
@@ -2603,21 +2779,37 @@ async function renderDB() {
         </div>
         <div class="sm-btn" title="Add to current set" onclick="quickAdd('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
         <div class="sm-btn" title="Delete" onclick="deleteSong('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></div>
-      </div>
-    </div>`).join('');
+      </div>` : ''}
+    </div>`;
+  }).join('');
   // show audio indicator badges asynchronously
-  songs.forEach(async s => {
-    const entry = await dbGet('audio', `audio_${s.id}`);
-    const ind = document.getElementById(`audioind_${s.id}`);
-    if (ind && entry) ind.style.display = 'flex';
-  });
+  if (!editingSongs) {
+    songs.forEach(async s => {
+      const entry = await dbGet('audio', `audio_${s.id}`);
+      const ind = document.getElementById(`audioind_${s.id}`);
+      if (ind && entry) ind.style.display = 'flex';
+    });
+  }
+  // bulk action bar for songs
+  if (editingSongs) {
+    showBulkBar('songs', selectedSongIds.size, songs.length, 'song');
+  } else {
+    removeBulkBar('songs');
+  }
 }
 
 function openSongModal(id) {
   document.getElementById('editSongId').value=id||'';
   document.getElementById('songModalTitle').textContent=id?'Edit Song':'Add Song';
   window._modalPendingAudio = null;
+  window._modalPendingPdf = null;
+  window._modalPendingImgs = [];
   document.getElementById('fAudioInput').value = '';
+  document.getElementById('fPdfInput').value = '';
+  document.getElementById('fImgInput').value = '';
+  document.getElementById('fPdfStatus').innerHTML = '';
+  document.getElementById('fImgStatus').innerHTML = '';
+  document.getElementById('fImgGrid').innerHTML = '';
   if(id){
     dbGet('songs',id).then(s=>{
       if(!s)return;
@@ -2630,7 +2822,7 @@ function openSongModal(id) {
       document.getElementById('fSpotify').value=s.spotifyUrl||'';
       document.getElementById('fYoutube').value=s.youtubeUrl||'';
     });
-    // check for existing audio
+    // load existing audio
     dbGet('audio', `audio_${id}`).then(entry => {
       const el = document.getElementById('fAudioStatus');
       if (el) el.innerHTML = entry
@@ -2638,16 +2830,88 @@ function openSongModal(id) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
             <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
             <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemoveAudio('${id}')">Remove</button>
-           </div>`
-        : '';
+           </div>` : '';
+    });
+    // load existing PDF (default key)
+    dbGet('pdfs', `default_${id}`).then(entry => {
+      const el = document.getElementById('fPdfStatus');
+      if (el && entry) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--red);flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
+        <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemovePdf('${id}')">Remove</button>
+      </div>`;
+    });
+    // load existing images
+    dbAll('images').then(imgs => {
+      const songImgs = imgs.filter(e => e.id.startsWith(`img_default_${id}_`));
+      refreshModalImgGrid(id, songImgs);
     });
   } else {
     ['fTitle','fArtist','fBpm','fDuration','fNotes','fSpotify','fYoutube'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('fKey').value='';
-    const el = document.getElementById('fAudioStatus');
-    if (el) el.innerHTML = '';
+    document.getElementById('fAudioStatus').innerHTML = '';
   }
   document.getElementById('songModal').classList.remove('hidden');
+}
+
+function refreshModalImgGrid(songId, imgs) {
+  const grid = document.getElementById('fImgGrid');
+  if (!grid || !imgs.length) { if(grid) grid.innerHTML=''; return; }
+  grid.innerHTML = `<div class="note-image-grid">${imgs.map(entry => {
+    const blob = new Blob([entry.data], { type: entry.mimeType||'image/jpeg' });
+    const url = URL.createObjectURL(blob);
+    return `<div class="note-image-item">
+      <img src="${url}" onclick="viewFullImage('${url}')">
+      <button class="img-remove" onclick="modalRemoveImg('${entry.id}','${songId}')">✕</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function handleModalPdfFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showToast('PDF must be under 10 MB', 'err'); return; }
+  const songId = document.getElementById('editSongId').value;
+  const pdfKey = `default_${songId}`;
+  const arrayBuffer = await file.arrayBuffer();
+  await dbPut('pdfs', { id: pdfKey, name: file.name, data: arrayBuffer, updatedAt: Date.now() });
+  const el = document.getElementById('fPdfStatus');
+  if (el) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--red);flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(file.name)}</span>
+    <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemovePdf('${songId}')">Remove</button>
+  </div>`;
+  showToast('PDF attached', 'ok');
+}
+
+async function modalRemovePdf(songId) {
+  await dbDel('pdfs', `default_${songId}`);
+  const el = document.getElementById('fPdfStatus');
+  if (el) el.innerHTML = '';
+  showToast('PDF removed');
+}
+
+async function handleModalImgFile(e) {
+  const songId = document.getElementById('editSongId').value;
+  if (!songId) { showToast('Save the song first before adding images', 'err'); return; }
+  const imgPrefix = `img_default_${songId}`;
+  for (const file of e.target.files) {
+    if (file.size > 10 * 1024 * 1024) { showToast(`${file.name} is over 10 MB — skipped`, 'err'); continue; }
+    if (!file.type.startsWith('image/')) continue;
+    const id = `${imgPrefix}_${uid()}`;
+    const arrayBuffer = await file.arrayBuffer();
+    await dbPut('images', { id, name: file.name, data: arrayBuffer, mimeType: file.type, updatedAt: Date.now() });
+  }
+  const imgs = (await dbAll('images')).filter(e => e.id.startsWith(`img_default_${songId}_`));
+  refreshModalImgGrid(songId, imgs);
+  showToast('Image attached', 'ok');
+}
+
+async function modalRemoveImg(imageId, songId) {
+  await dbDel('images', imageId);
+  const imgs = (await dbAll('images')).filter(e => e.id.startsWith(`img_default_${songId}_`));
+  refreshModalImgGrid(songId, imgs);
+  showToast('Image removed');
 }
 function closeSongModal(){document.getElementById('songModal').classList.add('hidden');}
 
@@ -2674,7 +2938,7 @@ async function handleModalAudioFile(e) {
   if (!allowedExts.includes(ext) && !file.type.startsWith('audio/')) {
     showToast('Unsupported audio format','err'); return;
   }
-  if (file.size > 100 * 1024 * 1024) { showToast('File must be under 100 MB','err'); return; }
+  if (file.size > 10 * 1024 * 1024) { showToast('Audio must be under 10 MB','err'); return; }
   window._modalPendingAudio = file;
   const el = document.getElementById('fAudioStatus');
   if (el) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid rgba(232,255,71,0.3);border-radius:var(--radius);font-size:13px;">
@@ -4058,7 +4322,7 @@ async function exportCSV() {
   const a = document.createElement('a');
   const date = new Date().toISOString().slice(0,10);
   a.href = url;
-  a.download = `stageset-songs-${date}.csv`;
+  a.download = `MyGigBook-songs-${date}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast(`Exported ${songs.length} songs`, 'ok');
@@ -4066,6 +4330,44 @@ async function exportCSV() {
 
 // ── IMPORT ──
 let importParsedSongs = [];
+
+function downloadImportTemplate() {
+  const headers = 'title,artist,key,bpm,duration,notes,spotifyUrl,youtubeUrl';
+  const example1 = '"Superstition","Stevie Wonder","Eb","100","4:02","Verse: Ebm7. Watch the clavinet intro cue.","",""';
+  const example2 = '"September","Earth Wind & Fire","G","126","3:35","Horns kick in bar 9. Key change to Ab in bridge.","",""';
+  const example3 = '"My Song Title","Artist Name","C","120","3:30","Add your notes here","",""';
+  const csv = [headers, example1, example2, example3].join('\n');
+  try {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'MyGigBook-import-template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch(e) {
+    // fallback: show the CSV in a copyable text area
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border-radius:var(--radius);padding:20px;width:100%;max-width:500px;display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);">Copy this template into a .csv file:</div>
+        <textarea style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--text);resize:none;height:120px;" readonly>${csv}</textarea>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn ghost" onclick="this.closest('div[style]').remove()">Close</button>
+          <button class="btn primary" onclick="
+            const ta=this.closest('div[style]').querySelector('textarea');
+            ta.select();
+            document.execCommand('copy');
+            this.textContent='Copied!';
+            setTimeout(()=>this.textContent='Copy',2000);">Copy</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+}
 
 function openImport() {
   importParsedSongs = [];
@@ -4393,6 +4695,10 @@ init().catch(console.error);
         <strong style="color:var(--text);">Optional:</strong> <code style="font-family:'DM Mono',monospace;font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:4px;">artist, key, bpm, duration, notes</code><br><br>
         Notes can contain line breaks — use <code style="font-family:'DM Mono',monospace;font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:4px;">\n</code> in the CSV cell or actual line breaks inside quoted fields.
       </div>
+      <button class="btn ghost" onclick="downloadImportTemplate()" style="display:flex;align-items:center;gap:8px;width:100%;justify-content:center;padding:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download CSV Template
+      </button>
       <div style="border:2px dashed var(--border2);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;transition:border-color 0.15s;" id="importDropZone" onclick="document.getElementById('importFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="handleImportDrop(event)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--text3);margin-bottom:8px;display:block;margin-left:auto;margin-right:auto;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
         <div style="font-size:14px;color:var(--text2);">Click to choose a CSV file</div>
