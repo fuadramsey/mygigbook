@@ -722,6 +722,9 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <div id="songPageSetName" style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Mono',monospace;"></div>
         <div id="songPageTopTitle" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;"></div>
       </div>
+      <button class="song-nav-btn" id="songPlayBtn" onclick="toggleSongPlay()" title="Play audio" style="display:none;">
+        <svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M8 5v14l11-7z"/></svg>
+      </button>
       <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;">
         <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
           <!-- left tine: starts at stem, curves out and up -->
@@ -2011,6 +2014,38 @@ function updateTopNav(idx) {
   if (prevBtn) prevBtn.classList.toggle('disabled', !prev);
   if (nextBtn) nextBtn.classList.toggle('disabled', !next);
   if (counter) counter.textContent = `${idx+1} / ${currentSetSongs.length}`;
+  // show play button if audio is attached to this song
+  const s = currentSetSongs[idx];
+  const playBtn = document.getElementById('songPlayBtn');
+  if (playBtn && s && s.type !== 'note') {
+    const audioKey = `audio_${s.id}`;
+    const hasAudio = !!(window._audioCache?.[audioKey]);
+    playBtn.style.display = hasAudio ? 'flex' : 'none';
+    updateSongPlayIcon();
+  } else if (playBtn) {
+    playBtn.style.display = 'none';
+  }
+}
+
+function updateSongPlayIcon() {
+  const icon = document.getElementById('songPlayIcon');
+  if (!icon) return;
+  const s = currentSetSongs[currentSongIdx];
+  if (!s) return;
+  const audioKey = `audio_${s.id}`;
+  const audio = window._audioEl;
+  const isPlaying = audio && !audio.paused && window._audioKey === audioKey;
+  icon.outerHTML = isPlaying
+    ? `<svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
+    : `<svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M8 5v14l11-7z"/></svg>`;
+}
+
+function toggleSongPlay() {
+  const s = currentSetSongs[currentSongIdx];
+  if (!s || s.type === 'note') return;
+  const audioKey = `audio_${s.id}`;
+  toggleAudio(audioKey, currentSongIdx);
+  setTimeout(updateSongPlayIcon, 50);
 }
 
 async function renderSongPage(idx) {
@@ -2727,6 +2762,9 @@ function updateAudioPlayIcons(playing) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = icon;
   });
+  // also update topbar play button
+  const songPlayIcon = document.getElementById('songPlayIcon');
+  if (songPlayIcon) songPlayIcon.innerHTML = icon;
 }
 
 function fmtAudioTime(sec) {
