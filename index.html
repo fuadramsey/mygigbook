@@ -1222,6 +1222,13 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <span class="settings-row-label">Sign Out</span>
       </button>
 
+      <div class="settings-section-label" style="margin-top:8px">Support</div>
+      <button class="settings-row" onclick="closeSettings();openBugReport()">
+        <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg></div>
+        <span class="settings-row-label">Submit a Bug Report</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+
     </div>
   </div>
 </div>
@@ -1231,10 +1238,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 let db;
 function openDB() {
   return new Promise((res,rej) => {
-    const r = indexedDB.open('stageset3', 6);
+    const r = indexedDB.open('stageset3', 7);
     r.onupgradeneeded = e => {
       const d = e.target.result;
-      ['songs','setlists','notes','pdfs','groups','audio','pdfmarkup','images'].forEach(s => { if (!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:'id'}); });
+      ['songs','setlists','notes','pdfs','groups','audio','pdfmarkup','images','bugreports'].forEach(s => { if (!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:'id'}); });
     };
     r.onsuccess = e => { db = e.target.result; res(); };
     r.onerror = rej;
@@ -3558,6 +3565,7 @@ function checkSession() {
 function openAdmin() {
   if (!currentIsAdmin) return;
   renderAdminUsers();
+  updateBugBadge();
   document.getElementById('adminModal').classList.remove('hidden');
 }
 function closeAdmin() {
@@ -4685,6 +4693,112 @@ async function processBackupFile(file) {
   }
 }
 
+// ── BUG REPORTS ──
+function openBugReport() {
+  document.getElementById('bugDescription').value = '';
+  document.getElementById('bugSteps').value = '';
+  document.getElementById('bugCategory').value = 'ui';
+  document.getElementById('bugError').classList.add('hidden');
+  document.getElementById('bugReportModal').classList.remove('hidden');
+}
+function closeBugReport() {
+  document.getElementById('bugReportModal').classList.add('hidden');
+}
+
+async function submitBugReport() {
+  const desc = document.getElementById('bugDescription').value.trim();
+  const errEl = document.getElementById('bugError');
+  if (!desc) {
+    errEl.textContent = 'Please describe the bug.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  errEl.classList.add('hidden');
+  const report = {
+    id: uid(),
+    user: currentUser,
+    category: document.getElementById('bugCategory').value,
+    description: desc,
+    steps: document.getElementById('bugSteps').value.trim(),
+    userAgent: navigator.userAgent,
+    timestamp: Date.now(),
+    status: 'new'
+  };
+  await dbPut('bugreports', report);
+  closeBugReport();
+  showToast('Bug report submitted — thank you!', 'ok');
+}
+
+async function openBugLog() {
+  await renderBugLog();
+  document.getElementById('bugLogModal').classList.remove('hidden');
+}
+function closeBugLog() {
+  document.getElementById('bugLogModal').classList.add('hidden');
+}
+
+async function renderBugLog() {
+  const reports = await dbAll('bugreports');
+  reports.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+  const el = document.getElementById('bugLogList');
+  const badge = document.getElementById('bugLogBadge');
+  const newCount = reports.filter(r => r.status === 'new').length;
+  if (badge) {
+    badge.textContent = newCount;
+    badge.style.display = newCount ? 'inline' : 'none';
+  }
+  if (!reports.length) {
+    el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">No bug reports yet.</div>';
+    return;
+  }
+  const categoryLabels = { ui:'UI/Display', sync:'Sync/Cloud', audio:'Audio/Media', songs:'Songs/Setlists', groups:'Groups', auth:'Login/Account', other:'Other' };
+  el.innerHTML = reports.map(r => `
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);${r.status==='new'?'background:rgba(220,38,38,0.04);':''}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:10px;background:${r.status==='new'?'var(--red)':'var(--surface3)'};color:${r.status==='new'?'#fff':'var(--text3)'};border-radius:4px;padding:2px 7px;font-family:'DM Mono',monospace;">${r.status==='new'?'NEW':'SEEN'}</span>
+        <span style="font-size:11px;background:var(--surface2);color:var(--accent);border-radius:4px;padding:2px 7px;font-family:'DM Mono',monospace;">${esc(categoryLabels[r.category]||r.category)}</span>
+        <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-left:auto;">${esc(r.user)} · ${new Date(r.timestamp).toLocaleDateString()} ${new Date(r.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:4px;">${esc(r.description)}</div>
+      ${r.steps ? `<div style="font-size:12px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:4px;white-space:pre-wrap;">${esc(r.steps)}</div>` : ''}
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        ${r.status==='new' ? `<button class="btn ghost" style="padding:3px 10px;font-size:11px;" onclick="markBugSeen('${r.id}')">Mark Seen</button>` : ''}
+        <button class="btn ghost" style="padding:3px 10px;font-size:11px;color:var(--red);" onclick="deleteBugReport('${r.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+async function markBugSeen(id) {
+  const r = await dbGet('bugreports', id);
+  if (!r) return;
+  r.status = 'seen';
+  await dbPut('bugreports', r);
+  renderBugLog();
+}
+
+async function deleteBugReport(id) {
+  await dbDel('bugreports', id);
+  renderBugLog();
+}
+
+async function clearAllBugs() {
+  const reports = await dbAll('bugreports');
+  for (const r of reports) await dbDel('bugreports', r.id);
+  renderBugLog();
+  showToast('All bug reports cleared');
+}
+
+async function updateBugBadge() {
+  if (!currentIsAdmin) return;
+  const reports = await dbAll('bugreports');
+  const newCount = reports.filter(r => r.status === 'new').length;
+  const badge = document.getElementById('bugLogBadge');
+  if (badge) {
+    badge.textContent = newCount;
+    badge.style.display = newCount ? 'inline' : 'none';
+  }
+}
+
 function openImport() {
   importParsedSongs = [];
   document.getElementById('importFileInput').value = '';
@@ -4950,7 +5064,14 @@ init().catch(console.error);
   <div class="modal-sheet" style="max-height:80vh;">
     <div class="modal-header">
       <span class="modal-title">Admin — Manage Users</span>
-      <div class="modal-close" onclick="closeAdmin()">✕</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn ghost" style="padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:5px;" onclick="openBugLog()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+          Bug Log
+          <span id="bugLogBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-family:'DM Mono',monospace;"></span>
+        </button>
+        <div class="modal-close" onclick="closeAdmin()">✕</div>
+      </div>
     </div>
     <div class="modal-body" style="padding:0">
       <div id="adminUserList"></div>
@@ -5127,6 +5248,58 @@ init().catch(console.error);
         <div id="restoreStatus" style="margin-top:8px;font-size:12px;color:var(--text3);text-align:center;font-family:'DM Mono',monospace;"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- BUG REPORT MODAL -->
+<div class="modal-overlay hidden" id="bugReportModal" onclick="if(event.target===this)closeBugReport()">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title">Submit a Bug Report</span>
+      <div class="modal-close" onclick="closeBugReport()">✕</div>
+    </div>
+    <div class="modal-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:13px;color:var(--text2);line-height:1.5;">Describe what happened and what you expected to happen. The admin will be notified.</div>
+      <div>
+        <label class="form-label" style="margin-bottom:6px;">Category</label>
+        <select class="form-input" id="bugCategory">
+          <option value="ui">UI / Display issue</option>
+          <option value="sync">Sync / Cloud issue</option>
+          <option value="audio">Audio / Media issue</option>
+          <option value="songs">Songs / Setlists issue</option>
+          <option value="groups">Groups issue</option>
+          <option value="auth">Login / Account issue</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label" style="margin-bottom:6px;">Description *</label>
+        <textarea class="form-input" id="bugDescription" placeholder="Describe the bug in detail…" style="min-height:100px;resize:vertical;"></textarea>
+      </div>
+      <div>
+        <label class="form-label" style="margin-bottom:6px;">Steps to reproduce</label>
+        <textarea class="form-input" id="bugSteps" placeholder="1. Go to…&#10;2. Tap on…&#10;3. See error" style="min-height:70px;resize:vertical;"></textarea>
+      </div>
+      <div class="login-error hidden" id="bugError"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" onclick="closeBugReport()">Cancel</button>
+      <button class="btn primary" onclick="submitBugReport()">Submit Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN BUG LOG MODAL -->
+<div class="modal-overlay hidden" id="bugLogModal" onclick="if(event.target===this)closeBugLog()">
+  <div class="modal-sheet" style="max-height:85vh;">
+    <div class="modal-header">
+      <span class="modal-title">Bug Reports</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--red);" onclick="clearAllBugs()">Clear All</button>
+        <div class="modal-close" onclick="closeBugLog()">✕</div>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:0;overflow-y:auto;" id="bugLogList"></div>
   </div>
 </div>
 
