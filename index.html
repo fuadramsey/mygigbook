@@ -3336,7 +3336,75 @@ async function verifyPassword(input, stored) {
 function getUsers() {
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch(e) { return []; }
 }
-function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
+
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  // push to Firestore asynchronously (don't block)
+  pushUsersToFirestore(users);
+}
+
+async function pushUsersToFirestore(users) {
+  if (!fbReady || !online) return;
+  const fb = window._fb;
+  if (!fb) return;
+  try {
+    // store as a single document — never expose plain passwords
+    const safeUsers = users.map(u => ({
+      username: u.username,
+      email: u.email || '',
+      password: u.password, // already hashed
+      hashed: true,
+      isAdmin: u.isAdmin || false,
+      mustChangePassword: u.mustChangePassword || false,
+      tempPassword: u.tempPassword || null,
+      updatedAt: Date.now()
+    }));
+    const batch = fb.writeBatch(fb.db);
+    // store each user as a doc in 'users' collection
+    safeUsers.forEach(u => {
+      batch.set(fb.doc(fb.collection(fb.db, 'users'), u.username), u);
+    });
+    // delete users removed locally
+    const snap = await fb.getDocs(fb.collection(fb.db, 'users'));
+    const localNames = new Set(safeUsers.map(u => u.username));
+    snap.docs.forEach(d => {
+      if (!localNames.has(d.id)) batch.delete(fb.doc(fb.collection(fb.db, 'users'), d.id));
+    });
+    await batch.commit();
+  } catch(e) { console.warn('User sync push error:', e); }
+}
+
+async function syncUsersFromFirestore() {
+  if (!fbReady || !online) return;
+  const fb = window._fb;
+  if (!fb) return;
+  try {
+    const snap = await fb.getDocs(fb.collection(fb.db, 'users'));
+    if (snap.empty) return;
+    const localUsers = getUsers();
+    const localMap = {};
+    localUsers.forEach(u => localMap[u.username] = u);
+    let changed = false;
+    snap.docs.forEach(d => {
+      const remote = d.data();
+      const local = localMap[remote.username];
+      // merge: remote wins unless local has a more recent password change
+      if (!local) {
+        localMap[remote.username] = remote;
+        changed = true;
+      } else {
+        // if remote is newer, update local (but keep local tempPassword if set)
+        if ((remote.updatedAt||0) > (local.updatedAt||0)) {
+          localMap[remote.username] = { ...remote, tempPassword: local.tempPassword || remote.tempPassword };
+          changed = true;
+        }
+      }
+    });
+    if (changed) {
+      saveUsers(Object.values(localMap));
+    }
+  } catch(e) { console.warn('User sync pull error:', e); }
+}
 
 async function ensureAdminExists() {
   let users = getUsers();
@@ -3745,6 +3813,8 @@ async function postLoginInit() {
       attempts = attempts || 0;
       if (fbReady) {
         await manualSync();
+        // push current user list to Firestore so all devices are in sync
+        pushUsersToFirestore(getUsers());
       } else if (attempts < 30) {
         setTimeout(function() { trySync(attempts + 1); }, 500);
       }
@@ -4993,6 +5063,20 @@ async function init() {
   await ensureAdminExists();
   applyTheme(localStorage.getItem('stageset_theme') || 'dark');
 
+  // sync users from Firestore so any device can log in
+  // wait for Firebase to be ready (up to 5 seconds)
+  if (navigator.onLine) {
+    await new Promise(resolve => {
+      if (fbReady) { resolve(); return; }
+      let waited = 0;
+      const check = setInterval(() => {
+        waited += 200;
+        if (fbReady || waited >= 5000) { clearInterval(check); resolve(); }
+      }, 200);
+    });
+    await syncUsersFromFirestore();
+  }
+
   const sessionState = checkSession();
   if (sessionState) {
     document.getElementById('loginScreen').classList.add('hidden');
@@ -5080,7 +5164,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.1 · 2026-03-16 18:08</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.1 · 2026-03-16 18:17</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
