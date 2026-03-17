@@ -858,11 +858,13 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <span id="tuningForkLabel" style="display:none;position:absolute;inset:0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;align-items:center;justify-content:center;">A</span>
       </button>
       <span class="song-nav-counter" id="songNavCounter" style="padding:0 2px;"></span>
-      <button class="song-nav-btn" id="songNavPrev" onclick="swipeTo(currentSongIdx-1)" title="Previous song">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+      <button class="song-nav-btn" id="songNavPrev" onclick="swipeTo(currentSongIdx-1)" title="Previous song" style="display:flex;flex-direction:column;align-items:center;gap:1px;max-width:64px;padding:4px 6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M15 18l-6-6 6-6"/></svg>
+        <span id="songNavPrevLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px;letter-spacing:0.2px;"></span>
       </button>
-      <button class="song-nav-btn" id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+      <button class="song-nav-btn" id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song" style="display:flex;flex-direction:column;align-items:center;gap:1px;max-width:64px;padding:4px 6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
+        <span id="songNavNextLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px;letter-spacing:0.2px;"></span>
       </button>
     </div>
     <div class="page-body no-nav" id="songPageBody" style="display:flex;flex-direction:column;padding:0;"></div>
@@ -1326,6 +1328,10 @@ let online = navigator.onLine;
 let bc; try { bc = new BroadcastChannel('stageset3'); } catch(e) {}
 let fbReady = false;
 let syncInProgress = false;
+let audioSyncCount = 0; // tracks active audio uploads/downloads
+
+function audioSyncStart() { audioSyncCount++; updateSyncUI(); }
+function audioSyncEnd()   { audioSyncCount = Math.max(0, audioSyncCount - 1); updateSyncUI(); }
 let lastSyncTime = parseInt(localStorage.getItem('mgb_last_sync')) || null;
 
 window.addEventListener('firebase-ready', () => { fbReady = true; });
@@ -1346,6 +1352,10 @@ function updateSyncUI() {
   if (syncInProgress) {
     pipClass = 'sync-pip syncing';
     lblText = 'Syncing…';
+    iconAnim = 'spin 1s linear infinite';
+  } else if (audioSyncCount > 0) {
+    pipClass = 'sync-pip syncing';
+    lblText = `Audio ${audioSyncCount > 1 ? audioSyncCount + ' files' : 'file'}…`;
     iconAnim = 'spin 1s linear infinite';
   } else if (!online) {
     pipClass = 'sync-pip offline';
@@ -1449,12 +1459,15 @@ async function fbStorageUpload(path, data, mimeType) {
   if (!fbReady || !online) return null;
   const fb = window._fb;
   if (!fb?.storage) return null;
+  const isAudio = path.includes('/audio/');
+  if (isAudio) audioSyncStart();
   try {
     const fileRef = fb.storageRef(fb.storage, path);
     const blob = data instanceof Blob ? data : new Blob([data], { type: mimeType });
     await fb.uploadBytes(fileRef, blob, { contentType: mimeType });
     return await fb.getDownloadURL(fileRef);
   } catch(e) { console.warn('Storage upload error:', e); return null; }
+  finally { if (isAudio) audioSyncEnd(); }
 }
 
 // Delete a file from Firebase Storage
@@ -1571,8 +1584,8 @@ async function loadAudioHybrid(songId) {
   if (!online) return null;
   const url = await getAudioDownloadUrl(songId);
   if (!url) return null;
+  audioSyncStart();
   try {
-    showToast('Loading audio…');
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const ab = await resp.arrayBuffer();
@@ -1591,8 +1604,9 @@ async function loadAudioHybrid(songId) {
     await dbPut('audio', { id: audioKey, name, data: ab, mimeType, updatedAt: Date.now() });
     const blob = new Blob([ab], { type: mimeType });
     window._audioCache[audioKey] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: false };
+    audioSyncEnd();
     return window._audioCache[audioKey];
-  } catch(e) { console.warn('Audio fetch error:', e); return null; }
+  } catch(e) { console.warn('Audio fetch error:', e); audioSyncEnd(); return null; }
 }
 
 async function fbPullAll() {
@@ -2191,6 +2205,11 @@ let scrollPlaying = false;
 let bpmTimer = null;
 const songScrollSpeeds = {}; // remembers speed per song id
 
+// Note zoom — per-song, last zoom also saved to localStorage as default
+const NOTE_ZOOM_KEY = 'mgb_note_zoom';
+let noteZoom = parseFloat(localStorage.getItem(NOTE_ZOOM_KEY) || '1');
+const songNoteZooms = {}; // per-song zoom override
+
 // ── TUNING FORK (Concert A 440 Hz) ──
 let tuningAudioCtx = null;
 let tuningOscillator = null;
@@ -2263,9 +2282,27 @@ function updateTopNav(idx) {
   const prevBtn = document.getElementById('songNavPrev');
   const nextBtn = document.getElementById('songNavNext');
   const counter = document.getElementById('songNavCounter');
+  const prevLabel = document.getElementById('songNavPrevLabel');
+  const nextLabel = document.getElementById('songNavNextLabel');
+
   if (prevBtn) prevBtn.classList.toggle('disabled', !prev);
   if (nextBtn) nextBtn.classList.toggle('disabled', !next);
   if (counter) counter.textContent = `${idx+1} / ${currentSetSongs.length}`;
+
+  // show adjacent song titles
+  if (prevLabel) {
+    const prevSong = prev ? currentSetSongs[idx - 1] : null;
+    prevLabel.textContent = prevSong
+      ? (prevSong.type === 'note' ? '— note —' : prevSong.title)
+      : '';
+  }
+  if (nextLabel) {
+    const nextSong = next ? currentSetSongs[idx + 1] : null;
+    nextLabel.textContent = nextSong
+      ? (nextSong.type === 'note' ? '— note —' : nextSong.title)
+      : '';
+  }
+
   // show play button if audio is attached to this song
   const s = currentSetSongs[idx];
   const playBtn = document.getElementById('songPlayBtn');
@@ -2323,6 +2360,8 @@ async function renderSongPage(idx) {
 
   // restore this song's remembered speed (or keep current default)
   if (songScrollSpeeds[s.id] !== undefined) scrollSpeed = songScrollSpeeds[s.id];
+  // restore per-song zoom
+  if (songNoteZooms[s.id] !== undefined) noteZoom = songNoteZooms[s.id];
   document.getElementById('songPageTopTitle').textContent = s.title;
 
   const audioKey = `audio_${s.id}`;
@@ -2428,16 +2467,23 @@ async function renderSongPage(idx) {
           <button class="note-tab ${noteTab==='all'?'active':''}" onclick="switchNoteTab('all',${idx})">All Notes</button>
           <button class="note-tab ${noteTab==='listen'?'active':''}" onclick="switchNoteTab('listen',${idx})">Links</button>
         </div>
-        <div class="scroll-toolbar" id="scrollToolbar" style="margin-left:12px;${noteTab==='listen'?'visibility:hidden;':''}">
-          <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
-            ${scrollPlaying
-              ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`
-              : `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`}
-          </button>
-          <div style="width:16px;flex-shrink:0;"></div>
-          <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
-          <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
-          <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
+        <div style="display:flex;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
+          ${noteTab !== 'listen' ? `
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="font-size:16px;">−</button>
+          <span class="note-zoom-label scroll-speed-label" style="min-width:36px;text-align:center;">${Math.round(noteZoom*100)}%</span>
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:16px;">+</button>
+          <div style="width:1px;height:16px;background:var(--border);margin:0 6px;"></div>` : ''}
+          <div class="scroll-toolbar" id="scrollToolbar" style="${noteTab==='listen'?'visibility:hidden;':''}">
+            <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
+              ${scrollPlaying
+                ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`
+                : `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`}
+            </button>
+            <div style="width:12px;flex-shrink:0;"></div>
+            <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
+            <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
+            <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2450,6 +2496,8 @@ async function renderSongPage(idx) {
     </div>`;
 
   setupSwipe(idx);
+  // apply zoom to note content area
+  applyNoteZoom();
   // trigger PDF.js rendering for any PDF viewers in the note area
   if (noteTab !== 'listen' && noteTab !== 'all') {
     const s2 = currentSetSongs[idx];
@@ -2728,6 +2776,33 @@ function changeSpeed(delta) {
   if (s) songScrollSpeeds[s.id] = scrollSpeed;
   const label = document.getElementById('scrollSpeedLabel');
   if (label) label.textContent = `×${scrollSpeed}`;
+}
+
+function changeNoteZoom(delta, idx) {
+  const step = 0.1;
+  noteZoom = Math.round(Math.max(0.5, Math.min(3.0, noteZoom + delta * step)) * 10) / 10;
+  // save per-song and as global default
+  const s = currentSetSongs[idx];
+  if (s) songNoteZooms[s.id] = noteZoom;
+  localStorage.setItem(NOTE_ZOOM_KEY, noteZoom);
+  applyNoteZoom();
+  // update the % label without full re-render
+  const labels = document.querySelectorAll('.note-zoom-label');
+  labels.forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
+}
+
+function applyNoteZoom() {
+  const area = document.getElementById('noteArea');
+  if (!area) return;
+  // apply zoom to text content only — not the audio player or attachment zones
+  const targets = area.querySelectorAll('.note-display, .rte-body, .note-edit-area');
+  targets.forEach(el => {
+    el.style.fontSize = noteZoom !== 1 ? `${noteZoom}em` : '';
+    el.style.lineHeight = noteZoom !== 1 ? `${1.6 * noteZoom}` : '';
+  });
+  // also update zoom label if present
+  const labels = area.querySelectorAll('.note-zoom-label');
+  labels.forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
 }
 
 function buildNoteContent(text, idx) {
@@ -6129,7 +6204,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 16:37</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:03</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
