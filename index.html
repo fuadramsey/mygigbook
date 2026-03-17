@@ -3623,12 +3623,16 @@ async function renderDB() {
           ${s.duration ? `<span>⏱ ${esc(s.duration)}</span>` : ''}
           ${s.createdBy && s.createdBy !== currentUser ? `<span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}
         </div>
+        <div id="songGroupBadges_${s.id}" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
       </div>
       ${!editingSongs ? `<div class="db-song-actions">
         ${s.spotifyUrl?`<a href="${esc(s.spotifyUrl)}" title="Open Spotify" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#1DB954;border-radius:6px;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:14px;height:14px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg></a>`:''}
         ${s.youtubeUrl?`<a href="${esc(s.youtubeUrl)}" title="Open YouTube" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#FF0000;border-radius:6px;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:14px;height:14px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>`:''}
         <div id="audioind_${s.id}" style="display:none;width:28px;height:28px;background:var(--surface3);border-radius:6px;align-items:center;justify-content:center;flex-shrink:0;" title="Audio attached">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--accent);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div class="sm-btn" title="Manage groups" onclick="openSongGroupModal('${s.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>
         </div>
         <div class="sm-btn" title="Add to current set" onclick="quickAdd('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
         <div class="sm-btn" title="Delete" onclick="deleteSong('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></div>
@@ -3641,6 +3645,16 @@ async function renderDB() {
       const entry = await dbGet('audio', `audio_${s.id}`);
       const ind = document.getElementById(`audioind_${s.id}`);
       if (ind && entry) ind.style.display = 'flex';
+      // show group badges
+      if (s.groupIds?.length) {
+        const groups = await Promise.all(s.groupIds.map(id => dbGet('groups', id)));
+        const badgeEl = document.getElementById(`songGroupBadges_${s.id}`);
+        if (badgeEl) {
+          badgeEl.innerHTML = groups.filter(Boolean).map(g =>
+            `<span style="font-size:10px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'DM Mono',monospace;white-space:nowrap;">${esc(g.name)}</span>`
+          ).join('');
+        }
+      }
     });
   }
   // bulk action bar for songs
@@ -4191,6 +4205,85 @@ async function confirmDeleteSong() {
     if (s.songs.length !== before) await dbPut('setlists', s);
   }
   await renderDB(); await syncOut(); showToast('Song deleted');
+}
+
+// ── SONG GROUP MANAGEMENT ──
+async function openSongGroupModal(songId) {
+  const song = await dbGet('songs', songId);
+  if (!song) return;
+  const allGroups = await dbAll('groups');
+  // only show groups the user owns or is a member of
+  const myGroups = allGroups.filter(g =>
+    g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin
+  );
+  const titleEl = document.getElementById('songGroupModalTitle');
+  if (titleEl) titleEl.textContent = esc(song.title) + ' — Groups';
+  const body = document.getElementById('songGroupModalBody');
+  if (!body) return;
+  if (!myGroups.length) {
+    body.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;">No groups available. Create a group first.</div>`;
+  } else {
+    body.innerHTML = myGroups.map(g => {
+      const inGroup = (song.groupIds||[]).includes(g.id);
+      return `<label style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+        <div class="select-checkbox ${inGroup?'checked':''}" id="sgcheck_${g.id}" style="flex-shrink:0;">
+          <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:500;">${esc(g.name)}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${g.createdBy === currentUser ? 'You own this group' : 'Member'}</div>
+        </div>
+        <input type="checkbox" ${inGroup?'checked':''} style="display:none;" onchange="toggleSongGroup('${songId}','${g.id}',this.checked)">
+      </label>`;
+    }).join('');
+    // wire up the visual checkboxes
+    myGroups.forEach(g => {
+      const box = document.getElementById(`sgcheck_${g.id}`);
+      const label = box?.closest('label');
+      if (label) {
+        const cb = label.querySelector('input[type="checkbox"]');
+        label.addEventListener('click', e => {
+          if (e.target.tagName === 'INPUT') return;
+          if (cb) {
+            cb.checked = !cb.checked;
+            toggleSongGroup(songId, g.id, cb.checked);
+            box.classList.toggle('checked', cb.checked);
+          }
+        });
+      }
+    });
+  }
+  document.getElementById('songGroupModal').classList.remove('hidden');
+}
+
+function closeSongGroupModal() {
+  document.getElementById('songGroupModal').classList.add('hidden');
+}
+
+async function toggleSongGroup(songId, groupId, add) {
+  const song = await dbGet('songs', songId);
+  if (!song) return;
+  let groupIds = [...(song.groupIds||[])];
+  if (add) {
+    if (!groupIds.includes(groupId)) groupIds.push(groupId);
+  } else {
+    groupIds = groupIds.filter(id => id !== groupId);
+  }
+  song.groupIds = groupIds;
+  song.updatedAt = Date.now();
+  await dbPut('songs', song);
+  await syncOut();
+  // refresh group badges on the card
+  const badgeEl = document.getElementById(`songGroupBadges_${songId}`);
+  if (badgeEl && groupIds.length) {
+    const groups = await Promise.all(groupIds.map(id => dbGet('groups', id)));
+    badgeEl.innerHTML = groups.filter(Boolean).map(g =>
+      `<span style="font-size:10px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'DM Mono',monospace;white-space:nowrap;">${esc(g.name)}</span>`
+    ).join('');
+  } else if (badgeEl) {
+    badgeEl.innerHTML = '';
+  }
+  showToast(add ? 'Added to group' : 'Removed from group', 'ok');
 }
 
 async function quickAdd(songId) {
@@ -6211,7 +6304,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:08</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:15</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
@@ -6469,6 +6562,20 @@ init().catch(console.error);
       <button class="btn primary" style="width:100%;" onclick="saveSongAndClose()">Save Changes</button>
       <button class="btn ghost" style="width:100%;color:var(--red);" onclick="discardSEEdit()">Discard Changes</button>
       <button class="btn ghost" style="width:100%;" onclick="closeSEUnsavedModal()">Keep Editing</button>
+    </div>
+  </div>
+</div>
+
+<!-- SONG GROUP MODAL -->
+<div class="modal-overlay hidden" id="songGroupModal" onclick="if(event.target===this)closeSongGroupModal()">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title" id="songGroupModalTitle">Manage Groups</span>
+      <div class="modal-close" onclick="closeSongGroupModal()">✕</div>
+    </div>
+    <div class="modal-body" id="songGroupModalBody" style="padding:16px;"></div>
+    <div class="modal-footer">
+      <button class="btn ghost" onclick="closeSongGroupModal()">Done</button>
     </div>
   </div>
 </div>
