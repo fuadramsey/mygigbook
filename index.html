@@ -2425,6 +2425,8 @@ async function openSongPage(idx) {
   currentSongIdx = idx;
   await renderSongPage(idx);
   showPage('pg-song');
+  // blur any focused element so arrow keys work without clicking
+  if (document.activeElement) document.activeElement.blur();
 }
 
 function updateTopNav(idx) {
@@ -3841,9 +3843,16 @@ function seekAudio(e, audioKey) {
 // Arrow key navigation — only active when viewing a song in a set
 document.addEventListener('keydown', (e) => {
   if (pageStack[pageStack.length - 1] !== 'pg-song') return;
-  // don't intercept if user is typing in an input/textarea/contenteditable
-  const tag = document.activeElement?.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+  // only block if user is actively typing in a text input or editable field
+  const el = document.activeElement;
+  const isTyping = el && (
+    el.tagName === 'INPUT' ||
+    el.tagName === 'TEXTAREA' ||
+    el.tagName === 'SELECT' ||
+    el.isContentEditable
+  );
+  if (isTyping) return;
+
   if (e.key === 'ArrowRight') {
     e.preventDefault();
     if (currentSongIdx < currentSetSongs.length - 1) swipeTo(currentSongIdx + 1);
@@ -3868,6 +3877,8 @@ function swipeTo(idx) {
   stopAudio();
   if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
   editingNote=false; renderSongPage(idx);
+  // blur so arrow keys work immediately after navigation
+  if (document.activeElement) document.activeElement.blur();
 }
 
 function setupSwipe(idx) {
@@ -7005,7 +7016,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 22:43</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 22:51</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
