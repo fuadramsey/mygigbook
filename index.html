@@ -4463,6 +4463,7 @@ async function handleModalPdfFile(e) {
     <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemovePdf('${songId}')">Remove</button>
   </div>`;
   showToast('PDF attached', 'ok');
+  if (document.getElementById('editSongId').value) switchSETab('attachments');
 }
 
 async function modalRemovePdf(songId) {
@@ -4494,6 +4495,7 @@ async function handleModalImgFile(e) {
   const imgs = (await dbAll('images')).filter(e => e.id.startsWith(`img_default_${songId}_`));
   refreshModalImgGrid(songId, imgs);
   showToast('Image attached', 'ok');
+  if (document.getElementById('editSongId').value) switchSETab('attachments');
 }
 
 async function modalRemoveImg(imageId, songId) {
@@ -4516,12 +4518,34 @@ async function handleModalAudioFile(e) {
     showToast('Unsupported audio format','err'); return;
   }
   if (file.size > 10 * 1024 * 1024) { showToast('Audio must be under 10 MB','err'); return; }
-  window._modalPendingAudio = file;
-  const el = document.getElementById('fAudioStatus');
-  if (el) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid rgba(232,255,71,0.3);border-radius:var(--radius);font-size:13px;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-    <span style="flex:1;">${esc(file.name)} <span style="color:var(--accent);font-size:11px;">(will save with song)</span></span>
-  </div>`;
+  const songId = document.getElementById('editSongId').value;
+  if (songId) {
+    // existing song — save immediately
+    const audioKey = `audio_${songId}`;
+    const ab = await file.arrayBuffer();
+    await dbPut('audio', { id: audioKey, name: file.name, data: ab, mimeType: file.type || 'audio/mpeg', updatedAt: Date.now() });
+    if (fbReady && online) {
+      const path = storagePath('audio', songId, audioKey);
+      const url = await fbStorageUpload(path, ab, file.type || 'audio/mpeg');
+      if (url) await fbSaveFileMeta(songId, 'audio', audioKey, { name: file.name, mimeType: file.type || 'audio/mpeg', downloadUrl: url, path });
+    }
+    // update cache
+    if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
+    const blob = new Blob([ab], { type: file.type || 'audio/mpeg' });
+    window._audioCache = window._audioCache || {};
+    window._audioCache[audioKey] = { name: file.name, blobUrl: URL.createObjectURL(blob), mimeType: file.type };
+    // refresh attachments tab
+    switchSETab('attachments');
+    showToast('Audio saved', 'ok');
+  } else {
+    // new song — queue for save
+    window._modalPendingAudio = file;
+    const el = document.getElementById('fAudioStatus');
+    if (el) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid rgba(232,255,71,0.3);border-radius:var(--radius);font-size:13px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span style="flex:1;">${esc(file.name)} <span style="color:var(--accent);font-size:11px;">(will save with song)</span></span>
+    </div>`;
+  }
 }
 
 async function modalRemoveAudio(songId) {
@@ -6821,7 +6845,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 22:02</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 22:20</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
