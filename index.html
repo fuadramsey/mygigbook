@@ -831,49 +831,67 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
   <!-- PAGE: SONG NOTE VIEW -->
   <div class="page" id="pg-song">
-    <div class="topbar" style="gap:2px;padding:0 16px;">
-
-      <!-- Back + Prev grouped on left -->
-      <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:4px;">
-        <button class="back-btn" onclick="goBack()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <button class="song-nav-btn disabled" id="songNavPrev" onclick="swipeTo(currentSongIdx-1)" title="Previous song" style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 8px;min-width:52px;max-width:80px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M15 18l-6-6 6-6"/></svg>
-          <span id="songNavPrevLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76px;letter-spacing:0.2px;"></span>
-        </button>
-      </div>
-
-      <!-- Current song title + counter — plain text, no box -->
+    <!-- Topbar: back, title, play, tuning only -->
+    <div class="topbar" style="gap:6px;padding:0 12px;">
+      <button class="back-btn" onclick="goBack()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;overflow:hidden;text-align:center;">
         <div id="songPageSetName" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Mono',monospace;"></div>
         <div id="songPageTopTitle" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;"></div>
         <span id="songNavCounter" style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:0.5px;"></span>
       </div>
-
-      <!-- Next + play/tuning grouped on right -->
-      <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-right:4px;">
-        <button class="song-nav-btn disabled" id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song" style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 8px;min-width:52px;max-width:80px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M9 18l6-6-6-6"/></svg>
-          <span id="songNavNextLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76px;letter-spacing:0.2px;"></span>
-        </button>
-        <button class="song-nav-btn" id="songPlayBtn" onclick="toggleSongPlay()" title="Play audio" style="display:none;">
-          <svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;">
-          <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
-            <path d="M12 13 Q8 13 8 8 L8 3"/>
-            <path d="M12 13 Q16 13 16 8 L16 3"/>
-            <path d="M8 3 Q8 1.5 9 1.5 Q10 1.5 10 3"/>
-            <path d="M14 3 Q14 1.5 15 1.5 Q16 1.5 16 3"/>
-            <line x1="12" y1="13" x2="12" y2="20.5"/>
-            <circle cx="12" cy="21.5" r="1.2" fill="currentColor" stroke="none"/>
-          </svg>
-          <span id="tuningForkLabel" style="display:none;position:absolute;inset:0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;align-items:center;justify-content:center;">A</span>
-        </button>
-      </div>
+      <button class="song-nav-btn" id="songPlayBtn" onclick="toggleSongPlay()" title="Play audio" style="display:none;">
+        <svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;">
+        <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+          <path d="M12 13 Q8 13 8 8 L8 3"/>
+          <path d="M12 13 Q16 13 16 8 L16 3"/>
+          <path d="M8 3 Q8 1.5 9 1.5 Q10 1.5 10 3"/>
+          <path d="M14 3 Q14 1.5 15 1.5 Q16 1.5 16 3"/>
+          <line x1="12" y1="13" x2="12" y2="20.5"/>
+          <circle cx="12" cy="21.5" r="1.2" fill="currentColor" stroke="none"/>
+        </svg>
+        <span id="tuningForkLabel" style="display:none;position:absolute;inset:0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;align-items:center;justify-content:center;">A</span>
+      </button>
     </div>
-    <div class="page-body no-nav" id="songPageBody" style="display:flex;flex-direction:column;padding:0;"></div>
+
+    <!-- Page body with floating side nav buttons -->
+    <div style="flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;">
+
+      <!-- LEFT: Prev song button — centered vertically on left edge -->
+      <button id="songNavPrev" onclick="swipeTo(currentSongIdx-1)" title="Previous song"
+        class="song-nav-btn disabled"
+        style="position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:10;
+               display:flex;flex-direction:column;align-items:center;gap:4px;
+               padding:14px 8px;background:var(--surface);border:none;border-right:1px solid var(--border);
+               border-radius:0 8px 8px 0;box-shadow:2px 0 8px rgba(0,0,0,0.08);
+               min-width:44px;max-width:68px;cursor:pointer;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;flex-shrink:0;"><path d="M15 18l-6-6 6-6"/></svg>
+        <span id="songNavPrevLabel"
+          style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);
+                 writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);
+                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:80px;letter-spacing:0.3px;"></span>
+      </button>
+
+      <!-- RIGHT: Next song button — centered vertically on right edge -->
+      <button id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song"
+        class="song-nav-btn disabled"
+        style="position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:10;
+               display:flex;flex-direction:column;align-items:center;gap:4px;
+               padding:14px 8px;background:var(--surface);border:none;border-left:1px solid var(--border);
+               border-radius:8px 0 0 8px;box-shadow:-2px 0 8px rgba(0,0,0,0.08);
+               min-width:44px;max-width:68px;cursor:pointer;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
+        <span id="songNavNextLabel"
+          style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);
+                 writing-mode:vertical-rl;text-orientation:mixed;
+                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:80px;letter-spacing:0.3px;"></span>
+      </button>
+
+      <div class="page-body no-nav" id="songPageBody" style="display:flex;flex-direction:column;padding:0;flex:1;"></div>
+    </div>
   </div>
 
   <!-- PAGE: SONG DATABASE -->
@@ -6532,7 +6550,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 19:08</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 19:30</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
