@@ -812,12 +812,16 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <input id="setNameInput" class="topbar-title" style="background:transparent;border:none;outline:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text)" onchange="renameCurrentSet(this.value)" />
+      <button class="top-action" onclick="openSetGroupModal()" title="Manage groups">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>
+      </button>
       <button class="top-action" onclick="openPicker()" title="Add songs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </div>
     <div class="page-body">
       <div class="set-header-strip" id="setHeaderStrip"></div>
+      <div id="setGroupBadgeStrip" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 0;"></div>
       <div id="setDetailSongs"></div>
       <div class="empty-view" id="setDetailEmpty" style="display:none">
         <div class="big">♫</div>
@@ -2040,6 +2044,7 @@ async function openSet(id) {
   currentSetId = id;
   const set = await dbGet('setlists', id);
   document.getElementById('setNameInput').value = set.name;
+  await renderSetGroupBadges(set);
   await renderSetDetail();
   showPage('pg-setdetail');
 }
@@ -4211,6 +4216,76 @@ async function confirmDeleteSong() {
 }
 
 // ── SONG GROUP MANAGEMENT ──
+// ── SETLIST GROUP MANAGEMENT ──
+async function openSetGroupModal() {
+  if (!currentSetId) return;
+  const set = await dbGet('setlists', currentSetId);
+  if (!set) return;
+  const allGroups = await dbAll('groups');
+  const myGroups = allGroups.filter(g =>
+    g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin
+  );
+  const titleEl = document.getElementById('setGroupModalTitle');
+  if (titleEl) titleEl.textContent = esc(set.name) + ' — Groups';
+  const body = document.getElementById('setGroupModalBody');
+  if (!body) return;
+  if (!myGroups.length) {
+    body.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;">No groups available. Create a group first.</div>`;
+  } else {
+    body.innerHTML = myGroups.map(g => {
+      const inGroup = (set.groupIds||[]).includes(g.id);
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="toggleSetGroup('${set.id}','${g.id}')">
+        <div class="select-checkbox ${inGroup?'checked':''}" id="stcheck_${g.id}" style="flex-shrink:0;pointer-events:none;">
+          <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:500;">${esc(g.name)}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${g.createdBy === currentUser ? 'You own this group' : 'Member'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('setGroupModal').classList.remove('hidden');
+}
+
+function closeSetGroupModal() {
+  document.getElementById('setGroupModal').classList.add('hidden');
+}
+
+async function toggleSetGroup(setId, groupId) {
+  const set = await dbGet('setlists', setId);
+  if (!set) return;
+  let groupIds = [...(set.groupIds||[])];
+  const inGroup = groupIds.includes(groupId);
+  if (inGroup) {
+    groupIds = groupIds.filter(id => id !== groupId);
+  } else {
+    groupIds.push(groupId);
+  }
+  set.groupIds = groupIds;
+  set.updatedAt = Date.now();
+  await dbPut('setlists', set);
+  await syncOut();
+  // update visual checkbox
+  const box = document.getElementById(`stcheck_${groupId}`);
+  if (box) box.classList.toggle('checked', !inGroup);
+  // refresh group badge strip in setlist detail
+  await renderSetGroupBadges(set);
+  // refresh setlists list
+  await renderSetsList();
+  showToast(!inGroup ? 'Added to group' : 'Removed from group', 'ok');
+}
+
+async function renderSetGroupBadges(set) {
+  const strip = document.getElementById('setGroupBadgeStrip');
+  if (!strip) return;
+  if (!set?.groupIds?.length) { strip.innerHTML = ''; return; }
+  const groups = await Promise.all(set.groupIds.map(id => dbGet('groups', id)));
+  strip.innerHTML = groups.filter(Boolean).map(g =>
+    `<span style="font-size:11px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:2px 10px;font-family:'DM Mono',monospace;white-space:nowrap;">${esc(g.name)}</span>`
+  ).join('');
+}
+
 async function openSongGroupModal(songId) {
   const song = await dbGet('songs', songId);
   if (!song) return;
@@ -4937,7 +5012,27 @@ async function postLoginInit() {
   await renderSetsList();
   await renderDB();
   await renderGroups();
+
+  // restore last group filter for this user, or auto-select first group they belong to
+  const savedGroup = localStorage.getItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'));
+  const allGroups = await dbAll('groups');
+  const myGroups = allGroups.filter(g =>
+    g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin
+  );
+  if (savedGroup && myGroups.find(g => g.id === savedGroup)) {
+    // restore saved group
+    activeGroupFilter = savedGroup;
+  } else if (myGroups.length > 0) {
+    // auto-select first group user belongs to
+    activeGroupFilter = myGroups[0].id;
+    localStorage.setItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'), myGroups[0].id);
+  } else {
+    // no groups — show all
+    activeGroupFilter = null;
+  }
   updateGroupFilterChips();
+  await renderSetsList();
+  await renderDB();
   // auto-sync from Firebase on startup if online
   if (online) {
     const trySync = async (attempts) => {
@@ -4956,6 +5051,7 @@ async function postLoginInit() {
 
 // ── GROUP FILTER ──
 let activeGroupFilter = null; // null = show all accessible, or a group id string
+const GROUP_FILTER_KEY = 'mgb_last_group';
 
 async function openGroupFilter() {
   const all = await dbAll('groups');
@@ -4987,6 +5083,12 @@ function closeGroupFilter() {
 
 async function setGroupFilter(groupId) {
   activeGroupFilter = groupId;
+  // persist last selection per user
+  if (groupId) {
+    localStorage.setItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'), groupId);
+  } else {
+    localStorage.removeItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'));
+  }
   closeGroupFilter();
   updateGroupFilterChips();
   await renderSetsList();
@@ -6295,7 +6397,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:30</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:42</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
@@ -6553,6 +6655,20 @@ init().catch(console.error);
       <button class="btn primary" style="width:100%;" onclick="saveSongAndClose()">Save Changes</button>
       <button class="btn ghost" style="width:100%;color:var(--red);" onclick="discardSEEdit()">Discard Changes</button>
       <button class="btn ghost" style="width:100%;" onclick="closeSEUnsavedModal()">Keep Editing</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETLIST GROUP MODAL -->
+<div class="modal-overlay hidden" id="setGroupModal" onclick="if(event.target===this)closeSetGroupModal()">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title" id="setGroupModalTitle">Manage Groups</span>
+      <div class="modal-close" onclick="closeSetGroupModal()">✕</div>
+    </div>
+    <div class="modal-body" id="setGroupModalBody" style="padding:16px;"></div>
+    <div class="modal-footer">
+      <button class="btn ghost" onclick="closeSetGroupModal()">Done</button>
     </div>
   </div>
 </div>
