@@ -341,7 +341,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .img-upload-zone:hover { border-color: var(--accent); }
 .note-image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
 .note-image-item { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--surface2); }
-.note-image-item img { width: 100%; display: block; cursor: pointer; border-radius: var(--radius); }
+.note-image-item img { width: 100%; height: auto; display: block; cursor: pointer; border-radius: var(--radius); object-fit: contain; }
 .note-image-item .img-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; }
 .note-image-item .img-remove:hover { background: var(--red); }
 /* ── MARKUP TOOLS ── */
@@ -3531,15 +3531,134 @@ async function removeNoteImage(imageId, idx) {
 }
 
 function viewFullImage(blobUrl) {
-  // open image in a lightbox overlay
+  // Full-screen lightbox with pinch-to-zoom, drag-to-pan, double-tap to toggle zoom
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:16px;';
-  overlay.onclick = () => overlay.remove();
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;overflow:hidden;touch-action:none;';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '✕';
+  closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;z-index:2;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+  closeBtn.onclick = () => overlay.remove();
+
   const img = document.createElement('img');
   img.src = blobUrl;
-  img.style.cssText = 'max-width:100%;max-height:100%;border-radius:8px;object-fit:contain;';
+  img.style.cssText = 'position:absolute;transform-origin:center;user-select:none;-webkit-user-drag:none;touch-action:none;max-width:none;';
+
+  overlay.appendChild(closeBtn);
   overlay.appendChild(img);
   document.body.appendChild(overlay);
+
+  let scale = 1, minScale = 1, maxScale = 8;
+  let tx = 0, ty = 0;
+  let lastTap = 0;
+
+  function fitImage() {
+    const ow = overlay.clientWidth, oh = overlay.clientHeight;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    if (!iw || !ih) return;
+    const fit = Math.min(ow / iw, oh / ih);
+    minScale = fit;
+    scale = fit;
+    tx = 0; ty = 0;
+    applyTransform();
+  }
+
+  function applyTransform() {
+    const ow = overlay.clientWidth, oh = overlay.clientHeight;
+    const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale;
+    // clamp pan so image edges can't go past center when smaller than viewport
+    const maxTx = Math.max(0, (iw - ow) / 2);
+    const maxTy = Math.max(0, (ih - oh) / 2);
+    tx = Math.max(-maxTx, Math.min(maxTx, tx));
+    ty = Math.max(-maxTy, Math.min(maxTy, ty));
+    img.style.width = (img.naturalWidth * scale) + 'px';
+    img.style.height = (img.naturalHeight * scale) + 'px';
+    img.style.left = (ow / 2 - img.naturalWidth * scale / 2 + tx) + 'px';
+    img.style.top = (oh / 2 - img.naturalHeight * scale / 2 + ty) + 'px';
+  }
+
+  img.onload = fitImage;
+  if (img.complete && img.naturalWidth) fitImage();
+
+  // ── Touch: pinch zoom + drag ──
+  let touches = {};
+  let lastDist = 0, lastMidX = 0, lastMidY = 0;
+  let dragging = false, dragStartX = 0, dragStartY = 0, dragStartTx = 0, dragStartTy = 0;
+
+  overlay.addEventListener('touchstart', e => {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(t => touches[t.identifier] = { x: t.clientX, y: t.clientY });
+    const ids = Object.keys(touches);
+    if (ids.length === 1) {
+      // double-tap detection
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        if (scale > minScale * 1.5) { scale = minScale; tx = 0; ty = 0; }
+        else { scale = Math.min(maxScale, minScale * 3); }
+        applyTransform();
+        lastTap = 0; return;
+      }
+      lastTap = now;
+      dragging = true;
+      dragStartX = touches[ids[0]].x; dragStartY = touches[ids[0]].y;
+      dragStartTx = tx; dragStartTy = ty;
+    } else if (ids.length === 2) {
+      dragging = false;
+      const [a, b] = ids.map(id => touches[id]);
+      lastDist = Math.hypot(b.x - a.x, b.y - a.y);
+      lastMidX = (a.x + b.x) / 2; lastMidY = (a.y + b.y) / 2;
+    }
+  }, { passive: false });
+
+  overlay.addEventListener('touchmove', e => {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(t => { if (touches[t.identifier]) touches[t.identifier] = { x: t.clientX, y: t.clientY }; });
+    const ids = Object.keys(touches);
+    if (ids.length === 2) {
+      const [a, b] = ids.map(id => touches[id]);
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+      const delta = dist / lastDist;
+      scale = Math.max(minScale, Math.min(maxScale, scale * delta));
+      tx += midX - lastMidX; ty += midY - lastMidY;
+      lastDist = dist; lastMidX = midX; lastMidY = midY;
+      applyTransform();
+    } else if (ids.length === 1 && dragging) {
+      const t = touches[ids[0]];
+      tx = dragStartTx + (t.x - dragStartX);
+      ty = dragStartTy + (t.y - dragStartY);
+      applyTransform();
+    }
+  }, { passive: false });
+
+  overlay.addEventListener('touchend', e => {
+    Array.from(e.changedTouches).forEach(t => delete touches[t.identifier]);
+    if (Object.keys(touches).length === 0) dragging = false;
+  });
+
+  // ── Mouse: scroll to zoom, drag to pan ──
+  overlay.addEventListener('wheel', e => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    scale = Math.max(minScale, Math.min(maxScale, scale * factor));
+    applyTransform();
+  }, { passive: false });
+
+  let mouseDown = false, mStartX = 0, mStartY = 0, mStartTx = 0, mStartTy = 0;
+  overlay.addEventListener('mousedown', e => {
+    if (e.target === closeBtn) return;
+    mouseDown = true; mStartX = e.clientX; mStartY = e.clientY; mStartTx = tx; mStartTy = ty;
+  });
+  overlay.addEventListener('mousemove', e => {
+    if (!mouseDown) return;
+    tx = mStartTx + (e.clientX - mStartX); ty = mStartTy + (e.clientY - mStartY);
+    applyTransform();
+  });
+  overlay.addEventListener('mouseup', e => {
+    mouseDown = false;
+    // click without drag = close if at fit scale
+    if (Math.abs(e.clientX - mStartX) < 4 && Math.abs(e.clientY - mStartY) < 4 && scale <= minScale * 1.05) overlay.remove();
+  });
 }
 
 // Also handle paste events on the note area for clipboard images
@@ -6598,6 +6717,64 @@ async function loadPdfViewer(pdfKey) {
     const container2 = document.getElementById(`pdfCanvasContainer_${pdfKey}`);
     if (container2) container2.innerHTML = `<div style="padding:20px;text-align:center;color:#f66;font-size:13px;">Failed to load PDF: ${esc(e.message)}</div>`;
   }
+  // add pinch-zoom to the container
+  setupPdfPinchZoom(container);
+}
+
+function setupPdfPinchZoom(container) {
+  if (!container || container._pinchSetup) return;
+  container._pinchSetup = true;
+  let scale = 1, minScale = 1, maxScale = 5;
+  let touches = {}, lastDist = 0;
+
+  container.style.transformOrigin = 'top center';
+  container.style.transition = 'transform 0.05s';
+
+  function applyScale() {
+    container.style.transform = `scale(${scale})`;
+    // expand the container's layout height to prevent clipping
+    container.style.height = (scale > 1) ? (container.scrollHeight * scale) + 'px' : '';
+  }
+
+  container.addEventListener('touchstart', e => {
+    if (e.touches.length < 2) return;
+    e.preventDefault();
+    Array.from(e.touches).forEach(t => touches[t.identifier] = { x: t.clientX, y: t.clientY });
+    const ids = Object.keys(touches);
+    if (ids.length >= 2) {
+      const [a, b] = [touches[ids[0]], touches[ids[1]]];
+      lastDist = Math.hypot(b.x - a.x, b.y - a.y);
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchmove', e => {
+    if (e.touches.length < 2) return;
+    e.preventDefault();
+    Array.from(e.touches).forEach(t => touches[t.identifier] = { x: t.clientX, y: t.clientY });
+    const ids = Object.keys(touches);
+    if (ids.length >= 2) {
+      const [a, b] = [touches[ids[0]], touches[ids[1]]];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      scale = Math.max(minScale, Math.min(maxScale, scale * (dist / lastDist)));
+      lastDist = dist;
+      applyScale();
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchend', e => {
+    Array.from(e.changedTouches).forEach(t => delete touches[t.identifier]);
+    if (Object.keys(touches).length === 0 && scale < 1.05) {
+      scale = 1; applyScale();
+    }
+  });
+
+  // mouse wheel zoom
+  container.addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    scale = Math.max(minScale, Math.min(maxScale, scale * (e.deltaY < 0 ? 1.1 : 0.9)));
+    applyScale();
+  }, { passive: false });
 }
 
 function redrawMarkup(pdfKey, pageIndex) {
@@ -7470,7 +7647,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 23:20</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 23:27</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
