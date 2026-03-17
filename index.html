@@ -351,6 +351,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .markup-color { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; flex-shrink: 0; }
 .markup-color:hover { border-color: rgba(255,255,255,0.5); }
 .markup-color.active { border-color: white; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
+.markup-color.active-color { border-color: white; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
 .pdf-page-wrap { position: relative; margin: 8px auto; display: block; }
 .pdf-page-wrap canvas { display: block; }
 .pdf-markup-canvas { position: absolute; top: 0; left: 0; cursor: crosshair; touch-action: none; }
@@ -871,10 +872,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <span id="songNavNextLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;letter-spacing:0.2px;text-align:center;display:block;"></span>
       </button>
 
-      <!-- Play + Tuning -->
-      <button class="song-nav-btn" id="songPlayBtn" onclick="toggleSongPlay()" title="Play audio" style="display:none;flex-shrink:0;">
-        <svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M8 5v14l11-7z"/></svg>
-      </button>
+      <!-- Tuning fork only — audio player is in the note area -->
       <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;flex-shrink:0;">
         <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
           <path d="M12 13 Q8 13 8 8 L8 3"/>
@@ -986,6 +984,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
               <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" style="border-radius:0;">My Notes</button>
               <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
               <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
+              <button class="note-tab" id="se-tab-horns" onclick="switchSETab('horns')" style="border-radius:0;">Horns</button>
             </div>
             <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
               <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
@@ -1056,6 +1055,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" style="border-radius:0;">My Notes</button>
       <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
       <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
+      <button class="note-tab" id="se-tab-horns" onclick="switchSETab('horns')" style="border-radius:0;">Horns</button>
     </div>
     <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
       <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
@@ -1389,10 +1389,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 let db;
 function openDB() {
   return new Promise((res,rej) => {
-    const r = indexedDB.open('stageset3', 7);
+    const r = indexedDB.open('stageset3', 8);
     r.onupgradeneeded = e => {
       const d = e.target.result;
-      ['songs','setlists','notes','pdfs','groups','audio','pdfmarkup','images','bugreports'].forEach(s => { if (!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:'id'}); });
+      ['songs','setlists','notes','pdfs','groups','audio','pdfmarkup','images','bugreports','imagemarkup'].forEach(s => { if (!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:'id'}); });
     };
     r.onsuccess = e => { db = e.target.result; res(); };
     r.onerror = rej;
@@ -2456,30 +2456,6 @@ function updateTopNav(idx) {
       : '';
   }
 
-  // show play button if audio is attached to this song
-  const s = currentSetSongs[idx];
-  const playBtn = document.getElementById('songPlayBtn');
-  if (playBtn && s && s.type !== 'note') {
-    const audioKey = `audio_${s.id}`;
-    const hasAudio = !!(window._audioCache?.[audioKey]);
-    playBtn.style.display = hasAudio ? 'flex' : 'none';
-    updateSongPlayIcon();
-  } else if (playBtn) {
-    playBtn.style.display = 'none';
-  }
-}
-
-function updateSongPlayIcon() {
-  const icon = document.getElementById('songPlayIcon');
-  if (!icon) return;
-  const s = currentSetSongs[currentSongIdx];
-  if (!s) return;
-  const audioKey = `audio_${s.id}`;
-  const audio = window._audioEl;
-  const isPlaying = audio && !audio.paused && window._audioKey === audioKey;
-  icon.outerHTML = isPlaying
-    ? `<svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
-    : `<svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M8 5v14l11-7z"/></svg>`;
 }
 
 function toggleSongPlay() {
@@ -2487,7 +2463,6 @@ function toggleSongPlay() {
   if (!s || s.type === 'note') return;
   const audioKey = `audio_${s.id}`;
   toggleAudio(audioKey, currentSongIdx);
-  setTimeout(updateSongPlayIcon, 50);
 }
 
 async function renderSongPage(idx) {
@@ -2617,14 +2592,15 @@ async function renderSongPage(idx) {
           <button class="note-tab ${noteTab==='mine'?'active':''}" onclick="switchNoteTab('mine',${idx})">My Notes</button>
           <button class="note-tab ${noteTab==='all'?'active':''}" onclick="switchNoteTab('all',${idx})">All Notes</button>
           <button class="note-tab ${noteTab==='listen'?'active':''}" onclick="switchNoteTab('listen',${idx})">Links</button>
+          ${(s.groupIds||[]).length ? `<button class="note-tab ${noteTab==='horns'?'active':''}" onclick="switchNoteTab('horns',${idx})">Horns</button>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
-          ${noteTab !== 'listen' ? `
+          ${noteTab !== 'listen' && noteTab !== 'horns' ? `
           <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="font-size:16px;">−</button>
           <span class="note-zoom-label scroll-speed-label" style="min-width:36px;text-align:center;">${Math.round(noteZoom*100)}%</span>
           <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:16px;">+</button>
           <div style="width:1px;height:16px;background:var(--border);margin:0 6px;"></div>` : ''}
-          <div class="scroll-toolbar" id="scrollToolbar" style="${noteTab==='listen'?'visibility:hidden;':''}">
+          <div class="scroll-toolbar" id="scrollToolbar" style="${noteTab==='listen'||noteTab==='horns'?'visibility:hidden;':''}">
             <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
               ${scrollPlaying
                 ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`
@@ -2643,6 +2619,8 @@ async function renderSongPage(idx) {
         ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + allNotesHtml
         : noteTab === 'listen'
         ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + buildListenContent(s)
+        : noteTab === 'horns'
+        ? `<div id="hornsContent" style="padding:16px;">Loading…</div>`
         : buildNoteContent(activeNote, idx)}
     </div>`;
 
@@ -2650,16 +2628,187 @@ async function renderSongPage(idx) {
   // apply zoom to note content area
   applyNoteZoom();
   // trigger PDF.js rendering for any PDF viewers in the note area
-  if (noteTab !== 'listen' && noteTab !== 'all') {
+  if (noteTab !== 'listen' && noteTab !== 'all' && noteTab !== 'horns') {
     const s2 = currentSetSongs[idx];
     if (s2 && s2.type !== 'note') {
       const pdfKey = noteTab === 'default' ? `default_${s2.id}` : `${currentUser||'me'}_${s2.id}`;
       if (window._pdfCache?.[pdfKey]) triggerPdfLoad(pdfKey);
-      // enable clipboard paste for images
       const imgPrefix2 = noteTab === 'default' ? `img_default_${s2.id}` : `img_${currentUser||'me'}_${s2.id}`;
       setupNotePaste(idx, imgPrefix2);
+      const imgPrefix3 = noteTab === 'default' ? `img_default_${s2.id}` : `img_${currentUser||'me'}_${s2.id}`;
+      const imgEntries2 = Object.entries(window._imageCache || {}).filter(([k]) => k.startsWith(imgPrefix3 + '_'));
+      if (imgEntries2.length) loadImageMarkupOverlays(imgEntries2);
     }
   }
+  if (noteTab === 'horns') {
+    const s2 = currentSetSongs[idx];
+    if (s2 && s2.type !== 'note') renderHornsTab(s2.id, idx);
+  }
+}
+
+// ── HORNS TAB ──
+async function renderHornsTab(songId, setIdx) {
+  const container = document.getElementById('hornsContent');
+  if (!container) return;
+  const user = currentUser || 'me';
+  const sharedPdfKey = `horns_shared_${songId}`;
+  const sharedImgPrefix = `horns_img_shared_${songId}`;
+  const personalPdfKey = `horns_${user}_${songId}`;
+  const personalImgPrefix = `horns_img_${user}_${songId}`;
+
+  // load files from IndexedDB
+  const [sharedPdf, personalPdf, allImgs] = await Promise.all([
+    dbGet('pdfs', sharedPdfKey),
+    dbGet('pdfs', personalPdfKey),
+    dbAll('images')
+  ]);
+  const sharedImgs = allImgs.filter(e => e.id.startsWith(sharedImgPrefix + '_'));
+  const personalImgs = allImgs.filter(e => e.id.startsWith(personalImgPrefix + '_'));
+
+  // build blob URLs for images
+  const imgBlobUrl = (entry) => {
+    if (window._imageCache?.[entry.id]) return window._imageCache[entry.id].blobUrl;
+    const blob = new Blob([entry.data], { type: entry.mimeType || 'image/jpeg' });
+    const url = URL.createObjectURL(blob);
+    window._imageCache = window._imageCache || {};
+    window._imageCache[entry.id] = { name: entry.name, blobUrl: url, mimeType: entry.mimeType };
+    return url;
+  };
+
+  const renderFileRow = (entry, removeCall) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;margin-bottom:6px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px;flex-shrink:0;color:var(--red);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
+      <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="${removeCall}">Remove</button>
+    </div>`;
+
+  const renderImgItem = (entry, removeCall) => `
+    <div style="position:relative;margin-bottom:8px;">
+      <img src="${imgBlobUrl(entry)}" style="width:100%;border-radius:6px;display:block;cursor:pointer;" onclick="openImageMarkup('${entry.id}','${imgBlobUrl(entry)}',${setIdx})">
+      <canvas id="imgMarkupOverlay_${entry.id}" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;border-radius:6px;"></canvas>
+      <div style="display:flex;gap:6px;margin-top:4px;">
+        <button class="edit-note-btn" style="flex:1;font-size:11px;" onclick="openImageMarkup('${entry.id}','${imgBlobUrl(entry)}',${setIdx})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Markup
+        </button>
+        <button class="edit-note-btn" style="font-size:11px;color:var(--red);" onclick="${removeCall}">Remove</button>
+      </div>
+    </div>`;
+
+  container.innerHTML = `
+    <!-- SHARED SECTION -->
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
+      <div class="settings-section-label" style="margin-bottom:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;display:inline;margin-right:4px;"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>
+        Group Chart
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Shared with all group members. Uploading replaces the previous file.</p>
+      ${sharedPdf ? renderFileRow(sharedPdf, `hornsRemoveSharedPdf('${songId}',${setIdx})`) : ''}
+      ${sharedImgs.map(e => renderImgItem(e, `hornsRemoveImg('${e.id}','${songId}',true,${setIdx})`)).join('')}
+      ${!sharedPdf && !sharedImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No group chart uploaded yet.</p>` : ''}
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('hornsPdfShared_${songId}').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span style="font-size:12px;">Upload PDF</span>
+        </div>
+        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('hornsImgShared_${songId}').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span style="font-size:12px;">Upload Image</span>
+        </div>
+      </div>
+      <input type="file" id="hornsPdfShared_${songId}" accept=".pdf,application/pdf" style="display:none" onchange="hornsHandlePdf(event,'${songId}',true,${setIdx})">
+      <input type="file" id="hornsImgShared_${songId}" accept="image/*" style="display:none" onchange="hornsHandleImg(event,'${songId}',true,${setIdx})">
+    </div>
+
+    <!-- PERSONAL SECTION -->
+    <div style="padding:14px 16px;">
+      <div class="settings-section-label" style="margin-bottom:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;display:inline;margin-right:4px;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        My Part
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Only visible to you.</p>
+      ${personalPdf ? renderFileRow(personalPdf, `hornsRemovePersonalPdf('${songId}',${setIdx})`) : ''}
+      ${personalImgs.map(e => renderImgItem(e, `hornsRemoveImg('${e.id}','${songId}',false,${setIdx})`)).join('')}
+      ${!personalPdf && !personalImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No personal part uploaded yet.</p>` : ''}
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('hornsPdfPersonal_${songId}').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span style="font-size:12px;">Upload PDF</span>
+        </div>
+        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('hornsImgPersonal_${songId}').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span style="font-size:12px;">Upload Image</span>
+        </div>
+      </div>
+      <input type="file" id="hornsPdfPersonal_${songId}" accept=".pdf,application/pdf" style="display:none" onchange="hornsHandlePdf(event,'${songId}',false,${setIdx})">
+      <input type="file" id="hornsImgPersonal_${songId}" accept="image/*" style="display:none" onchange="hornsHandleImg(event,'${songId}',false,${setIdx})">
+    </div>`;
+
+  // load markup overlays
+  const allHornsImgs = [...sharedImgs, ...personalImgs];
+  if (allHornsImgs.length) loadImageMarkupOverlays(allHornsImgs.map(e => [e.id, { blobUrl: imgBlobUrl(e), name: e.name }]));
+}
+
+async function hornsHandlePdf(e, songId, isShared, setIdx) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showToast('PDF must be under 10 MB', 'err'); return; }
+  const user = currentUser || 'me';
+  const key = isShared ? `horns_shared_${songId}` : `horns_${user}_${songId}`;
+  const ab = await file.arrayBuffer();
+  await dbPut('pdfs', { id: key, name: file.name, data: ab, updatedAt: Date.now() });
+  if (fbReady && online) {
+    const path = `songs/${songId}/horns/${key}`;
+    const url = await fbStorageUpload(path, ab, 'application/pdf');
+    if (url) await fbSaveFileMeta(songId, isShared ? 'horns_pdf_shared' : `horns_pdf_${user}`, key, { name: file.name, mimeType: 'application/pdf', downloadUrl: url, path });
+  }
+  showToast('Chart uploaded', 'ok');
+  renderHornsTab(songId, setIdx);
+}
+
+async function hornsHandleImg(e, songId, isShared, setIdx) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showToast('Image must be under 10 MB', 'err'); return; }
+  const user = currentUser || 'me';
+  const prefix = isShared ? `horns_img_shared_${songId}` : `horns_img_${user}_${songId}`;
+  const id = `${prefix}_${uid()}`;
+  const ab = await file.arrayBuffer();
+  await dbPut('images', { id, name: file.name, data: ab, mimeType: file.type, updatedAt: Date.now() });
+  if (fbReady && online) {
+    const path = `songs/${songId}/horns/${id}`;
+    const url = await fbStorageUpload(path, ab, file.type);
+    if (url) await fbSaveFileMeta(songId, isShared ? 'horns_img_shared' : `horns_img_${user}`, id, { name: file.name, mimeType: file.type, downloadUrl: url, path });
+  }
+  showToast('Image uploaded', 'ok');
+  renderHornsTab(songId, setIdx);
+}
+
+async function hornsRemoveSharedPdf(songId, setIdx) {
+  const key = `horns_shared_${songId}`;
+  await dbDel('pdfs', key);
+  fbStorageDelete(`songs/${songId}/horns/${key}`);
+  fbDeleteFileMeta(key);
+  renderHornsTab(songId, setIdx ?? -1);
+  showToast('Removed');
+}
+
+async function hornsRemovePersonalPdf(songId, setIdx) {
+  const user = currentUser || 'me';
+  const key = `horns_${user}_${songId}`;
+  await dbDel('pdfs', key);
+  fbStorageDelete(`songs/${songId}/horns/${key}`);
+  fbDeleteFileMeta(key);
+  renderHornsTab(songId, setIdx ?? -1);
+  showToast('Removed');
+}
+
+async function hornsRemoveImg(imageId, songId, isShared, setIdx) {
+  await dbDel('images', imageId);
+  fbStorageDelete(`songs/${songId}/horns/${imageId}`);
+  fbDeleteFileMeta(imageId);
+  renderHornsTab(songId, setIdx ?? -1);
+  showToast('Removed');
 }
 
 // ── LISTEN TAB ──
@@ -3124,8 +3273,15 @@ function buildNoteContent(text, idx) {
   const imageSection = imgEntries.length ? `<div style="margin-top:12px;">
     <div class="note-image-grid">
       ${imgEntries.map(([key, img]) => `
-        <div class="note-image-item">
-          <img src="${esc(img.blobUrl)}" alt="${esc(img.name)}" onclick="viewFullImage('${esc(img.blobUrl)}')">
+        <div class="note-image-item" style="position:relative;">
+          <div style="position:relative;width:100%;">
+            <img src="${esc(img.blobUrl)}" alt="${esc(img.name)}" onclick="openImageMarkup('${esc(key)}','${esc(img.blobUrl)}',${idx})" style="cursor:pointer;display:block;width:100%;border-radius:6px;">
+            <canvas id="imgMarkupOverlay_${key}" style="position:absolute;inset:0;width:100%;height:100%;border-radius:6px;pointer-events:none;"></canvas>
+          </div>
+          <button class="edit-note-btn" style="margin-top:4px;font-size:11px;" onclick="openImageMarkup('${esc(key)}','${esc(img.blobUrl)}',${idx})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit / Markup
+          </button>
           <button class="img-remove" onclick="removeNoteImage('${esc(key)}',${idx})" title="Remove image">✕</button>
         </div>`).join('')}
     </div>
@@ -4157,7 +4313,7 @@ function discardSEEdit() {
 function switchSETab(tab) {
   sePersistCurrentTab();
   seTab = tab;
-  ['details','mynotes','links','attachments'].forEach(t => {
+  ['details','mynotes','links','attachments','horns'].forEach(t => {
     const btn = document.getElementById(`se-tab-${t}`);
     if (btn) btn.classList.toggle('active', t === tab);
   });
@@ -4198,8 +4354,7 @@ function renderSETab() {
 
   // show scroll toolbar only on text tabs in read-only mode
   const scrollBar = document.getElementById('seScrollToolbar');
-  const showScroll = !seEditMode && (seTab === 'details' || seTab === 'mynotes');
-  if (scrollBar) {
+  const showScroll = !seEditMode && (seTab === 'details' || seTab === 'mynotes');  if (scrollBar) {
     scrollBar.style.display = showScroll ? 'flex' : 'none';
     const lbl = document.getElementById('seScrollSpeedLabel');
     if (lbl) lbl.textContent = `×${scrollSpeed}`;
@@ -4385,6 +4540,17 @@ function renderSETab() {
         </div>`;
       });
       dbAll('images').then(imgs => refreshModalImgGrid(id, imgs.filter(e => e.id.startsWith(`img_default_${id}_`))));
+    }
+  } else if (seTab === 'horns') {
+    const songGroups = (window._seCurrentSong?.groupIds || []);
+    if (!songGroups.length) {
+      body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3);">
+        <div style="font-size:32px;margin-bottom:8px;">🎺</div>
+        <p style="font-size:14px;">This song isn't in a group yet.<br>Add it to a group to use the Horns tab.</p>
+      </div>`;
+    } else {
+      body.innerHTML = `<div id="hornsContent" style="padding:0;">Loading…</div>`;
+      renderHornsTab(id, -1);
     }
   }
 }
@@ -6059,6 +6225,294 @@ async function deleteGroup(groupId) {
   showToast('Group deleted');
 }
 
+// ── IMAGE MARKUP ──
+const _imgMarkupState = {
+  tool: 'pen', color: '#e8ff47', size: 3,
+  strokes: [], redoStack: [],
+  drawing: false, lastX: 0, lastY: 0,
+  imageId: null, blobUrl: null, songIdx: null,
+  scaleX: 1, scaleY: 1
+};
+
+async function openImageMarkup(imageId, blobUrl, idx) {
+  const ms = _imgMarkupState;
+  ms.imageId = imageId;
+  ms.blobUrl = blobUrl;
+  ms.songIdx = idx;
+  ms.strokes = [];
+  ms.redoStack = [];
+  ms.drawing = false;
+
+  // load saved strokes
+  const saved = await dbGet('imagemarkup', imageId);
+  if (saved?.strokes) ms.strokes = saved.strokes;
+
+  // set up modal
+  document.getElementById('imgMarkupModal').classList.remove('hidden');
+  const img = document.getElementById('imgMarkupSource');
+  img.src = blobUrl;
+
+  img.onload = () => {
+    const canvas = document.getElementById('imgMarkupCanvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.style.width = img.offsetWidth + 'px';
+    canvas.style.height = img.offsetHeight + 'px';
+    ms.scaleX = img.naturalWidth / img.offsetWidth;
+    ms.scaleY = img.naturalHeight / img.offsetHeight;
+    imgMarkupRedraw();
+    setupImgMarkupEvents(canvas);
+  };
+
+  // update tool buttons
+  setImgMarkupTool(ms.tool);
+  setImgMarkupColor(ms.color);
+  document.getElementById('imgMarkupSize').value = ms.size;
+}
+
+function setupImgMarkupEvents(canvas) {
+  canvas.onmousedown = canvas.ontouchstart = (e) => {
+    e.preventDefault();
+    const ms = _imgMarkupState;
+    const pos = getImgMarkupPos(e, canvas);
+    ms.drawing = true;
+    ms.lastX = pos.x; ms.lastY = pos.y;
+    if (ms.tool === 'text') {
+      ms.drawing = false;
+      const text = prompt('Enter text:');
+      if (text) {
+        ms.strokes.push({ tool:'text', color: ms.color, size: ms.size * 5 + 10, x: pos.x, y: pos.y, text });
+        ms.redoStack = [];
+        imgMarkupRedraw();
+      }
+    } else {
+      ms.strokes.push({ tool: ms.tool, color: ms.color, size: ms.size, points: [{x: pos.x, y: pos.y}] });
+      ms.redoStack = [];
+    }
+  };
+  canvas.onmousemove = canvas.ontouchmove = (e) => {
+    e.preventDefault();
+    const ms = _imgMarkupState;
+    if (!ms.drawing) return;
+    const pos = getImgMarkupPos(e, canvas);
+    const stroke = ms.strokes[ms.strokes.length - 1];
+    if (stroke && stroke.points) {
+      stroke.points.push({x: pos.x, y: pos.y});
+      imgMarkupRedraw();
+    }
+    ms.lastX = pos.x; ms.lastY = pos.y;
+  };
+  canvas.onmouseup = canvas.ontouchend = (e) => {
+    _imgMarkupState.drawing = false;
+  };
+}
+
+function getImgMarkupPos(e, canvas) {
+  const ms = _imgMarkupState;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches?.[0] || e.changedTouches?.[0];
+  const cx = touch ? touch.clientX : e.clientX;
+  const cy = touch ? touch.clientY : e.clientY;
+  return {
+    x: (cx - rect.left) * ms.scaleX,
+    y: (cy - rect.top) * ms.scaleY
+  };
+}
+
+function imgMarkupRedraw() {
+  const canvas = document.getElementById('imgMarkupCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const ms = _imgMarkupState;
+  for (const stroke of ms.strokes) {
+    ctx.save();
+    if (stroke.tool === 'text') {
+      ctx.fillStyle = stroke.color;
+      ctx.font = `bold ${stroke.size}px DM Sans, sans-serif`;
+      ctx.fillText(stroke.text, stroke.x, stroke.y);
+    } else if (stroke.tool === 'highlight') {
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size * 6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      drawPath(ctx, stroke.points);
+    } else if (stroke.tool === 'arrow') {
+      if (stroke.points?.length >= 2) {
+        const from = stroke.points[0];
+        const to = stroke.points[stroke.points.length - 1];
+        ctx.strokeStyle = stroke.color;
+        ctx.fillStyle = stroke.color;
+        ctx.lineWidth = stroke.size;
+        ctx.lineCap = 'round';
+        drawArrow(ctx, from.x, from.y, to.x, to.y, stroke.size * 4);
+      }
+    } else {
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      drawPath(ctx, stroke.points);
+    }
+    ctx.restore();
+  }
+  // also update the inline overlay if visible
+  const overlay = document.getElementById(`imgMarkupOverlay_${ms.imageId}`);
+  if (overlay) {
+    const img = document.getElementById('imgMarkupSource');
+    overlay.width = canvas.width;
+    overlay.height = canvas.height;
+    const octx = overlay.getContext('2d');
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    octx.drawImage(canvas, 0, 0);
+  }
+}
+
+function drawPath(ctx, points) {
+  if (!points || points.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+  ctx.stroke();
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, headSize) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headSize * Math.cos(angle - Math.PI / 6), y2 - headSize * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(x2 - headSize * Math.cos(angle + Math.PI / 6), y2 - headSize * Math.sin(angle + Math.PI / 6));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function setImgMarkupTool(tool) {
+  _imgMarkupState.tool = tool;
+  ['pen','highlight','arrow','text'].forEach(t => {
+    const btn = document.getElementById(`imt_${t}`);
+    if (btn) btn.classList.toggle('active', t === tool);
+  });
+}
+
+function setImgMarkupColor(color) {
+  _imgMarkupState.color = color;
+  ['yellow','red','blue','green','white'].forEach(c => {
+    const btn = document.getElementById(`imc_${c}`);
+    if (btn) btn.classList.toggle('active-color', btn.style.background === color || (c==='yellow'&&color==='#e8ff47') || (c==='red'&&color==='#ff4444') || (c==='blue'&&color==='#4488ff') || (c==='green'&&color==='#44ff88') || (c==='white'&&color==='#ffffff'));
+  });
+}
+
+function setImgMarkupSize(val) {
+  _imgMarkupState.size = parseInt(val);
+}
+
+function imgMarkupUndo() {
+  const ms = _imgMarkupState;
+  if (!ms.strokes.length) return;
+  ms.redoStack.push(ms.strokes.pop());
+  imgMarkupRedraw();
+}
+
+function imgMarkupReset() {
+  if (!confirm('Clear all markup on this image?')) return;
+  _imgMarkupState.strokes = [];
+  _imgMarkupState.redoStack = [];
+  imgMarkupRedraw();
+}
+
+async function imgMarkupDone() {
+  const ms = _imgMarkupState;
+  // save strokes to IndexedDB
+  await dbPut('imagemarkup', { id: ms.imageId, strokes: ms.strokes, updatedAt: Date.now() });
+  // upload merged image to Firebase Storage for group sharing
+  if (fbReady && online && ms.strokes.length > 0) {
+    try {
+      const srcImg = document.getElementById('imgMarkupSource');
+      const canvas = document.getElementById('imgMarkupCanvas');
+      const merged = document.createElement('canvas');
+      merged.width = canvas.width;
+      merged.height = canvas.height;
+      const mctx = merged.getContext('2d');
+      mctx.drawImage(srcImg, 0, 0, canvas.width, canvas.height);
+      mctx.drawImage(canvas, 0, 0);
+      const blob = await new Promise(res => merged.toBlob(res, 'image/png'));
+      const path = `images/markup/${ms.imageId}.png`;
+      const url = await fbStorageUpload(path, blob, 'image/png');
+      if (url) await fbSaveFileMeta(ms.imageId.split('_').slice(2, -1).join('_'), 'imagemarkup', ms.imageId + '_markup', { imageId: ms.imageId, downloadUrl: url, path });
+    } catch(e) { console.warn('Image markup upload error:', e); }
+  }
+  // update inline overlay
+  const overlay = document.getElementById(`imgMarkupOverlay_${ms.imageId}`);
+  if (overlay) {
+    const canvas = document.getElementById('imgMarkupCanvas');
+    overlay.width = canvas.width;
+    overlay.height = canvas.height;
+    const octx = overlay.getContext('2d');
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    octx.drawImage(canvas, 0, 0);
+  }
+  document.getElementById('imgMarkupModal').classList.add('hidden');
+  showToast('Markup saved', 'ok');
+}
+
+// Load saved markup overlays after images render
+async function loadImageMarkupOverlays(imgEntries) {
+  for (const [key] of imgEntries) {
+    const saved = await dbGet('imagemarkup', key);
+    if (!saved?.strokes?.length) continue;
+    const overlay = document.getElementById(`imgMarkupOverlay_${key}`);
+    const img = overlay?.previousElementSibling;
+    if (!overlay || !img) continue;
+    const applyOverlay = () => {
+      overlay.width = img.naturalWidth;
+      overlay.height = img.naturalHeight;
+      const ctx = overlay.getContext('2d');
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+      // replay strokes
+      const prevState = { ..._imgMarkupState };
+      const tmpState = { strokes: saved.strokes, imageId: key };
+      Object.assign(_imgMarkupState, tmpState);
+      const tmpCanvas = document.getElementById('imgMarkupCanvas');
+      // draw directly to overlay
+      for (const stroke of saved.strokes) {
+        ctx.save();
+        if (stroke.tool === 'text') {
+          ctx.fillStyle = stroke.color;
+          ctx.font = `bold ${stroke.size}px DM Sans, sans-serif`;
+          ctx.fillText(stroke.text, stroke.x, stroke.y);
+        } else if (stroke.tool === 'highlight') {
+          ctx.globalAlpha = 0.35;
+          ctx.strokeStyle = stroke.color;
+          ctx.lineWidth = stroke.size * 6;
+          ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          drawPath(ctx, stroke.points);
+        } else if (stroke.tool === 'arrow') {
+          if (stroke.points?.length >= 2) {
+            const from = stroke.points[0];
+            const to = stroke.points[stroke.points.length - 1];
+            ctx.strokeStyle = stroke.color; ctx.fillStyle = stroke.color;
+            ctx.lineWidth = stroke.size; ctx.lineCap = 'round';
+            drawArrow(ctx, from.x, from.y, to.x, to.y, stroke.size * 4);
+          }
+        } else {
+          ctx.strokeStyle = stroke.color; ctx.lineWidth = stroke.size;
+          ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          drawPath(ctx, stroke.points);
+        }
+        ctx.restore();
+      }
+      Object.assign(_imgMarkupState, prevState);
+    };
+    if (img.complete && img.naturalWidth) applyOverlay();
+    else img.onload = applyOverlay;
+  }
+}
+
 // ── PDF.js VIEWER & MARKUP ──
 if (typeof pdfjsLib !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -7016,7 +7470,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 22:51</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 23:20</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
@@ -7324,6 +7778,47 @@ init().catch(console.error);
     <div class="modal-footer" id="audioCompressFooter">
       <button class="btn ghost" onclick="audioCompressCancel()">Cancel</button>
       <button class="btn primary" onclick="audioCompressConfirm()">Compress &amp; Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE MARKUP MODAL -->
+<div class="modal-overlay hidden" id="imgMarkupModal" style="padding:0;align-items:stretch;">
+  <div style="display:flex;flex-direction:column;width:100%;height:100%;background:var(--bg);max-height:100vh;">
+    <!-- Toolbar -->
+    <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;">
+      <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-family:'DM Mono',monospace;margin-right:4px;">Markup</span>
+      <button class="markup-tool-btn active" id="imt_pen" onclick="setImgMarkupTool('pen')" title="Pen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+      </button>
+      <button class="markup-tool-btn" id="imt_highlight" onclick="setImgMarkupTool('highlight')" title="Highlight">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      </button>
+      <button class="markup-tool-btn" id="imt_arrow" onclick="setImgMarkupTool('arrow')" title="Arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+      <button class="markup-tool-btn" id="imt_text" onclick="setImgMarkupTool('text')" title="Text">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      </button>
+      <div style="display:flex;gap:4px;margin-left:4px;">
+        <div class="markup-color active-color" id="imc_yellow" style="background:#e8ff47;" onclick="setImgMarkupColor('#e8ff47')" title="Yellow"></div>
+        <div class="markup-color" id="imc_red" style="background:#ff4444;" onclick="setImgMarkupColor('#ff4444')" title="Red"></div>
+        <div class="markup-color" id="imc_blue" style="background:#4488ff;" onclick="setImgMarkupColor('#4488ff')" title="Blue"></div>
+        <div class="markup-color" id="imc_green" style="background:#44ff88;" onclick="setImgMarkupColor('#44ff88')" title="Green"></div>
+        <div class="markup-color" id="imc_white" style="background:#ffffff;border:1px solid #666;" onclick="setImgMarkupColor('#ffffff')" title="White"></div>
+      </div>
+      <input type="range" min="1" max="16" value="3" id="imgMarkupSize" oninput="setImgMarkupSize(this.value)" style="width:60px;accent-color:var(--accent);">
+      <div style="flex:1;"></div>
+      <button class="btn ghost" style="padding:4px 10px;font-size:12px;" onclick="imgMarkupUndo()">↩ Undo</button>
+      <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--red);" onclick="imgMarkupReset()">Reset</button>
+      <button class="btn primary" style="padding:4px 12px;font-size:12px;" onclick="imgMarkupDone()">Done</button>
+    </div>
+    <!-- Canvas container -->
+    <div style="flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;background:#111;padding:8px;">
+      <div style="position:relative;display:inline-block;">
+        <img id="imgMarkupSource" style="display:block;max-width:100%;max-height:calc(100vh - 120px);border-radius:4px;user-select:none;-webkit-user-drag:none;">
+        <canvas id="imgMarkupCanvas" style="position:absolute;inset:0;border-radius:4px;cursor:crosshair;touch-action:none;"></canvas>
+      </div>
     </div>
   </div>
 </div>
