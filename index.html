@@ -3989,6 +3989,11 @@ function switchSETab(tab) {
     const btn = document.getElementById(`se-tab-${t}`);
     if (btn) btn.classList.toggle('active', t === tab);
   });
+  // save last content tab (details/mynotes) per song
+  const id = document.getElementById('editSongId')?.value;
+  if (id && (tab === 'details' || tab === 'mynotes')) {
+    localStorage.setItem('mgb_tab_' + id, tab);
+  }
   renderSETab();
 }
 
@@ -4332,7 +4337,9 @@ function dbScheduleHide() {
 async function openSongModal(id) {
   const onDbPage = pageStack[pageStack.length - 1] === 'pg-db';
 
-  seTab = 'details';
+  // restore last tab for this song (only details/mynotes), default to details
+  const savedTab = id ? localStorage.getItem('mgb_tab_' + id) : null;
+  seTab = (savedTab === 'mynotes') ? 'mynotes' : 'details';
   seEditMode = false;
   window._seCurrentSong = null;
   window._modalPendingAudio = null;
@@ -4356,7 +4363,7 @@ async function openSongModal(id) {
   document.getElementById('editSongId').value = id || '';
   ['details','mynotes','links','attachments'].forEach(t => {
     const btn = document.getElementById(`se-tab-${t}`);
-    if (btn) btn.classList.toggle('active', t === 'details');
+    if (btn) btn.classList.toggle('active', t === seTab);
   });
 
   if (onDbPage && !isMobile()) {
@@ -6814,7 +6821,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 21:56</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 22:02</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
