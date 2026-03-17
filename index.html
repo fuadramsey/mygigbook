@@ -514,10 +514,8 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   50% { box-shadow: 0 0 0 6px rgba(232,255,71,0); }
 }
 .song-nav-counter {
-  font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace;
   letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0;
-  background: var(--surface3); border: 1px solid var(--border); border-radius: 6px;
-  padding: 3px 7px;
 }
 
 /* BPM flash chip */
@@ -833,44 +831,47 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
   <!-- PAGE: SONG NOTE VIEW -->
   <div class="page" id="pg-song">
-    <div class="topbar" style="gap:4px;padding:0 8px;">
-      <button class="back-btn" onclick="goBack()" style="flex-shrink:0;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
+    <div class="topbar" style="gap:2px;padding:0 6px;">
 
-      <!-- Prev nav -->
-      <button class="song-nav-btn disabled" id="songNavPrev" onclick="swipeTo(currentSongIdx-1)" title="Previous song" style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;padding:4px 8px;min-width:52px;max-width:80px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M15 18l-6-6 6-6"/></svg>
-        <span id="songNavPrevLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76px;letter-spacing:0.2px;"></span>
-      </button>
+      <!-- Back + Prev grouped on left -->
+      <div style="display:flex;align-items:center;gap:0;flex-shrink:0;">
+        <button class="back-btn" onclick="goBack()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="song-nav-btn disabled" id="songNavPrev" onclick="swipeTo(currentSongIdx-1)" title="Previous song" style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 8px;min-width:52px;max-width:80px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M15 18l-6-6 6-6"/></svg>
+          <span id="songNavPrevLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76px;letter-spacing:0.2px;"></span>
+        </button>
+      </div>
 
-      <!-- Current song title -->
+      <!-- Current song title + counter — plain text, no box -->
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;overflow:hidden;text-align:center;">
         <div id="songPageSetName" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Mono',monospace;"></div>
         <div id="songPageTopTitle" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;"></div>
-        <span class="song-nav-counter" id="songNavCounter" style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;"></span>
+        <span id="songNavCounter" style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:0.5px;"></span>
       </div>
 
-      <!-- Next nav -->
-      <button class="song-nav-btn disabled" id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song" style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;padding:4px 8px;min-width:52px;max-width:80px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M9 18l6-6-6-6"/></svg>
-        <span id="songNavNextLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76px;letter-spacing:0.2px;"></span>
-      </button>
-
-      <button class="song-nav-btn" id="songPlayBtn" onclick="toggleSongPlay()" title="Play audio" style="display:none;flex-shrink:0;">
-        <svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-      <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;flex-shrink:0;">
-        <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
-          <path d="M12 13 Q8 13 8 8 L8 3"/>
-          <path d="M12 13 Q16 13 16 8 L16 3"/>
-          <path d="M8 3 Q8 1.5 9 1.5 Q10 1.5 10 3"/>
-          <path d="M14 3 Q14 1.5 15 1.5 Q16 1.5 16 3"/>
-          <line x1="12" y1="13" x2="12" y2="20.5"/>
-          <circle cx="12" cy="21.5" r="1.2" fill="currentColor" stroke="none"/>
-        </svg>
-        <span id="tuningForkLabel" style="display:none;position:absolute;inset:0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;align-items:center;justify-content:center;">A</span>
-      </button>
+      <!-- Next + play/tuning grouped on right -->
+      <div style="display:flex;align-items:center;gap:0;flex-shrink:0;">
+        <button class="song-nav-btn disabled" id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song" style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 8px;min-width:52px;max-width:80px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M9 18l6-6-6-6"/></svg>
+          <span id="songNavNextLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76px;letter-spacing:0.2px;"></span>
+        </button>
+        <button class="song-nav-btn" id="songPlayBtn" onclick="toggleSongPlay()" title="Play audio" style="display:none;">
+          <svg id="songPlayIcon" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;">
+          <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+            <path d="M12 13 Q8 13 8 8 L8 3"/>
+            <path d="M12 13 Q16 13 16 8 L16 3"/>
+            <path d="M8 3 Q8 1.5 9 1.5 Q10 1.5 10 3"/>
+            <path d="M14 3 Q14 1.5 15 1.5 Q16 1.5 16 3"/>
+            <line x1="12" y1="13" x2="12" y2="20.5"/>
+            <circle cx="12" cy="21.5" r="1.2" fill="currentColor" stroke="none"/>
+          </svg>
+          <span id="tuningForkLabel" style="display:none;position:absolute;inset:0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;align-items:center;justify-content:center;">A</span>
+        </button>
+      </div>
     </div>
     <div class="page-body no-nav" id="songPageBody" style="display:flex;flex-direction:column;padding:0;"></div>
   </div>
@@ -967,11 +968,22 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <button id="seSaveBtn" class="btn primary" style="padding:6px 16px;font-size:13px;flex-shrink:0;display:none;" onclick="saveSong()">Save</button>
   </div>
   <!-- Tab bar -->
-  <div class="note-tab-bar" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-    <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" style="border-radius:0;">Details</button>
-    <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" style="border-radius:0;">My Notes</button>
-    <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
-    <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
+  <div class="note-tab-bar" style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+    <div style="flex:1;display:flex;">
+      <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" style="border-radius:0;">Details</button>
+      <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" style="border-radius:0;">My Notes</button>
+      <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
+      <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
+    </div>
+    <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
+      <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div style="width:12px;"></div>
+      <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
+      <span class="scroll-speed-label" id="seScrollSpeedLabel">×${scrollSpeed}</span>
+      <button class="scroll-speed-btn" onclick="changeSESpeed(1)">+</button>
+    </div>
   </div>
   <div class="note-area" id="seTabBody" style="padding:16px;overflow-y:auto;"></div>
   <input type="hidden" id="editSongId">
@@ -1765,6 +1777,7 @@ function showPage(id) {
 function goBack() {
   if (pageStack.length <= 1) return;
   stopScroll();
+  stopSEScroll();
   stopTuningFork();
   stopAudio();
   if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
@@ -2759,6 +2772,58 @@ function startBpmFlash(bpm) {
 // ── AUTO SCROLL ──
 function toggleScroll() {
   scrollPlaying ? stopScroll() : startScroll();
+}
+
+// Song editor / DB scroll (scrolls seTabBody)
+let seScrollPlaying = false;
+let seScrollTimer = null;
+
+function toggleSEScroll() {
+  seScrollPlaying ? stopSEScroll() : startSEScroll();
+}
+function startSEScroll() {
+  if (seScrollPlaying) return;
+  seScrollPlaying = true;
+  updateSEScrollUI();
+  let last = null;
+  let accumulated = 0;
+  function step(ts) {
+    if (!seScrollPlaying) return;
+    if (last !== null) {
+      const pxPerSec = scrollSpeed * 5;
+      accumulated += (pxPerSec * (ts - last)) / 1000;
+      if (accumulated >= 1) {
+        const area = document.getElementById('seTabBody');
+        if (!area) { stopSEScroll(); return; }
+        const move = Math.floor(accumulated);
+        accumulated -= move;
+        area.scrollTop += move;
+        if (area.scrollTop + area.clientHeight >= area.scrollHeight - 2) {
+          stopSEScroll(); return;
+        }
+      }
+    }
+    last = ts;
+    seScrollTimer = requestAnimationFrame(step);
+  }
+  seScrollTimer = requestAnimationFrame(step);
+}
+function stopSEScroll() {
+  seScrollPlaying = false;
+  if (seScrollTimer) { cancelAnimationFrame(seScrollTimer); seScrollTimer = null; }
+  updateSEScrollUI();
+}
+function updateSEScrollUI() {
+  const btn = document.getElementById('seScrollPlayBtn');
+  if (!btn) return;
+  btn.innerHTML = seScrollPlaying
+    ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+}
+function changeSESpeed(delta) {
+  scrollSpeed = Math.max(1, Math.min(10, scrollSpeed + delta));
+  const lbl = document.getElementById('seScrollSpeedLabel');
+  if (lbl) lbl.textContent = `×${scrollSpeed}`;
 }
 
 function startScroll() {
@@ -3835,6 +3900,15 @@ function renderSETab() {
   if (!body) return;
   const id = document.getElementById('editSongId')?.value || '';
   const s = window._seCurrentSong || {};
+
+  // show scroll toolbar only on text tabs in read-only mode
+  const scrollBar = document.getElementById('seScrollToolbar');
+  const showScroll = !seEditMode && (seTab === 'details' || seTab === 'mynotes');
+  if (scrollBar) {
+    scrollBar.style.display = showScroll ? 'flex' : 'none';
+    const lbl = document.getElementById('seScrollSpeedLabel');
+    if (lbl) lbl.textContent = `×${scrollSpeed}`;
+  }
 
   if (seTab === 'details') {
     const sePlayer = (id && window._audioCache?.[`audio_${id}`]) ? buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0) : '';
@@ -6458,7 +6532,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 18:57</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 19:05</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
