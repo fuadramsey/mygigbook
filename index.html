@@ -982,7 +982,11 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <div style="flex:1;min-width:0;">
       <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text)">New Song</div>
     </div>
-    <button class="btn primary" style="padding:6px 16px;font-size:13px;flex-shrink:0;" onclick="saveSong()">Save</button>
+    <button id="seEditBtn" class="btn ghost" style="padding:6px 14px;font-size:13px;flex-shrink:0;display:flex;align-items:center;gap:6px;" onclick="enterSEEditMode()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit
+    </button>
+    <button id="seSaveBtn" class="btn primary" style="padding:6px 16px;font-size:13px;flex-shrink:0;display:none;" onclick="saveSong()">Save</button>
   </div>
   <!-- Tab bar -->
   <div class="note-tab-bar" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
@@ -1668,8 +1672,8 @@ async function manualSync() {
     localStorage.setItem('mgb_last_sync', lastSyncTime);
     showToast('Synced with cloud', 'ok');
   } catch(e) {
-    console.warn('Sync error:', e);
-    showToast('Sync failed — check connection', 'err');
+    console.error('Sync error:', e);
+    showToast('Sync failed: ' + (e?.message || e), 'err');
   } finally {
     syncInProgress = false;
     updateSyncUI();
@@ -3572,6 +3576,16 @@ async function renderDB() {
 }
 
 let seTab = 'details';
+let seEditMode = false;
+
+function enterSEEditMode() {
+  seEditMode = true;
+  const editBtn = document.getElementById('seEditBtn');
+  const saveBtn = document.getElementById('seSaveBtn');
+  if (editBtn) editBtn.style.display = 'none';
+  if (saveBtn) saveBtn.style.display = 'flex';
+  renderSETab();
+}
 
 function switchSETab(tab) {
   sePersistCurrentTab();
@@ -3584,6 +3598,7 @@ function switchSETab(tab) {
 }
 
 function sePersistCurrentTab() {
+  if (!seEditMode) return; // nothing to persist in view mode
   const s = window._seCurrentSong;
   if (!s) return;
   if (seTab === 'details') {
@@ -3611,56 +3626,67 @@ function renderSETab() {
 
   if (seTab === 'details') {
     const sePlayer = (id && window._audioCache?.[`audio_${id}`]) ? buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0) : '';
-    body.innerHTML = `
-      ${sePlayer}
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Title *</label><input class="form-input" id="fTitle" placeholder="Song name" value="${esc(s.title||'')}" oninput="document.getElementById('sePageTitle').textContent=this.value||'New Song'"></div>
-        <div class="form-group"><label class="form-label">Artist</label><input class="form-input" id="fArtist" placeholder="Original artist" value="${esc(s.artist||'')}"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Key</label>
-          <select class="form-input" id="fKey"><option value="">—</option><option>A</option><option>A#/Bb</option><option>B</option><option>C</option><option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option><option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option></select>
+    if (!seEditMode) {
+      // READ-ONLY view
+      body.innerHTML = `
+        ${sePlayer}
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            ${s.key ? `<span class="chip accent">${esc(s.key)}</span>` : ''}
+            ${s.bpm ? `<span class="chip">${s.bpm} BPM</span>` : ''}
+            ${s.duration ? `<span class="chip">⏱ ${esc(s.duration)}</span>` : ''}
+          </div>
+          ${s.artist ? `<div style="font-size:15px;color:var(--text2);">${esc(s.artist)}</div>` : ''}
+          ${s.notes ? `<div style="margin-top:8px;"><div class="form-label" style="margin-bottom:6px;">Lyrics</div><div class="note-display" style="white-space:pre-wrap;">${s.notes}</div></div>` : '<div style="color:var(--text3);font-style:italic;font-size:14px;">No lyrics added.</div>'}
+        </div>`;
+    } else {
+      // EDIT view
+      body.innerHTML = `
+        ${sePlayer}
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Title *</label><input class="form-input" id="fTitle" placeholder="Song name" value="${esc(s.title||'')}" oninput="document.getElementById('sePageTitle').textContent=this.value||'New Song'"></div>
+          <div class="form-group"><label class="form-label">Artist</label><input class="form-input" id="fArtist" placeholder="Original artist" value="${esc(s.artist||'')}"></div>
         </div>
-        <div class="form-group"><label class="form-label">BPM</label><input class="form-input" id="fBpm" type="number" placeholder="" value="${esc(s.bpm||'')}"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Duration</label><input class="form-input" id="fDuration" placeholder="3:30" value="${esc(s.duration||'')}"></div>
-        <div class="form-group"></div>
-      </div>
-      <div class="form-label" style="margin-bottom:6px;">Lyrics</div>
-      <div class="rte-toolbar">
-        <button class="rte-btn" onclick="rteCmd2('bold')" title="Bold"><strong>B</strong></button>
-        <button class="rte-btn" onclick="rteCmd2('italic')" title="Italic"><em>I</em></button>
-        <button class="rte-btn" onclick="rteCmd2('underline')" title="Underline" style="text-decoration:underline;">U</button>
-        <div class="rte-divider"></div>
-        <button class="rte-highlight-btn" onclick="rteHighlight2('#ffff00')" title="Yellow"><div style="width:18px;height:18px;background:#ffff00;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
-        <button class="rte-highlight-btn" onclick="rteHighlight2('#ff9999')" title="Red"><div style="width:18px;height:18px;background:#ff9999;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
-        <button class="rte-highlight-btn" onclick="rteHighlight2('#99ff99')" title="Green"><div style="width:18px;height:18px;background:#99ff99;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
-        <button class="rte-highlight-btn" onclick="rteHighlight2('#99ccff')" title="Blue"><div style="width:18px;height:18px;background:#99ccff;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
-        <button class="rte-btn" onclick="rteHighlight2('none')" title="Remove highlight" style="font-size:11px;">✕</button>
-        <div class="rte-divider"></div>
-        <select class="rte-select" onchange="rteFontSize2(this.value)" title="Font size">
-          <option value="12px">12</option><option value="14px" selected>14</option><option value="16px">16</option>
-          <option value="18px">18</option><option value="22px">22</option><option value="28px">28</option>
-        </select>
-        <div class="rte-divider"></div>
-        <button class="rte-btn" onclick="rteCmd2('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
-        <button class="rte-btn" onclick="rteClearFormat2()" title="Clear" style="font-size:11px;">Aa</button>
-      </div>
-      <div class="rte-body" id="fNotes" contenteditable="true" style="min-height:200px;" onpaste="rtePaste2(event)">${s.notes||''}</div>`;
-    // set key select after render
-    requestAnimationFrame(() => {
-      const keyEl = document.getElementById('fKey');
-      if (keyEl && s.key) keyEl.value = s.key;
-    });
-    // if audio not yet cached, load it async and inject player
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Key</label>
+            <select class="form-input" id="fKey"><option value="">—</option><option>A</option><option>A#/Bb</option><option>B</option><option>C</option><option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option><option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">BPM</label><input class="form-input" id="fBpm" type="number" placeholder="" value="${esc(s.bpm||'')}"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Duration</label><input class="form-input" id="fDuration" placeholder="3:30" value="${esc(s.duration||'')}"></div>
+          <div class="form-group"></div>
+        </div>
+        <div class="form-label" style="margin-bottom:6px;">Lyrics</div>
+        <div class="rte-toolbar">
+          <button class="rte-btn" onclick="rteCmd2('bold')" title="Bold"><strong>B</strong></button>
+          <button class="rte-btn" onclick="rteCmd2('italic')" title="Italic"><em>I</em></button>
+          <button class="rte-btn" onclick="rteCmd2('underline')" title="Underline" style="text-decoration:underline;">U</button>
+          <div class="rte-divider"></div>
+          <button class="rte-highlight-btn" onclick="rteHighlight2('#ffff00')" title="Yellow"><div style="width:18px;height:18px;background:#ffff00;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+          <button class="rte-highlight-btn" onclick="rteHighlight2('#ff9999')" title="Red"><div style="width:18px;height:18px;background:#ff9999;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+          <button class="rte-highlight-btn" onclick="rteHighlight2('#99ff99')" title="Green"><div style="width:18px;height:18px;background:#99ff99;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+          <button class="rte-highlight-btn" onclick="rteHighlight2('#99ccff')" title="Blue"><div style="width:18px;height:18px;background:#99ccff;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+          <button class="rte-btn" onclick="rteHighlight2('none')" title="Remove highlight" style="font-size:11px;">✕</button>
+          <div class="rte-divider"></div>
+          <select class="rte-select" onchange="rteFontSize2(this.value)" title="Font size">
+            <option value="12px">12</option><option value="14px" selected>14</option><option value="16px">16</option>
+            <option value="18px">18</option><option value="22px">22</option><option value="28px">28</option>
+          </select>
+          <div class="rte-divider"></div>
+          <button class="rte-btn" onclick="rteCmd2('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
+          <button class="rte-btn" onclick="rteClearFormat2()" title="Clear" style="font-size:11px;">Aa</button>
+        </div>
+        <div class="rte-body" id="fNotes" contenteditable="true" style="min-height:200px;" onpaste="rtePaste2(event)">${s.notes||''}</div>`;
+      requestAnimationFrame(() => {
+        const keyEl = document.getElementById('fKey');
+        if (keyEl && s.key) keyEl.value = s.key;
+      });
+    }
+    // async audio inject if not cached
     if (id && !window._audioCache?.[`audio_${id}`]) {
-      dbGet('audio', `audio_${id}`).then(entry => {
+      loadAudioHybrid(id).then(entry => {
         if (!entry) return;
-        if (!window._audioCache) window._audioCache = {};
-        const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
-        window._audioCache[`audio_${id}`] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType };
-        // inject player at top of tab body
         const playerHtml = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
         const wrap = document.createElement('div');
         wrap.innerHTML = playerHtml;
@@ -3670,35 +3696,42 @@ function renderSETab() {
   } else if (seTab === 'mynotes') {
     const myNoteHtml = window._seMyNotesHtml || '';
     const sePlayer = (id && window._audioCache?.[`audio_${id}`]) ? buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0) : '';
-    body.innerHTML = `
-      ${sePlayer}
-      <div class="rte-toolbar">
-        <button class="rte-btn" onclick="rteCmd3('bold')" title="Bold"><strong>B</strong></button>
-        <button class="rte-btn" onclick="rteCmd3('italic')" title="Italic"><em>I</em></button>
-        <button class="rte-btn" onclick="rteCmd3('underline')" title="Underline" style="text-decoration:underline;">U</button>
-        <div class="rte-divider"></div>
-        <button class="rte-highlight-btn" onclick="rteHighlight3('#ffff00')" title="Yellow"><div style="width:18px;height:18px;background:#ffff00;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
-        <button class="rte-highlight-btn" onclick="rteHighlight3('#ff9999')" title="Red"><div style="width:18px;height:18px;background:#ff9999;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
-        <button class="rte-highlight-btn" onclick="rteHighlight3('#99ff99')" title="Green"><div style="width:18px;height:18px;background:#99ff99;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
-        <button class="rte-highlight-btn" onclick="rteHighlight3('#99ccff')" title="Blue"><div style="width:18px;height:18px;background:#99ccff;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
-        <button class="rte-btn" onclick="rteHighlight3('none')" title="Remove highlight" style="font-size:11px;">✕</button>
-        <div class="rte-divider"></div>
-        <select class="rte-select" onchange="rteFontSize3(this.value)" title="Font size">
-          <option value="12px">12</option><option value="14px" selected>14</option><option value="16px">16</option>
-          <option value="18px">18</option><option value="22px">22</option><option value="28px">28</option>
-        </select>
-        <div class="rte-divider"></div>
-        <button class="rte-btn" onclick="rteCmd3('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
-        <button class="rte-btn" onclick="rteClearFormat3()" title="Clear" style="font-size:11px;">Aa</button>
-      </div>
-      <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
-    // if audio not yet cached, load it async and inject player
+    if (!seEditMode) {
+      // READ-ONLY view
+      body.innerHTML = `
+        ${sePlayer}
+        ${myNoteHtml
+          ? `<div class="note-display" style="white-space:pre-wrap;min-height:80px;">${myNoteHtml}</div>`
+          : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
+    } else {
+      // EDIT view
+      body.innerHTML = `
+        ${sePlayer}
+        <div class="rte-toolbar">
+          <button class="rte-btn" onclick="rteCmd3('bold')" title="Bold"><strong>B</strong></button>
+          <button class="rte-btn" onclick="rteCmd3('italic')" title="Italic"><em>I</em></button>
+          <button class="rte-btn" onclick="rteCmd3('underline')" title="Underline" style="text-decoration:underline;">U</button>
+          <div class="rte-divider"></div>
+          <button class="rte-highlight-btn" onclick="rteHighlight3('#ffff00')" title="Yellow"><div style="width:18px;height:18px;background:#ffff00;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+          <button class="rte-highlight-btn" onclick="rteHighlight3('#ff9999')" title="Red"><div style="width:18px;height:18px;background:#ff9999;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+          <button class="rte-highlight-btn" onclick="rteHighlight3('#99ff99')" title="Green"><div style="width:18px;height:18px;background:#99ff99;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+          <button class="rte-highlight-btn" onclick="rteHighlight3('#99ccff')" title="Blue"><div style="width:18px;height:18px;background:#99ccff;border-radius:3px;border:1px solid rgba(0,0,0,0.2);"></div></button>
+          <button class="rte-btn" onclick="rteHighlight3('none')" title="Remove highlight" style="font-size:11px;">✕</button>
+          <div class="rte-divider"></div>
+          <select class="rte-select" onchange="rteFontSize3(this.value)" title="Font size">
+            <option value="12px">12</option><option value="14px" selected>14</option><option value="16px">16</option>
+            <option value="18px">18</option><option value="22px">22</option><option value="28px">28</option>
+          </select>
+          <div class="rte-divider"></div>
+          <button class="rte-btn" onclick="rteCmd3('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
+          <button class="rte-btn" onclick="rteClearFormat3()" title="Clear" style="font-size:11px;">Aa</button>
+        </div>
+        <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
+    }
+    // async audio inject if not cached
     if (id && !window._audioCache?.[`audio_${id}`]) {
-      dbGet('audio', `audio_${id}`).then(entry => {
+      loadAudioHybrid(id).then(entry => {
         if (!entry) return;
-        if (!window._audioCache) window._audioCache = {};
-        const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
-        window._audioCache[`audio_${id}`] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType };
         const playerHtml = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
         const wrap = document.createElement('div');
         wrap.innerHTML = playerHtml;
@@ -3777,6 +3810,7 @@ function renderSETab() {
 
 async function openSongModal(id) {
   seTab = 'details';
+  seEditMode = false;
   window._seCurrentSong = null;
   window._modalPendingAudio = null;
   window._seMyNotesHtml = '';
@@ -3801,6 +3835,11 @@ async function openSongModal(id) {
     renderSETab();
   } else {
     window._seCurrentSong = {};
+    seEditMode = true; // new song starts in edit mode
+    const editBtn = document.getElementById('seEditBtn');
+    const saveBtn = document.getElementById('seSaveBtn');
+    if (editBtn) editBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'flex';
     const titleEl = document.getElementById('sePageTitle');
     if (titleEl) titleEl.textContent = 'New Song';
     renderSETab();
@@ -6026,7 +6065,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 15:58</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 16:11</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
