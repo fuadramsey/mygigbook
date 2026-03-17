@@ -1794,6 +1794,9 @@ function goBack() {
   rp.style.transform = ''; // clear any residual transform before activating
   rp.classList.remove('behind');
   rp.classList.add('active');
+  // refresh list pages when returning to them
+  if (ret === 'pg-setlists') renderSetsList();
+  if (ret === 'pg-db') renderDB();
 }
 function exitEditSets() {
   if (!editingSets) return;
@@ -6292,7 +6295,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:24</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:30</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
