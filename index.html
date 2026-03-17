@@ -831,10 +831,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
   <!-- PAGE: SONG NOTE VIEW -->
   <div class="page" id="pg-song">
-    <div class="topbar" style="gap:2px;padding:0 6px;">
+    <div class="topbar" style="gap:2px;padding:0 16px;">
 
       <!-- Back + Prev grouped on left -->
-      <div style="display:flex;align-items:center;gap:0;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:4px;">
         <button class="back-btn" onclick="goBack()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
@@ -852,7 +852,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       </div>
 
       <!-- Next + play/tuning grouped on right -->
-      <div style="display:flex;align-items:center;gap:0;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-right:4px;">
         <button class="song-nav-btn disabled" id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song" style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 8px;min-width:52px;max-width:80px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M9 18l6-6-6-6"/></svg>
           <span id="songNavNextLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76px;letter-spacing:0.2px;"></span>
@@ -6532,7 +6532,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 19:05</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 19:08</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
