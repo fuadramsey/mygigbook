@@ -916,10 +916,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     </div>
 
     <!-- Split body: left list + right detail -->
-    <div style="display:flex;flex:1;overflow:hidden;position:relative;">
+    <div id="dbSplitBody" style="display:flex;flex:1;overflow:hidden;position:relative;">
 
       <!-- LEFT PANEL: song list -->
-      <div id="dbLeftPanel" style="width:52%;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);transition:width 0.25s ease;overflow:hidden;background:var(--surface);">
+      <div id="dbLeftPanel" style="width:52%;flex-shrink:0;display:flex;flex-direction:column;border-right:none;transition:width 0.25s ease;overflow:hidden;background:var(--surface);">
         <div class="songs-toolbar" style="flex-shrink:0;">
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
@@ -948,6 +948,17 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
           <div id="groupMembersInnerDb" style="display:flex;gap:12px;align-items:center;min-width:max-content;"></div>
         </div>
         <div id="dbList" style="overflow-y:auto;flex:1;"></div>
+      </div>
+
+      <!-- Resize divider -->
+      <div id="dbResizeDivider"
+        style="width:6px;flex-shrink:0;cursor:col-resize;background:var(--border);
+               position:relative;z-index:5;transition:background 0.15s;"
+        onmousedown="dbStartResize(event)"
+        ontouchstart="dbStartResize(event)"
+        title="Drag to resize">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                    width:2px;height:32px;background:var(--text3);border-radius:1px;opacity:0.4;"></div>
       </div>
 
       <!-- Peek tab — shows when list is hidden -->
@@ -4205,6 +4216,66 @@ function renderSETab() {
 let dbListPinned = localStorage.getItem('mgb_db_pinned') === '1';
 let _dbAutoHideTimer = null;
 
+const DB_PANEL_WIDTH_KEY = 'mgb_db_panel_width';
+const DB_PANEL_DEFAULT = 52;
+
+function dbGetSavedWidth() {
+  const saved = localStorage.getItem(DB_PANEL_WIDTH_KEY);
+  return saved ? parseFloat(saved) : DB_PANEL_DEFAULT;
+}
+
+function dbApplyWidth(pct) {
+  const panel = document.getElementById('dbLeftPanel');
+  const divider = document.getElementById('dbResizeDivider');
+  if (panel) panel.style.width = pct + '%';
+  // remove transition during drag for smoothness
+  if (panel) panel.style.transition = '';
+}
+
+function dbSaveWidth(pct) {
+  localStorage.setItem(DB_PANEL_WIDTH_KEY, pct);
+}
+
+function dbStartResize(e) {
+  if (isMobile()) return;
+  e.preventDefault();
+  const body = document.getElementById('dbSplitBody');
+  const panel = document.getElementById('dbLeftPanel');
+  if (!body || !panel) return;
+  // remove transition during drag
+  panel.style.transition = 'none';
+
+  const startX = e.touches ? e.touches[0].clientX : e.clientX;
+  const startWidth = panel.offsetWidth;
+  const totalWidth = body.offsetWidth;
+
+  function onMove(ev) {
+    const x = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const delta = x - startX;
+    const newPct = Math.min(75, Math.max(20, ((startWidth + delta) / totalWidth) * 100));
+    dbApplyWidth(newPct);
+  }
+
+  function onUp(ev) {
+    const x = ev.changedTouches ? ev.changedTouches[0].clientX : ev.clientX;
+    const delta = x - startX;
+    const newPct = Math.min(75, Math.max(20, ((startWidth + delta) / totalWidth) * 100));
+    dbApplyWidth(newPct);
+    dbSaveWidth(Math.round(newPct * 10) / 10);
+    // restore transition
+    if (panel) panel.style.transition = 'width 0.25s ease';
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onUp);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onUp);
+}
+
 function dbUpdatePinBtn() {
   const btn = document.getElementById('dbPinBtn');
   if (!btn) return;
@@ -4235,8 +4306,10 @@ function dbShowList() {
   clearTimeout(_dbAutoHideTimer);
   const panel = document.getElementById('dbLeftPanel');
   const peek = document.getElementById('dbPeekTab');
-  if (panel) panel.style.width = '52%';
+  const divider = document.getElementById('dbResizeDivider');
+  if (panel) { panel.style.transition = 'width 0.25s ease'; panel.style.width = dbGetSavedWidth() + '%'; }
   if (peek) peek.style.display = 'none';
+  if (divider) divider.style.display = '';
   dbUpdatePinBtn();
 }
 
@@ -4244,8 +4317,10 @@ function dbHideList() {
   if (isMobile() || dbListPinned) return;
   const panel = document.getElementById('dbLeftPanel');
   const peek = document.getElementById('dbPeekTab');
+  const divider = document.getElementById('dbResizeDivider');
   if (panel) panel.style.width = '0';
   if (peek) peek.style.display = 'flex';
+  if (divider) divider.style.display = 'none';
 }
 
 function dbScheduleHide() {
@@ -6739,7 +6814,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 21:49</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 21:56</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
