@@ -846,28 +846,26 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       </button>
       <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;">
         <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
-          <!-- left tine: starts at stem, curves out and up -->
           <path d="M12 13 Q8 13 8 8 L8 3"/>
-          <!-- right tine: starts at stem, curves out and up -->
           <path d="M12 13 Q16 13 16 8 L16 3"/>
-          <!-- tine tops (small rounded caps) -->
           <path d="M8 3 Q8 1.5 9 1.5 Q10 1.5 10 3"/>
           <path d="M14 3 Q14 1.5 15 1.5 Q16 1.5 16 3"/>
-          <!-- stem going down -->
           <line x1="12" y1="13" x2="12" y2="20.5"/>
-          <!-- base knob -->
           <circle cx="12" cy="21.5" r="1.2" fill="currentColor" stroke="none"/>
         </svg>
         <span id="tuningForkLabel" style="display:none;position:absolute;inset:0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;align-items:center;justify-content:center;">A</span>
       </button>
-      <span class="song-nav-counter" id="songNavCounter" style="padding:0 2px;"></span>
-      <button class="song-nav-btn" id="songNavPrev" onclick="swipeTo(currentSongIdx-1)" title="Previous song" style="display:flex;flex-direction:column;align-items:center;gap:1px;max-width:64px;padding:4px 6px;">
+    </div>
+    <!-- Navigation bar — prev/next with full-width song titles -->
+    <div style="display:flex;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);padding:0;flex-shrink:0;">
+      <button class="song-nav-btn disabled" id="songNavPrev" onclick="swipeTo(currentSongIdx-1)" title="Previous song" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 10px;min-width:0;flex:1;border-radius:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M15 18l-6-6 6-6"/></svg>
-        <span id="songNavPrevLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px;letter-spacing:0.2px;"></span>
+        <span id="songNavPrevLabel" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;letter-spacing:0.2px;"></span>
       </button>
-      <button class="song-nav-btn" id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song" style="display:flex;flex-direction:column;align-items:center;gap:1px;max-width:64px;padding:4px 6px;">
+      <span class="song-nav-counter" id="songNavCounter" style="padding:0 12px;flex-shrink:0;font-size:11px;white-space:nowrap;"></span>
+      <button class="song-nav-btn disabled" id="songNavNext" onclick="swipeTo(currentSongIdx+1)" title="Next song" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding:6px 10px;min-width:0;flex:1;border-radius:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
-        <span id="songNavNextLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px;letter-spacing:0.2px;"></span>
+        <span id="songNavNextLabel" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:right;letter-spacing:0.2px;"></span>
       </button>
     </div>
     <div class="page-body no-nav" id="songPageBody" style="display:flex;flex-direction:column;padding:0;"></div>
@@ -982,11 +980,14 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span class="modal-title">Add songs to set</span>
       <div class="modal-close" onclick="closePicker()">✕</div>
     </div>
-    <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)">
-      <div class="search-wrap">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;gap:8px;align-items:center;">
+      <div class="search-wrap" style="flex:1;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
         <input class="search-input" id="pickerSearch" placeholder="Search…" oninput="renderPicker()">
       </div>
+      <select id="pickerArtistFilter" class="filter-sel" onchange="renderPicker()" style="max-width:120px;flex-shrink:0;">
+        <option value="">All artists</option>
+      </select>
     </div>
     <div class="modal-body" id="pickerList"></div>
   </div>
@@ -3554,25 +3555,64 @@ function setupSwipe(idx) {
 }
 
 // ── PICKER ──
-function openPicker() { document.getElementById('pickerSearch').value=''; document.getElementById('pickerModal').classList.remove('hidden'); renderPicker(); }
+async function openPicker() {
+  document.getElementById('pickerSearch').value = '';
+  document.getElementById('pickerModal').classList.remove('hidden');
+  // populate artist filter
+  const songs = await dbAll('songs');
+  const artists = [...new Set(songs.map(s => s.artist).filter(Boolean))].sort();
+  const sel = document.getElementById('pickerArtistFilter');
+  sel.innerHTML = '<option value="">All artists</option>' +
+    artists.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  renderPicker();
+}
 function closePicker() { document.getElementById('pickerModal').classList.add('hidden'); }
 document.getElementById('pickerModal').addEventListener('click', e => { if(e.target===e.currentTarget) closePicker(); });
 
 async function renderPicker() {
   const set=await dbGet('setlists',currentSetId);
-  const songIdsInSet = (set?.songs||[]).map(s=>typeof s==='string'?s:s?.songId).filter(Boolean);
+  const setItems = (set?.songs||[]);
+  // build a map of songId -> [position numbers] (1-based, songs only, skipping notes)
+  const posMap = {};
+  let songPos = 0;
+  setItems.forEach(entry => {
+    const id = typeof entry === 'string' ? entry : entry?.songId;
+    if (typeof entry === 'string' || (entry && entry.type !== 'note')) {
+      songPos++;
+      if (id) {
+        if (!posMap[id]) posMap[id] = [];
+        posMap[id].push(songPos);
+      }
+    }
+  });
   let songs=await dbAll('songs');
   const q=document.getElementById('pickerSearch').value.toLowerCase();
-  if(q) songs=songs.filter(s=>(s.title+s.artist).toLowerCase().includes(q));
+  const artistFilter=document.getElementById('pickerArtistFilter')?.value || '';
+  if(q) songs=songs.filter(s=>(s.title+' '+(s.artist||'')).toLowerCase().includes(q));
+  if(artistFilter) songs=songs.filter(s=>s.artist===artistFilter);
   songs.sort((a,b)=>a.title.localeCompare(b.title));
   const el=document.getElementById('pickerList');
   if(!songs.length){el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3)">No songs in database yet.</div>';return;}
   el.innerHTML=songs.map(s=>{
-    const count = songIdsInSet.filter(id=>id===s.id).length;
+    const positions = posMap[s.id] || [];
+    const inSet = positions.length > 0;
     return `<div class="picker-song" onclick="pickerAdd('${s.id}')">
-      <div class="check-circle ${count>0?'on':''}">${count>1?`<span style="font-size:10px;font-weight:700;color:#000">${count}</span>`:count===1?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-9"/></svg>`:''}</div>
-      <div class="picker-info"><div class="picker-title">${esc(s.title)}</div><div class="picker-meta">${[s.artist,s.key,s.bpm?s.bpm+' BPM':''].filter(Boolean).join(' · ')}</div></div>
-      ${count>0?`<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0;">+add again</span>`:''}
+      <div class="check-circle ${inSet?'on':''}" style="flex-shrink:0;">
+        ${positions.length > 1
+          ? `<span style="font-size:10px;font-weight:700;color:#000;">${positions.length}×</span>`
+          : positions.length === 1
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-9"/></svg>`
+          : ''}
+      </div>
+      <div class="picker-info">
+        <div class="picker-title">${esc(s.title)}</div>
+        <div class="picker-meta">${[s.artist,s.key,s.bpm?s.bpm+' BPM':''].filter(Boolean).join(' · ')}</div>
+      </div>
+      ${positions.length > 0
+        ? `<div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end;flex-shrink:0;max-width:80px;">
+            ${positions.map(p=>`<span style="font-size:10px;font-family:'DM Mono',monospace;background:var(--accent);color:#000;border-radius:4px;padding:1px 6px;font-weight:700;">#${p}</span>`).join('')}
+           </div>`
+        : ''}
     </div>`;
   }).join('');
 }
@@ -6414,7 +6454,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 18:40</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 18:51</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
