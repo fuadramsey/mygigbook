@@ -3418,6 +3418,145 @@ function handleAudioFile(e, idx) {
   if (file) processAudioFile(file, idx);
 }
 
+// ── AUDIO COMPRESSION ──
+let _audioCompressResolve = null;
+let _audioCompressFile = null;
+let _audioCompressCallback = null;
+
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
+
+async function checkAndHandleAudioFile(file, callback) {
+  if (file.size <= MAX_AUDIO_BYTES) {
+    callback(file);
+    return;
+  }
+  // File too big — ask user
+  _audioCompressFile = file;
+  _audioCompressCallback = callback;
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  document.getElementById('audioCompressMsg').textContent =
+    `"${file.name}" is ${mb} MB which exceeds the 10 MB limit. Would you like to compress it?`;
+  document.getElementById('audioCompressProgress').style.display = 'none';
+  document.getElementById('audioCompressFooter').style.display = 'flex';
+  document.getElementById('audioCompressBar').style.width = '0%';
+  document.getElementById('audioCompressModal').classList.remove('hidden');
+}
+
+function audioCompressCancel() {
+  document.getElementById('audioCompressModal').classList.add('hidden');
+  _audioCompressFile = null;
+  _audioCompressCallback = null;
+}
+
+async function audioCompressConfirm() {
+  const file = _audioCompressFile;
+  const callback = _audioCompressCallback;
+  if (!file || !callback) { audioCompressCancel(); return; }
+
+  // Show progress UI
+  document.getElementById('audioCompressFooter').style.display = 'none';
+  document.getElementById('audioCompressProgress').style.display = 'block';
+  document.getElementById('audioCompressStatus').textContent = 'Decoding audio…';
+  document.getElementById('audioCompressBar').style.width = '20%';
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    document.getElementById('audioCompressBar').style.width = '40%';
+    document.getElementById('audioCompressStatus').textContent = 'Compressing…';
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+    await audioCtx.close();
+
+    document.getElementById('audioCompressBar').style.width = '60%';
+
+    // Re-encode using MediaRecorder at lower bitrate
+    const compressed = await reencodeAudio(decoded, file.name);
+    document.getElementById('audioCompressBar').style.width = '90%';
+
+    if (!compressed) {
+      document.getElementById('audioCompressStatus').textContent = 'Compression failed — try a different file.';
+      setTimeout(() => audioCompressCancel(), 2500);
+      return;
+    }
+
+    if (compressed.size > MAX_AUDIO_BYTES) {
+      const mb = (compressed.size / 1024 / 1024).toFixed(1);
+      document.getElementById('audioCompressStatus').textContent =
+        `Still too large (${mb} MB). Try a shorter or lower-quality recording.`;
+      setTimeout(() => audioCompressCancel(), 3000);
+      return;
+    }
+
+    document.getElementById('audioCompressBar').style.width = '100%';
+    document.getElementById('audioCompressStatus').textContent = `Done — ${(compressed.size / 1024 / 1024).toFixed(1)} MB`;
+
+    setTimeout(() => {
+      document.getElementById('audioCompressModal').classList.add('hidden');
+      _audioCompressFile = null;
+      _audioCompressCallback = null;
+      callback(compressed);
+    }, 600);
+
+  } catch (err) {
+    console.warn('Audio compression error:', err);
+    document.getElementById('audioCompressStatus').textContent = 'Error: ' + (err.message || 'compression failed');
+    setTimeout(() => audioCompressCancel(), 3000);
+  }
+}
+
+async function reencodeAudio(audioBuffer, originalName) {
+  return new Promise(async (resolve) => {
+    try {
+      // Load lamejs for MP3 encoding if not already loaded
+      if (!window.lamejs) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+      const numChannels = Math.min(audioBuffer.numberOfChannels, 2);
+      const sampleRate = audioBuffer.sampleRate;
+      const bitrate = 192; // near-CD quality
+
+      const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, bitrate);
+      const blockSize = 1152;
+      const mp3Data = [];
+
+      const left = audioBuffer.getChannelData(0);
+      const right = numChannels > 1 ? audioBuffer.getChannelData(1) : left;
+
+      // Convert float32 to int16
+      const toInt16 = (f32) => {
+        const int16 = new Int16Array(f32.length);
+        for (let i = 0; i < f32.length; i++) {
+          int16[i] = Math.max(-32768, Math.min(32767, f32[i] * 32767));
+        }
+        return int16;
+      };
+      const leftInt16 = toInt16(left);
+      const rightInt16 = numChannels > 1 ? toInt16(right) : leftInt16;
+
+      for (let i = 0; i < leftInt16.length; i += blockSize) {
+        const lChunk = leftInt16.subarray(i, i + blockSize);
+        const rChunk = rightInt16.subarray(i, i + blockSize);
+        const encoded = numChannels > 1
+          ? mp3encoder.encodeBuffer(lChunk, rChunk)
+          : mp3encoder.encodeBuffer(lChunk);
+        if (encoded.length > 0) mp3Data.push(encoded);
+      }
+      const final = mp3encoder.flush();
+      if (final.length > 0) mp3Data.push(final);
+
+      const blob = new Blob(mp3Data, { type: 'audio/mp3' });
+      const name = originalName.replace(/\.[^.]+$/, '') + '_compressed.mp3';
+      resolve(new File([blob], name, { type: 'audio/mp3' }));
+    } catch(e) { console.warn('MP3 encode error:', e); resolve(null); }
+  });
+}
+
 async function processAudioFile(file, idx) {
   const allowed = ['audio/mpeg','audio/wav','audio/mp4','audio/x-m4a','audio/aac','audio/ogg','audio/flac','audio/x-flac'];
   const ext = file.name.split('.').pop().toLowerCase();
@@ -3425,23 +3564,22 @@ async function processAudioFile(file, idx) {
   if (!allowed.includes(file.type) && !allowedExts.includes(ext)) {
     showToast('Unsupported audio format', 'err'); return;
   }
-  if (file.size > 10 * 1024 * 1024) { showToast('Audio must be under 10 MB', 'err'); return; }
-  showToast('Attaching audio…');
-  const s = currentSetSongs[idx];
-  if (!s) return;
-  const audioKey = `audio_${s.id}`;
-  const arrayBuffer = await file.arrayBuffer();
-  stopAudio();
-  // save locally
-  await dbPut('audio', { id: audioKey, name: file.name, data: arrayBuffer, mimeType: file.type || 'audio/mpeg', updatedAt: Date.now() });
-  // upload to Firebase Storage
-  if (fbReady && online) {
-    const path = storagePath('audio', s.id, audioKey);
-    const url = await fbStorageUpload(path, arrayBuffer, file.type || 'audio/mpeg');
-    if (url) await fbSaveFileMeta(s.id, 'audio', audioKey, { name: file.name, mimeType: file.type || 'audio/mpeg', downloadUrl: url, path });
-  }
-  showToast('Audio attached', 'ok');
-  await renderSongPage(idx);
+  checkAndHandleAudioFile(file, async (f) => {
+    showToast('Attaching audio…');
+    const s = currentSetSongs[idx];
+    if (!s) return;
+    const audioKey = `audio_${s.id}`;
+    const arrayBuffer = await f.arrayBuffer();
+    stopAudio();
+    await dbPut('audio', { id: audioKey, name: f.name, data: arrayBuffer, mimeType: f.type || 'audio/mpeg', updatedAt: Date.now() });
+    if (fbReady && online) {
+      const path = storagePath('audio', s.id, audioKey);
+      const url = await fbStorageUpload(path, arrayBuffer, f.type || 'audio/mpeg');
+      if (url) await fbSaveFileMeta(s.id, 'audio', audioKey, { name: f.name, mimeType: f.type || 'audio/mpeg', downloadUrl: url, path });
+    }
+    showToast('Audio attached', 'ok');
+    await renderSongPage(idx);
+  });
 }
 
 async function removeAudio(audioKey, idx) {
@@ -4517,35 +4655,34 @@ async function handleModalAudioFile(e) {
   if (!allowedExts.includes(ext) && !file.type.startsWith('audio/')) {
     showToast('Unsupported audio format','err'); return;
   }
-  if (file.size > 10 * 1024 * 1024) { showToast('Audio must be under 10 MB','err'); return; }
-  const songId = document.getElementById('editSongId').value;
-  if (songId) {
-    // existing song — save immediately
-    const audioKey = `audio_${songId}`;
-    const ab = await file.arrayBuffer();
-    await dbPut('audio', { id: audioKey, name: file.name, data: ab, mimeType: file.type || 'audio/mpeg', updatedAt: Date.now() });
-    if (fbReady && online) {
-      const path = storagePath('audio', songId, audioKey);
-      const url = await fbStorageUpload(path, ab, file.type || 'audio/mpeg');
-      if (url) await fbSaveFileMeta(songId, 'audio', audioKey, { name: file.name, mimeType: file.type || 'audio/mpeg', downloadUrl: url, path });
+  checkAndHandleAudioFile(file, async (f) => {
+    const songId = document.getElementById('editSongId').value;
+    if (songId) {
+      // existing song — save immediately
+      const audioKey = `audio_${songId}`;
+      const ab = await f.arrayBuffer();
+      await dbPut('audio', { id: audioKey, name: f.name, data: ab, mimeType: f.type || 'audio/mpeg', updatedAt: Date.now() });
+      if (fbReady && online) {
+        const path = storagePath('audio', songId, audioKey);
+        const url = await fbStorageUpload(path, ab, f.type || 'audio/mpeg');
+        if (url) await fbSaveFileMeta(songId, 'audio', audioKey, { name: f.name, mimeType: f.type || 'audio/mpeg', downloadUrl: url, path });
+      }
+      if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
+      const blob = new Blob([ab], { type: f.type || 'audio/mpeg' });
+      window._audioCache = window._audioCache || {};
+      window._audioCache[audioKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType: f.type };
+      switchSETab('attachments');
+      showToast('Audio saved', 'ok');
+    } else {
+      // new song — queue for save
+      window._modalPendingAudio = f;
+      const el = document.getElementById('fAudioStatus');
+      if (el) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid rgba(232,255,71,0.3);border-radius:var(--radius);font-size:13px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span style="flex:1;">${esc(f.name)} <span style="color:var(--accent);font-size:11px;">(will save with song)</span></span>
+      </div>`;
     }
-    // update cache
-    if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-    const blob = new Blob([ab], { type: file.type || 'audio/mpeg' });
-    window._audioCache = window._audioCache || {};
-    window._audioCache[audioKey] = { name: file.name, blobUrl: URL.createObjectURL(blob), mimeType: file.type };
-    // refresh attachments tab
-    switchSETab('attachments');
-    showToast('Audio saved', 'ok');
-  } else {
-    // new song — queue for save
-    window._modalPendingAudio = file;
-    const el = document.getElementById('fAudioStatus');
-    if (el) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid rgba(232,255,71,0.3);border-radius:var(--radius);font-size:13px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-      <span style="flex:1;">${esc(file.name)} <span style="color:var(--accent);font-size:11px;">(will save with song)</span></span>
-    </div>`;
-  }
+  });
 }
 
 async function modalRemoveAudio(songId) {
@@ -6845,7 +6982,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 22:20</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 22:28</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
@@ -7131,6 +7268,28 @@ init().catch(console.error);
     <div class="modal-body" id="songGroupModalBody" style="padding:16px;"></div>
     <div class="modal-footer">
       <button class="btn ghost" onclick="closeSongGroupModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIO COMPRESS MODAL -->
+<div class="modal-overlay hidden" id="audioCompressModal">
+  <div class="modal-sheet" style="max-width:360px;">
+    <div class="modal-header">
+      <span class="modal-title">File Too Large</span>
+    </div>
+    <div class="modal-body" style="padding:16px;">
+      <p id="audioCompressMsg" style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:12px;"></p>
+      <div id="audioCompressProgress" style="display:none;">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-family:'DM Mono',monospace;" id="audioCompressStatus">Compressing…</div>
+        <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
+          <div id="audioCompressBar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.3s;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="audioCompressFooter">
+      <button class="btn ghost" onclick="audioCompressCancel()">Cancel</button>
+      <button class="btn primary" onclick="audioCompressConfirm()">Compress &amp; Upload</button>
     </div>
   </div>
 </div>
