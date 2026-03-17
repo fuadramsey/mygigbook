@@ -1862,7 +1862,7 @@ async function renderSetsList() {
     const el2 = document.getElementById('gbadge_'+s.id);
     if (!el2) return;
     const groups = await Promise.all(s.groupIds.map(id => dbGet('groups',id)));
-    el2.innerHTML = groups.filter(Boolean).map(g => `<span class="admin-badge" style="font-size:10px;">${esc(g.name)}</span>`).join('');
+    el2.innerHTML = groups.filter(Boolean).map(g => `<span class="admin-badge" style="font-size:10px;cursor:pointer;" onclick="event.stopPropagation();openSetGroupModalById('${s.id}')" title="Manage groups">${esc(g.name)}</span>`).join('');
   });
   // bulk action bar
   if (editingSets) {
@@ -3652,7 +3652,7 @@ async function renderDB() {
         const badgeEl = document.getElementById(`songGroupBadges_${s.id}`);
         if (badgeEl) {
           badgeEl.innerHTML = groups.filter(Boolean).map(g =>
-            `<span style="font-size:10px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'DM Mono',monospace;white-space:nowrap;">${esc(g.name)}</span>`
+            `<span style="font-size:10px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'DM Mono',monospace;white-space:nowrap;cursor:pointer;" onclick="event.stopPropagation();openSongGroupModal('${s.id}')" title="Manage groups">${esc(g.name)}</span>`
           ).join('');
         }
       }
@@ -4212,31 +4212,46 @@ async function confirmDeleteSong() {
 
 // ── SONG GROUP MANAGEMENT ──
 // ── SETLIST GROUP MANAGEMENT ──
+// Open set group modal by id (used from badge clicks on list page)
+async function openSetGroupModalById(setId) {
+  currentSetId = setId;
+  await openSetGroupModal();
+}
+
 async function openSetGroupModal() {
   if (!currentSetId) return;
   const set = await dbGet('setlists', currentSetId);
   if (!set) return;
   const allGroups = await dbAll('groups');
   const privateGroupId = getPrivateGroupId();
+  // include all groups including Private so user can move content between them
   const myGroups = allGroups.filter(g =>
-    (g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin) && !g.isPrivate
-  );
+    g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin
+  ).sort((a, b) => {
+    if (a.id === privateGroupId) return -1;
+    if (b.id === privateGroupId) return 1;
+    return a.name.localeCompare(b.name);
+  });
   const titleEl = document.getElementById('setGroupModalTitle');
   if (titleEl) titleEl.textContent = esc(set.name) + ' — Groups';
   const body = document.getElementById('setGroupModalBody');
   if (!body) return;
   if (!myGroups.length) {
-    body.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;">No groups available. Create a group first.</div>`;
+    body.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;">No groups available.</div>`;
   } else {
     body.innerHTML = myGroups.map(g => {
       const inGroup = (set.groupIds||[]).includes(g.id);
+      const isPrivate = g.id === privateGroupId;
       return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="toggleSetGroup('${set.id}','${g.id}')">
         <div class="select-checkbox ${inGroup?'checked':''}" id="stcheck_${g.id}" style="flex-shrink:0;pointer-events:none;">
           <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div style="flex:1;">
-          <div style="font-size:15px;font-weight:500;">${esc(g.name)}</div>
-          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${g.createdBy === currentUser ? 'You own this group' : 'Member'}</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:500;">
+            ${isPrivate ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>` : ''}
+            ${esc(g.name)}
+          </div>
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${isPrivate ? 'Personal — only visible to you' : (g.createdBy === currentUser ? 'You own this group' : 'Member')}</div>
         </div>
       </div>`;
     }).join('');
@@ -4278,7 +4293,7 @@ async function renderSetGroupBadges(set) {
   if (!set?.groupIds?.length) { strip.innerHTML = ''; return; }
   const groups = await Promise.all(set.groupIds.map(id => dbGet('groups', id)));
   strip.innerHTML = groups.filter(Boolean).map(g =>
-    `<span style="font-size:11px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:2px 10px;font-family:'DM Mono',monospace;white-space:nowrap;">${esc(g.name)}</span>`
+    `<span style="font-size:11px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:2px 10px;font-family:'DM Mono',monospace;white-space:nowrap;cursor:pointer;" onclick="openSetGroupModal()" title="Manage groups">${esc(g.name)}</span>`
   ).join('');
 }
 
@@ -4286,25 +4301,35 @@ async function openSongGroupModal(songId) {
   const song = await dbGet('songs', songId);
   if (!song) return;
   const allGroups = await dbAll('groups');
+  const privateGroupId = getPrivateGroupId();
+  // include all groups including Private
   const myGroups = allGroups.filter(g =>
-    (g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin) && !g.isPrivate
-  );
+    g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin
+  ).sort((a, b) => {
+    if (a.id === privateGroupId) return -1;
+    if (b.id === privateGroupId) return 1;
+    return a.name.localeCompare(b.name);
+  });
   const titleEl = document.getElementById('songGroupModalTitle');
   if (titleEl) titleEl.textContent = esc(song.title) + ' — Groups';
   const body = document.getElementById('songGroupModalBody');
   if (!body) return;
   if (!myGroups.length) {
-    body.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;">No groups available. Create a group first.</div>`;
+    body.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;">No groups available.</div>`;
   } else {
     body.innerHTML = myGroups.map(g => {
       const inGroup = (song.groupIds||[]).includes(g.id);
+      const isPrivate = g.id === privateGroupId;
       return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="toggleSongGroup('${songId}','${g.id}')">
         <div class="select-checkbox ${inGroup?'checked':''}" id="sgcheck_${g.id}" style="flex-shrink:0;pointer-events:none;">
           <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div style="flex:1;">
-          <div style="font-size:15px;font-weight:500;">${esc(g.name)}</div>
-          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${g.createdBy === currentUser ? 'You own this group' : 'Member'}</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:500;">
+            ${isPrivate ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>` : ''}
+            ${esc(g.name)}
+          </div>
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${isPrivate ? 'Personal — only visible to you' : (g.createdBy === currentUser ? 'You own this group' : 'Member')}</div>
         </div>
       </div>`;
     }).join('');
@@ -4339,7 +4364,7 @@ async function toggleSongGroup(songId, groupId) {
     if (groupIds.length) {
       const groups = await Promise.all(groupIds.map(id => dbGet('groups', id)));
       badgeEl.innerHTML = groups.filter(Boolean).map(g =>
-        `<span style="font-size:10px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'DM Mono',monospace;white-space:nowrap;">${esc(g.name)}</span>`
+        `<span style="font-size:10px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'DM Mono',monospace;white-space:nowrap;cursor:pointer;" onclick="event.stopPropagation();openSongGroupModal('${songId}')" title="Manage groups">${esc(g.name)}</span>`
       ).join('');
     } else {
       badgeEl.innerHTML = '';
@@ -4392,7 +4417,7 @@ function applyTheme(mode) {
   document.body.classList.toggle('dim', mode === 'dim');
 }
 function updateSettingsUI() {
-  const mode = localStorage.getItem('stageset_theme') || 'dark';
+  const mode = localStorage.getItem('stageset_theme') || 'light';
   document.getElementById('check-dark').classList.toggle('visible', mode === 'dark');
   document.getElementById('check-light').classList.toggle('visible', mode === 'light');
   const hcCheck = document.getElementById('check-hc');
@@ -6255,7 +6280,7 @@ async function confirmImport() {
 async function init() {
   await openDB();
   await ensureAdminExists();
-  applyTheme(localStorage.getItem('stageset_theme') || 'dark');
+  applyTheme(localStorage.getItem('stageset_theme') || 'light');
 
   // sync users from Firestore so any device can log in
   // wait for Firebase to be ready (up to 5 seconds)
@@ -6358,7 +6383,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.5 · 2026-03-17 18:18</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 18:27</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
