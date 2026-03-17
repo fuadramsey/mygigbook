@@ -811,22 +811,21 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <button class="back-btn" onclick="goBack()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <input id="setNameInput" class="topbar-title" style="background:transparent;border:none;outline:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text)" onchange="renameCurrentSet(this.value)" />
-      <button class="top-action" onclick="openSetGroupModal()" title="Manage groups">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>
-      </button>
-      <button class="top-action" onclick="openPicker()" title="Add songs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
+      <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;overflow:hidden;">
+        <div id="setNameDisplay" style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;line-height:1.1;" onclick="startRenameSet()" title="Tap to rename"></div>
+        <button onclick="startRenameSet()" title="Rename setlist" style="background:none;border:none;padding:4px;cursor:pointer;color:var(--text3);flex-shrink:0;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </div>
     </div>
-    <div class="page-body">
+    <div class="page-body" style="display:flex;flex-direction:column;">
       <div class="set-header-strip" id="setHeaderStrip"></div>
       <div id="setGroupBadgeStrip" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 0;"></div>
       <div id="setDetailSongs"></div>
-      <div class="empty-view" id="setDetailEmpty" style="display:none">
-        <div class="big">♫</div>
-        <h3>No songs in this set</h3>
-        <p>Tap + to add songs from your database</p>
+      <div id="setDetailEmpty" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 24px;text-align:center;">
+        <div style="font-size:48px;opacity:0.3;">♫</div>
+        <h3 style="margin:0;font-size:18px;color:var(--text2);">No songs in this set</h3>
+        <p style="margin:0;font-size:14px;color:var(--text3);">Tap + to add songs from your database</p>
       </div>
     </div>
     <button class="fab" onclick="openPicker()">+</button>
@@ -882,13 +881,17 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>
         <span id="groupFilterLabelDb">All</span>
       </button>
-      <span style="flex:1;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;padding-left:8px;letter-spacing:2px">DATABASE</span>
+      <span style="flex:1"></span>
       <button class="top-action" onclick="manualSync()" title="Sync with cloud" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px;min-width:48px;">
         <div style="display:flex;align-items:center;gap:4px;">
           <div class="sync-pip" id="syncPipDb"></div>
           <svg id="syncIconDb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--text2);"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
         </div>
         <span id="syncBtnLabelDb" style="color:var(--text3);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.3px;white-space:nowrap;">Sync</span>
+      </button>
+      <button class="top-action" onclick="promptUserName()" title="Your account" style="display:flex;align-items:center;gap:6px;position:relative;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:20px;height:20px;flex-shrink:0"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <span id="topbarNameLabelDb" style="font-size:13px;font-family:'DM Mono',monospace;letter-spacing:0.5px;color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
       </button>
       <button class="top-action" id="editSongsBtn" onclick="toggleEditSongs()" title="Edit songs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2033,7 +2036,8 @@ async function openSet(id) {
   exitEditSets();
   currentSetId = id;
   const set = await dbGet('setlists', id);
-  document.getElementById('setNameInput').value = set.name;
+  const nameDisplay = document.getElementById('setNameDisplay');
+  if (nameDisplay) nameDisplay.textContent = set.name;
   await renderSetGroupBadges(set);
   await renderSetDetail();
   showPage('pg-setdetail');
@@ -2129,6 +2133,31 @@ async function renameCurrentSet(name) {
   if (!currentSetId||!name.trim()) return;
   const set=await dbGet('setlists',currentSetId); set.name=name.trim(); set.updatedAt=Date.now();
   await dbPut('setlists',set); await renderSetsList(); await syncOut();
+  // update display
+  const nameDisplay = document.getElementById('setNameDisplay');
+  if (nameDisplay) nameDisplay.textContent = name.trim();
+}
+
+function startRenameSet() {
+  if (!currentSetId) return;
+  const nameDisplay = document.getElementById('setNameDisplay');
+  const currentName = nameDisplay?.textContent || '';
+  const input = document.createElement('input');
+  input.value = currentName;
+  input.style.cssText = 'background:transparent;border:none;border-bottom:2px solid var(--accent);outline:none;font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text);width:100%;min-width:0;';
+  input.onblur = () => {
+    const newName = input.value.trim();
+    if (newName && newName !== currentName) renameCurrentSet(newName);
+    else if (nameDisplay) nameDisplay.style.display = '';
+    input.replaceWith(nameDisplay || input);
+    if (nameDisplay) nameDisplay.style.display = '';
+  };
+  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') { input.value = currentName; input.blur(); }};
+  if (nameDisplay) {
+    nameDisplay.style.display = 'none';
+    nameDisplay.parentNode.insertBefore(input, nameDisplay);
+  }
+  setTimeout(() => { input.focus(); input.select(); }, 50);
 }
 async function deleteCurrentSet() {
   if (!confirm('Delete this setlist?')) return;
@@ -4498,6 +4527,8 @@ function updateSidebarName() {
   if (el) el.textContent = currentUser || 'Set name';
   const tl = document.getElementById('topbarNameLabel');
   if (tl) tl.textContent = currentUser || '';
+  const tlDb = document.getElementById('topbarNameLabelDb');
+  if (tlDb) tlDb.textContent = currentUser || '';
 }
 
 // ── AUTH ──
@@ -6383,7 +6414,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 18:27</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 18:40</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
