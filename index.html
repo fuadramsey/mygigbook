@@ -375,6 +375,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .sort-btn.active { background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.35); color: var(--accent); }
 .db-song-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .db-song-card:active { background: var(--surface2); }
+.db-song-card.db-song-selected { background: var(--surface2); border-left: 2px solid var(--accent); }
 .db-song-dot { width: 40px; height: 40px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .db-song-dot svg { width: 18px; height: 18px; color: var(--text3); }
 .db-song-info { flex: 1; min-width: 0; }
@@ -907,31 +908,87 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
     </div>
-    <div class="songs-toolbar">
-      <div class="search-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
-        <input class="search-input" id="dbSearch" placeholder="Search songs…" oninput="renderDB()">
+
+    <!-- Split body: left list + right detail -->
+    <div style="display:flex;flex:1;overflow:hidden;position:relative;">
+
+      <!-- LEFT PANEL: song list -->
+      <div id="dbLeftPanel" style="width:52%;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);transition:width 0.25s ease;overflow:hidden;background:var(--surface);">
+        <div class="songs-toolbar" style="flex-shrink:0;">
+          <div class="search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
+            <input class="search-input" id="dbSearch" placeholder="Search songs…" oninput="renderDB()">
+          </div>
+          <select class="filter-sel" id="dbFilterKey" onchange="renderDB()">
+            <option value="">Key</option>
+            <option>A</option><option>A#/Bb</option><option>B</option><option>C</option>
+            <option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option>
+            <option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option>
+          </select>
+        </div>
+        <div class="sort-bar" style="display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;">
+          <button class="sort-btn active" id="sort-title" onclick="setSort('title')">Title</button>
+          <button class="sort-btn" id="sort-key" onclick="setSort('key')">Key</button>
+          <button class="sort-btn" id="sort-bpm" onclick="setSort('bpm')">BPM</button>
+          <button class="sort-btn" id="sort-duration" onclick="setSort('duration')">Time</button>
+        </div>
+        <div id="groupMembersStripDb" style="display:none;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;">
+          <div id="groupMembersInnerDb" style="display:flex;gap:12px;align-items:center;min-width:max-content;"></div>
+        </div>
+        <div id="dbList" style="overflow-y:auto;flex:1;"></div>
       </div>
-      <select class="filter-sel" id="dbFilterKey" onchange="renderDB()">
-        <option value="">Key</option>
-        <option>A</option><option>A#/Bb</option><option>B</option><option>C</option>
-        <option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option>
-        <option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option>
-      </select>
-    </div>
-    <div class="sort-bar" style="display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;">
-      <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);align-self:center;font-family:'DM Mono',monospace;margin-right:2px;">Sort:</span>
-      <button class="sort-btn active" id="sort-title" onclick="setSort('title')">Title</button>
-      <button class="sort-btn" id="sort-key" onclick="setSort('key')">Key</button>
-      <button class="sort-btn" id="sort-bpm" onclick="setSort('bpm')">BPM</button>
-      <button class="sort-btn" id="sort-duration" onclick="setSort('duration')">Time</button>
-    </div>
-    <div class="page-body" id="dbBody">
-      <!-- Group members strip - shown when a group filter is active -->
-      <div id="groupMembersStripDb" style="display:none;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <div id="groupMembersInnerDb" style="display:flex;gap:12px;align-items:center;min-width:max-content;"></div>
+
+      <!-- Peek tab — shows when list is hidden -->
+      <button id="dbPeekTab" onclick="dbShowList()" title="Show song list"
+        style="display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:20;
+               background:var(--surface2);border:1px solid var(--border);border-left:none;
+               border-radius:0 8px 8px 0;padding:14px 6px;cursor:pointer;color:var(--text2);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+
+      <!-- RIGHT PANEL: song detail -->
+      <div id="dbRightPanel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
+        <!-- detail topbar: song title + pin + edit buttons -->
+        <div id="dbDetailBar" style="display:none;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+          <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+          <button id="dbPinBtn" onclick="dbTogglePin()" title="Pin list"
+            style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);cursor:pointer;white-space:nowrap;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
+            Pin list
+          </button>
+          <button id="dbDetailEditBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;" onclick="enterSEEditMode()">Edit</button>
+          <button id="dbDetailSaveBtn" class="btn primary" style="padding:4px 12px;font-size:12px;display:none;" onclick="saveSong()">Save</button>
+          <button id="dbDetailCancelBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;color:var(--text2);" onclick="cancelSEEdit()">Cancel</button>
+        </div>
+        <!-- tab bar -->
+        <div id="dbDetailTabBar" style="display:none;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+          <div style="display:flex;align-items:center;">
+            <div style="flex:1;display:flex;">
+              <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" style="border-radius:0;">Details</button>
+              <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" style="border-radius:0;">My Notes</button>
+              <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
+              <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
+            </div>
+            <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
+              <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+              <div style="width:12px;"></div>
+              <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
+              <span class="scroll-speed-label" id="seScrollSpeedLabel">×3</span>
+              <button class="scroll-speed-btn" onclick="changeSESpeed(1)">+</button>
+            </div>
+          </div>
+        </div>
+        <!-- detail body -->
+        <div id="seTabBody" style="flex:1;overflow-y:auto;padding:16px;">
+          <div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text3);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="width:48px;height:48px;opacity:0.3;"><circle cx="9" cy="18" r="3"/><circle cx="19" cy="15" r="3"/><path d="M12 18V8l10-3v10"/></svg>
+            <p style="font-size:14px;">Select a song to view</p>
+          </div>
+        </div>
+        <input type="hidden" id="editSongId">
       </div>
-      <div id="dbList"></div>
     </div>
     <button class="fab" onclick="openSongModal(null)">+</button>
   </div>
@@ -1805,7 +1862,11 @@ function goBack() {
   rp.classList.add('active');
   // refresh list pages when returning to them
   if (ret === 'pg-setlists') renderSetsList();
-  if (ret === 'pg-db') renderDB();
+  if (ret === 'pg-db') {
+    renderDB(); dbShowList(); dbUpdatePinBtn();
+    const detailBar = document.getElementById('dbDetailBar');
+    if (detailBar) detailBar.style.display = 'flex';
+  }
 }
 function exitEditSets() {
   if (!editingSets) return;
@@ -1839,7 +1900,10 @@ function navTo(tab) {
   const pg = 'pg-'+tab;
   document.getElementById(pg).classList.add('active');
   pageStack.push(pg);
-  if (tab==='db') renderDB();
+  if (tab==='db') { renderDB(); dbShowList(); dbUpdatePinBtn();
+    const detailBar = document.getElementById('dbDetailBar');
+    if (detailBar) detailBar.style.display = 'flex';
+  }
   if (tab==='setlists') renderSetsList();
 }
 
@@ -3751,7 +3815,7 @@ async function renderDB() {
   el.innerHTML = songs.map(s => {
     const isSelected = selectedSongIds.has(s.id);
     return `
-    <div class="db-song-card" style="${editingSongs && isSelected ? 'background:var(--surface2);' : ''}">
+    <div class="db-song-card" data-id="${s.id}" style="${editingSongs && isSelected ? 'background:var(--surface2);' : ''}">
       ${editingSongs
         ? `<div class="select-checkbox ${isSelected?'checked':''}" onclick="toggleSelectSong('${s.id}')">
             <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
@@ -3814,23 +3878,39 @@ let seEditMode = false;
 
 function enterSEEditMode() {
   seEditMode = true;
+  // pg-song-edit buttons
   const editBtn = document.getElementById('seEditBtn');
   const cancelBtn = document.getElementById('seCancelBtn');
   const saveBtn = document.getElementById('seSaveBtn');
   if (editBtn) editBtn.style.display = 'none';
   if (cancelBtn) cancelBtn.style.display = 'flex';
   if (saveBtn) saveBtn.style.display = 'flex';
+  // DB inline buttons
+  const dEditBtn = document.getElementById('dbDetailEditBtn');
+  const dSaveBtn = document.getElementById('dbDetailSaveBtn');
+  const dCancelBtn = document.getElementById('dbDetailCancelBtn');
+  if (dEditBtn) dEditBtn.style.display = 'none';
+  if (dSaveBtn) dSaveBtn.style.display = '';
+  if (dCancelBtn) dCancelBtn.style.display = '';
   renderSETab();
 }
 
 function cancelSEEdit() {
   seEditMode = false;
+  // pg-song-edit buttons
   const editBtn = document.getElementById('seEditBtn');
   const cancelBtn = document.getElementById('seCancelBtn');
   const saveBtn = document.getElementById('seSaveBtn');
   if (editBtn) editBtn.style.display = 'flex';
   if (cancelBtn) cancelBtn.style.display = 'none';
   if (saveBtn) saveBtn.style.display = 'none';
+  // DB inline buttons
+  const dEditBtn = document.getElementById('dbDetailEditBtn');
+  const dSaveBtn = document.getElementById('dbDetailSaveBtn');
+  const dCancelBtn = document.getElementById('dbDetailCancelBtn');
+  if (dEditBtn) dEditBtn.style.display = '';
+  if (dSaveBtn) dSaveBtn.style.display = 'none';
+  if (dCancelBtn) dCancelBtn.style.display = 'none';
   // reload original song data to discard in-memory changes
   const id = document.getElementById('editSongId')?.value;
   if (id) {
@@ -4099,51 +4179,129 @@ function renderSETab() {
   }
 }
 
+// DB split panel state
+let dbListPinned = localStorage.getItem('mgb_db_pinned') === '1';
+let _dbAutoHideTimer = null;
+
+function dbUpdatePinBtn() {
+  const btn = document.getElementById('dbPinBtn');
+  if (!btn) return;
+  if (dbListPinned) {
+    btn.style.background = 'rgba(232,255,71,0.12)';
+    btn.style.borderColor = 'rgba(232,255,71,0.35)';
+    btn.style.color = 'var(--accent)';
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px;"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg> Pinned`;
+  } else {
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg> Pin list`;
+  }
+}
+
+function dbTogglePin() {
+  dbListPinned = !dbListPinned;
+  localStorage.setItem('mgb_db_pinned', dbListPinned ? '1' : '0');
+  dbUpdatePinBtn();
+  if (dbListPinned) dbShowList();
+}
+
+function dbShowList() {
+  clearTimeout(_dbAutoHideTimer);
+  const panel = document.getElementById('dbLeftPanel');
+  const peek = document.getElementById('dbPeekTab');
+  if (panel) panel.style.width = '52%';
+  if (peek) peek.style.display = 'none';
+  dbUpdatePinBtn();
+}
+
+function dbHideList() {
+  if (dbListPinned) return;
+  const panel = document.getElementById('dbLeftPanel');
+  const peek = document.getElementById('dbPeekTab');
+  if (panel) panel.style.width = '0';
+  if (peek) peek.style.display = 'flex';
+}
+
+function dbScheduleHide() {
+  if (dbListPinned) return;
+  clearTimeout(_dbAutoHideTimer);
+  _dbAutoHideTimer = setTimeout(dbHideList, 3000);
+}
+
 async function openSongModal(id) {
+  const onDbPage = pageStack[pageStack.length - 1] === 'pg-db';
+
   seTab = 'details';
   seEditMode = false;
-  // reset topbar buttons to view state
-  const _editBtn = document.getElementById('seEditBtn');
-  const _cancelBtn = document.getElementById('seCancelBtn');
-  const _saveBtn = document.getElementById('seSaveBtn');
-  if (_editBtn) _editBtn.style.display = 'flex';
-  if (_cancelBtn) _cancelBtn.style.display = 'none';
-  if (_saveBtn) _saveBtn.style.display = 'none';
   window._seCurrentSong = null;
   window._modalPendingAudio = null;
   window._seMyNotesHtml = '';
-  document.getElementById('editSongId').value = id||'';
+
+  // Reset button state for both inline and page modes
+  ['seEditBtn','seCancelBtn','seSaveBtn'].forEach(bid => {
+    const b = document.getElementById(bid);
+    if (!b) return;
+    if (bid === 'seEditBtn') b.style.display = 'flex';
+    else b.style.display = 'none';
+  });
+  // Also reset DB inline buttons
+  const dEditBtn = document.getElementById('dbDetailEditBtn');
+  const dSaveBtn = document.getElementById('dbDetailSaveBtn');
+  const dCancelBtn = document.getElementById('dbDetailCancelBtn');
+  if (dEditBtn) dEditBtn.style.display = '';
+  if (dSaveBtn) dSaveBtn.style.display = 'none';
+  if (dCancelBtn) dCancelBtn.style.display = 'none';
+
+  document.getElementById('editSongId').value = id || '';
   ['details','mynotes','links','attachments'].forEach(t => {
     const btn = document.getElementById(`se-tab-${t}`);
     if (btn) btn.classList.toggle('active', t === 'details');
   });
-  showPage('pg-song-edit');
+
+  if (onDbPage) {
+    // Show detail bar and tab bar inline
+    const detailBar = document.getElementById('dbDetailBar');
+    const tabBar = document.getElementById('dbDetailTabBar');
+    if (detailBar) detailBar.style.display = 'flex';
+    if (tabBar) tabBar.style.display = 'block';
+    // Highlight selected song in list
+    document.querySelectorAll('.db-song-card').forEach(c => c.classList.remove('db-song-selected'));
+    if (id) {
+      const card = document.querySelector(`.db-song-card[data-id="${id}"]`);
+      if (card) card.classList.add('db-song-selected');
+    }
+  } else {
+    showPage('pg-song-edit');
+  }
+
   if (id) {
-    const [s, noteEntry, audioEntry] = await Promise.all([
+    const [s, noteEntry] = await Promise.all([
       dbGet('songs', id),
-      dbGet('notes', `${currentUser||'me'}_${id}`),
-      dbGet('audio', `audio_${id}`)
+      dbGet('notes', `${currentUser||'me'}_${id}`)
     ]);
     window._seCurrentSong = s || {};
     window._seMyNotesHtml = noteEntry?.text || '';
-    // preload audio using hybrid loader (IndexedDB first, then Firebase Storage)
     await loadAudioHybrid(id);
+    // Update title display
     const titleEl = document.getElementById('sePageTitle');
     if (titleEl) titleEl.textContent = s?.title || 'Edit Song';
+    const dbTitle = document.getElementById('dbDetailTitle');
+    if (dbTitle) dbTitle.textContent = s?.title || '';
     renderSETab();
+    if (onDbPage) dbScheduleHide();
   } else {
+    // New song — start in edit mode
     window._seCurrentSong = {};
-    seEditMode = true; // new song starts in edit mode
-    const editBtn = document.getElementById('seEditBtn');
-    const cancelBtn = document.getElementById('seCancelBtn');
-    const saveBtn = document.getElementById('seSaveBtn');
-    if (editBtn) editBtn.style.display = 'none';
-    if (cancelBtn) cancelBtn.style.display = 'flex';
-    if (saveBtn) saveBtn.style.display = 'flex';
+    seEditMode = true;
+    if (dEditBtn) dEditBtn.style.display = 'none';
+    if (dSaveBtn) dSaveBtn.style.display = '';
+    if (dCancelBtn) dCancelBtn.style.display = '';
     const titleEl = document.getElementById('sePageTitle');
     if (titleEl) titleEl.textContent = 'New Song';
+    const dbTitle = document.getElementById('dbDetailTitle');
+    if (dbTitle) dbTitle.textContent = 'New Song';
     renderSETab();
-    // focus the Title input after render
     requestAnimationFrame(() => {
       const titleInput = document.getElementById('fTitle');
       if (titleInput) titleInput.focus();
@@ -4314,14 +4472,33 @@ async function saveSong() {
     window._modalPendingAudio = null;
   }
   seEditMode = false;
-  // reset topbar button visibility
+  // reset button visibility
   const _editBtn = document.getElementById('seEditBtn');
   const _cancelBtn = document.getElementById('seCancelBtn');
   const _saveBtn = document.getElementById('seSaveBtn');
   if (_editBtn) _editBtn.style.display = 'flex';
   if (_cancelBtn) _cancelBtn.style.display = 'none';
   if (_saveBtn) _saveBtn.style.display = 'none';
-  goBack(); await renderDB(); await syncOut(); showToast('Song saved','ok');
+  const dEditBtn = document.getElementById('dbDetailEditBtn');
+  const dSaveBtn = document.getElementById('dbDetailSaveBtn');
+  const dCancelBtn = document.getElementById('dbDetailCancelBtn');
+  if (dEditBtn) dEditBtn.style.display = '';
+  if (dSaveBtn) dSaveBtn.style.display = 'none';
+  if (dCancelBtn) dCancelBtn.style.display = 'none';
+
+  const onDbPage = pageStack[pageStack.length - 1] === 'pg-db';
+  if (onDbPage) {
+    // stay on DB page — just re-render list and show the saved song
+    await renderDB();
+    await syncOut();
+    // update the title display
+    const dbTitle = document.getElementById('dbDetailTitle');
+    if (dbTitle && window._seCurrentSong?.title) dbTitle.textContent = window._seCurrentSong.title;
+    renderSETab();
+  } else {
+    goBack(); await renderDB(); await syncOut();
+  }
+  showToast('Song saved','ok');
 }
 
 let pendingDeleteSongId = null;
@@ -6537,7 +6714,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 20:27</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 21:15</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
