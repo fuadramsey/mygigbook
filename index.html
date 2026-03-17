@@ -2329,10 +2329,26 @@ let scrollPlaying = false;
 let bpmTimer = null;
 const songScrollSpeeds = {}; // remembers speed per song id
 
-// Note zoom — per-song, last zoom also saved to localStorage as default
-const NOTE_ZOOM_KEY = 'mgb_note_zoom';
-let noteZoom = parseFloat(localStorage.getItem(NOTE_ZOOM_KEY) || '1');
-const songNoteZooms = {}; // per-song zoom override
+// Note zoom — per-song per-tab, saved to localStorage
+const NOTE_ZOOM_KEY = 'mgb_zoom_'; // + songId + '_' + tab
+const NOTE_ZOOM_DEFAULT = 1;
+let noteZoom = NOTE_ZOOM_DEFAULT; // current zoom for active song+tab
+
+function loadSongZoom(songId) {
+  if (!songId) { noteZoom = NOTE_ZOOM_DEFAULT; return; }
+  const saved = localStorage.getItem(NOTE_ZOOM_KEY + songId + '_' + noteTab);
+  noteZoom = saved ? parseFloat(saved) : NOTE_ZOOM_DEFAULT;
+}
+
+function saveSongZoom(songId) {
+  if (!songId) return;
+  const key = NOTE_ZOOM_KEY + songId + '_' + noteTab;
+  if (noteZoom === NOTE_ZOOM_DEFAULT) {
+    localStorage.removeItem(key);
+  } else {
+    localStorage.setItem(key, noteZoom);
+  }
+}
 
 // ── TUNING FORK (Concert A 440 Hz) ──
 let tuningAudioCtx = null;
@@ -2483,8 +2499,8 @@ async function renderSongPage(idx) {
 
   // restore this song's remembered speed (or keep current default)
   if (songScrollSpeeds[s.id] !== undefined) scrollSpeed = songScrollSpeeds[s.id];
-  // restore per-song zoom
-  if (songNoteZooms[s.id] !== undefined) noteZoom = songNoteZooms[s.id];
+  // restore per-song zoom from localStorage
+  loadSongZoom(s.id);
 
   const audioKey = `audio_${s.id}`;
 
@@ -2955,10 +2971,9 @@ function changeSpeed(delta) {
 function changeNoteZoom(delta, idx) {
   const step = 0.1;
   noteZoom = Math.round(Math.max(0.5, Math.min(3.0, noteZoom + delta * step)) * 10) / 10;
-  // save per-song and as global default
+  // save zoom for this specific song only
   const s = currentSetSongs[idx];
-  if (s) songNoteZooms[s.id] = noteZoom;
-  localStorage.setItem(NOTE_ZOOM_KEY, noteZoom);
+  if (s && s.id) saveSongZoom(s.id);
   applyNoteZoom();
   // update the % label without full re-render
   const labels = document.querySelectorAll('.note-zoom-label');
@@ -6724,7 +6739,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 21:28</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 21:49</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
