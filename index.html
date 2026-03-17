@@ -924,40 +924,6 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   </div>
 
   <!-- PAGE: GROUPS -->
-  <div class="page" id="pg-groups">
-    <div class="topbar">
-      <span class="topbar-logo">MyGigBook</span>
-      <span style="flex:1;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;padding-left:8px;letter-spacing:2px">GROUPS</span>
-    </div>
-    <div class="page-body">
-      <div class="empty-view" id="groupsEmpty" style="display:none">
-        <div class="big">◎</div>
-        <h3>No groups yet</h3>
-        <p>Tap + to create your first group</p>
-      </div>
-      <div id="groupsList"></div>
-    </div>
-    <button class="fab" onclick="openNewGroupModal()">+</button>
-  </div>
-
-  <!-- PAGE: GROUP DETAIL -->
-  <div class="page" id="pg-groupdetail">
-    <div class="topbar">
-      <button class="back-btn" onclick="goBack()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
-      <div style="flex:1;min-width:0;">
-        <div id="groupDetailName" style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-      </div>
-    </div>
-    <!-- Filter tabs inside group -->
-    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-      <button class="note-tab active" id="gd-tab-sets" style="border-radius:0;padding:12px 20px;" onclick="switchGroupTab('sets')">Setlists</button>
-      <button class="note-tab" id="gd-tab-songs" style="border-radius:0;padding:12px 20px;" onclick="switchGroupTab('songs')">Songs</button>
-      <button class="note-tab" id="gd-tab-members" style="border-radius:0;padding:12px 20px;" onclick="switchGroupTab('members')">Members</button>
-    </div>
-    <div class="page-body no-nav" id="groupDetailBody"></div>
-  </div>
 
 </div><!-- end #page-area -->
 
@@ -1157,15 +1123,26 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 <div class="modal-overlay hidden" id="groupFilterModal" onclick="if(event.target===this)closeGroupFilter()">
   <div class="modal-sheet">
     <div class="modal-header">
-      <span class="modal-title">Filter by Group</span>
+      <span class="modal-title">My Groups</span>
       <div class="modal-close" onclick="closeGroupFilter()">✕</div>
     </div>
     <div class="modal-body" style="padding:0;" id="groupFilterList"></div>
-    <div class="modal-footer">
-      <button class="btn primary" style="width:100%;" onclick="closeGroupFilter();openNewGroupModal()">
+    <div id="groupMembersSection" style="display:none;border-top:1px solid var(--border);padding:0;">
+      <div style="padding:10px 16px 4px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);font-family:'DM Mono',monospace;">Members</div>
+      <div id="groupMembersList" style="padding:0 16px 8px;"></div>
+      <div style="padding:0 16px 12px;">
+        <button class="btn ghost" style="width:100%;font-size:12px;padding:7px;" onclick="openAddMemberModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-right:5px;"><path d="M12 5v14M5 12h14"/></svg>
+          Add Member
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;gap:8px;">
+      <button class="btn primary" style="width:100%;" onclick="openNewGroupModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;margin-right:6px;"><path d="M12 5v14M5 12h14"/></svg>
-        Create Group
+        Create New Group
       </button>
+      <button id="deleteGroupBtn" class="btn ghost" style="width:100%;color:var(--red);border-color:rgba(255,68,68,0.3);display:none;" onclick="deleteActiveGroup()">Delete This Group</button>
     </div>
   </div>
 </div>
@@ -1836,7 +1813,6 @@ function navTo(tab) {
   pageStack.push(pg);
   if (tab==='db') renderDB();
   if (tab==='setlists') renderSetsList();
-  if (tab==='groups') renderGroups();
 }
 
 // ── SETLISTS ──
@@ -4448,7 +4424,7 @@ function togglePwVis(inputId, btn) {
     ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 }
-function renderAll(){renderSetsList();renderDB();renderGroups();}
+function renderAll(){renderSetsList();renderDB();}
 
 // ── SEED ──
 async function seed(){
@@ -5151,7 +5127,6 @@ const GROUP_FILTER_KEY = 'mgb_last_group';
 async function openGroupFilter() {
   const all = await dbAll('groups');
   const privateGroupId = getPrivateGroupId();
-  // sort: private first, then others
   const myGroups = all.filter(g =>
     g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin
   ).sort((a, b) => {
@@ -5165,20 +5140,50 @@ async function openGroupFilter() {
     const isOwner = g.createdBy === currentUser;
     const isActive = activeGroupFilter === g.id;
     return `
-    <div class="settings-row" style="cursor:pointer;" onclick="setGroupFilter('${g.id}')">
+    <div class="settings-row" style="cursor:pointer;${isActive?'background:var(--surface2);':''}" onclick="setGroupFilter('${g.id}')">
       <div class="settings-row-icon">
         ${isPrivate
           ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`
           : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>`
         }
       </div>
-      <span class="settings-row-label" style="flex:1;">${esc(g.name)}${isPrivate ? ' <span style="font-size:10px;opacity:0.5;font-family:\'DM Mono\',monospace;">(personal)</span>' : ''}</span>
-      ${isActive ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M5 12l5 5 9-9"/></svg>' : ''}
+      <span class="settings-row-label" style="flex:1;">${esc(g.name)}${isPrivate?` <span style="font-size:10px;opacity:0.5;font-family:'DM Mono',monospace;">(personal)</span>`:''}</span>
+      ${isActive ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M5 12l5 5 9-9"/></svg>` : ''}
       ${!isOwner && !isPrivate ? `<button onclick="event.stopPropagation();closeGroupFilter();confirmLeaveGroupPrompt('${g.id}','${esc(g.name)}')" style="flex-shrink:0;background:none;border:1px solid rgba(255,68,68,0.4);border-radius:20px;padding:3px 9px;font-size:11px;color:var(--red);cursor:pointer;font-family:inherit;margin-left:6px;">Leave</button>` : ''}
     </div>`;
   }).join('') :
   `<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">No groups found.</div>`;
+
+  // show members of active group
+  updateGroupMembersInModal();
   document.getElementById('groupFilterModal').classList.remove('hidden');
+}
+
+async function updateGroupMembersInModal() {
+  const section = document.getElementById('groupMembersSection');
+  const list = document.getElementById('groupMembersList');
+  const deleteBtn = document.getElementById('deleteGroupBtn');
+  if (!section || !list) return;
+  const privateGroupId = getPrivateGroupId();
+  if (!activeGroupFilter || activeGroupFilter === privateGroupId) {
+    section.style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    return;
+  }
+  const g = await dbGet('groups', activeGroupFilter);
+  if (!g) { section.style.display = 'none'; return; }
+  const isOwner = g.createdBy === currentUser;
+  section.style.display = 'block';
+  const members = g.members || [];
+  list.innerHTML = members.length
+    ? members.map(m => `
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;">${m[0].toUpperCase()}</div>
+        <span style="flex:1;font-size:14px;">${esc(m)}${m===currentUser?' <span style="font-size:10px;color:var(--accent);font-family:\'DM Mono\',monospace;">(you)</span>':''}</span>
+        ${isOwner && m !== currentUser ? `<button onclick="removeMemberFromGroup('${g.id}','${esc(m)}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:2px 6px;line-height:1;">×</button>` : ''}
+      </div>`).join('')
+    : `<div style="color:var(--text3);font-size:12px;padding:8px 0;">No members yet.</div>`;
+  if (deleteBtn) deleteBtn.style.display = isOwner ? 'flex' : 'none';
 }
 
 function closeGroupFilter() {
@@ -5192,10 +5197,46 @@ async function setGroupFilter(groupId) {
   } else {
     localStorage.removeItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'));
   }
-  closeGroupFilter();
+  // re-render group list to update active checkmark
+  const el = document.getElementById('groupFilterList');
+  if (el) {
+    const rows = el.querySelectorAll('.settings-row');
+    rows.forEach(row => {
+      const isActive = row.getAttribute('onclick')?.includes(`'${groupId}'`);
+      row.style.background = isActive ? 'var(--surface2)' : '';
+      const check = row.querySelector('svg[stroke-width="2.5"]');
+      if (check && !isActive) check.remove();
+    });
+  }
+  updateGroupMembersInModal();
   updateGroupFilterChips();
   await renderSetsList();
   await renderDB();
+}
+
+async function deleteActiveGroup() {
+  if (!activeGroupFilter) return;
+  const g = await dbGet('groups', activeGroupFilter);
+  if (!g || g.isPrivate) return;
+  if (!confirm(`Delete group "${g.name}"? This won't delete the songs or setlists in it.`)) return;
+  await dbDel('groups', activeGroupFilter);
+  await syncOut();
+  // switch to private group
+  const privateGroupId = getPrivateGroupId();
+  await setGroupFilter(privateGroupId);
+  closeGroupFilter();
+  showToast('Group deleted', 'ok');
+}
+
+async function removeMemberFromGroup(groupId, username) {
+  const g = await dbGet('groups', groupId);
+  if (!g) return;
+  g.members = (g.members||[]).filter(m => m !== username);
+  g.updatedAt = Date.now();
+  await dbPut('groups', g);
+  await syncOut();
+  updateGroupMembersInModal();
+  showToast(`${username} removed`, 'ok');
 }
 
 async function updateGroupFilterChips() {
@@ -5263,28 +5304,8 @@ function renderGroupMembersStrip(group) {
 
 // ── GROUPS ──
 let currentGroupId = null;
-let currentGroupTab = 'sets';
-
-async function renderGroups() {
-  const all = await dbAll('groups');
-  // user sees groups they created or are a member of
-  const mine = all.filter(g => g.createdBy === currentUser || (g.members||[]).includes(currentUser));
-  const el = document.getElementById('groupsList');
-  const empty = document.getElementById('groupsEmpty');
-  if (!el) return;
-  if (!mine.length) { empty.style.display='flex'; el.innerHTML=''; return; }
-  empty.style.display='none';
-  el.innerHTML = mine.map(g => {
-    const isOwner = g.createdBy === currentUser;
-    return `<div class="set-row" onclick="openGroup('${g.id}')">
-      <div style="flex:1;min-width:0;">
-        <div class="set-row-name">${esc(g.name)}</div>
-        <div class="set-row-meta">${(g.members||[]).length} member${(g.members||[]).length!==1?'s':''} · Created by ${esc(g.createdBy)}${isOwner?' (you)':''}</div>
-      </div>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--text3);flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
-    </div>`;
-  }).join('');
-}
+// stub — no longer renders a page
+async function renderGroups() {}
 
 function openNewGroupModal() {
   document.getElementById('newGroupNameInput').value = '';
@@ -5299,171 +5320,47 @@ async function confirmNewGroup() {
   const group = { id: uid(), name, createdBy: currentUser, members: [currentUser], createdAt: Date.now(), updatedAt: Date.now() };
   await dbPut('groups', group);
   closeNewGroupModal();
-  await renderGroups();
   await syncOut();
+  // switch to new group
+  await setGroupFilter(group.id);
+  await openGroupFilter();
   showToast('Group created','ok');
 }
 
-async function openGroup(id) {
-  currentGroupId = id;
-  currentGroupTab = 'sets';
-  await renderGroupDetail();
-  showPage('pg-groupdetail');
-}
-
-async function renderGroupDetail() {
-  const g = await dbGet('groups', currentGroupId);
-  if (!g) return;
-  document.getElementById('groupDetailName').textContent = g.name;
-  // update tab active states
-  ['sets','songs','members'].forEach(t => {
-    document.getElementById('gd-tab-'+t).classList.toggle('active', t === currentGroupTab);
+function openAddMemberModal() {
+  const users = getUsers();
+  const el = document.getElementById('addMemberList');
+  dbGet('groups', activeGroupFilter).then(g => {
+    const members = g?.members || [];
+    const available = users.filter(u => !members.includes(u.username));
+    if (!available.length) {
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">All users are already in this group.</div>';
+    } else {
+      el.innerHTML = available.map(u => `
+        <div class="admin-user-row" style="cursor:pointer;" onclick="addMemberToGroup('${esc(u.username)}')">
+          <div class="admin-user-avatar">${u.username[0].toUpperCase()}</div>
+          <div class="admin-user-info">
+            <div class="admin-user-name">${esc(u.username)}</div>
+            <div class="admin-user-role">${u.email ? esc(u.email) : 'no email'}</div>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M12 5v14M5 12h14"/></svg>
+        </div>`).join('');
+    }
+    document.getElementById('addMemberModal').classList.remove('hidden');
   });
-  await renderGroupTab();
 }
+function closeAddMemberModal() { document.getElementById('addMemberModal').classList.add('hidden'); }
 
-async function switchGroupTab(tab) {
-  currentGroupTab = tab;
-  await renderGroupDetail();
-}
-
-async function renderGroupTab() {
-  const g = await dbGet('groups', currentGroupId);
+async function addMemberToGroup(username) {
+  const g = await dbGet('groups', activeGroupFilter);
   if (!g) return;
-  const isOwner = g.createdBy === currentUser;
-  const body = document.getElementById('groupDetailBody');
-
-  if (currentGroupTab === 'members') {
-    const users = getUsers();
-    const memberRows = (g.members||[]).map(m => {
-      const isCreator = m === g.createdBy;
-      return `<div class="admin-user-row">
-        <div class="admin-user-avatar">${m[0].toUpperCase()}</div>
-        <div class="admin-user-info">
-          <div class="admin-user-name">${esc(m)}${m===currentUser?' <span style="color:var(--text3);font-size:11px">(you)</span>':''} ${isCreator?'<span class="admin-badge">OWNER</span>':''}</div>
-        </div>
-        ${isOwner && !isCreator ? `<button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeMember('${esc(m)}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>` : ''}
-      </div>`;
-    }).join('');
-    body.innerHTML = `
-      <div style="padding-bottom:80px;">
-        ${memberRows}
-        ${isOwner && !g.isPrivate ? `<div style="padding:14px 16px;">
-          <button class="btn primary" onclick="openAddMemberModal()" style="width:100%;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:6px;"><path d="M12 5v14M5 12h14"/></svg>
-            Add Member
-          </button>
-        </div>` : ''}
-        ${isOwner && !g.isPrivate ? `<div style="padding:0 16px 16px;">
-          <button class="btn ghost" onclick="deleteGroup('${g.id}')" style="width:100%;color:var(--red);border-color:rgba(255,68,68,0.3);">Delete Group</button>
-        </div>` : ''}
-        ${g.isPrivate ? `<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px;font-family:'DM Mono',monospace;">🔒 Private group — personal use only</div>` : ''}
-      </div>`;
-    return;
-  }
-
-  if (currentGroupTab === 'sets') {
-    const allSets = await dbAll('setlists');
-    const groupSets = allSets.filter(s => (s.groupIds||[]).includes(currentGroupId));
-    const otherSets = allSets.filter(s => !(s.groupIds||[]).includes(currentGroupId));
-    body.innerHTML = `
-      <div style="padding-bottom:80px;">
-        ${groupSets.length ? groupSets.map(s => `
-          <div class="set-row">
-            <div style="flex:1;min-width:0;">
-              <div class="set-row-name">${esc(s.name)}</div>
-              <div class="set-row-meta">${(s.songs||[]).filter(x=>typeof x==='string').length} songs</div>
-            </div>
-            ${isOwner ? `<button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeFromGroup('set','${s.id}')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-            </button>` : ''}
-          </div>`).join('') : '<div class="empty-view" style="padding:32px 16px;"><p style="color:var(--text3)">No setlists assigned to this group yet.</p></div>'}
-        ${isOwner && otherSets.length ? `<div style="padding:12px 16px;border-top:1px solid var(--border);margin-top:8px;">
-          <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:10px;">Add Setlist to Group</div>
-          ${otherSets.map(s => `<div class="set-row" style="cursor:pointer;" onclick="addToGroup('set','${s.id}')">
-            <div style="flex:1;min-width:0;"><div class="set-row-name">${esc(s.name)}</div></div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--accent)"><path d="M12 5v14M5 12h14"/></svg>
-          </div>`).join('')}
-        </div>` : ''}
-      </div>`;
-    return;
-  }
-
-  if (currentGroupTab === 'songs') {
-    const allSongs = await dbAll('songs');
-    const groupSongs = allSongs.filter(s => (s.groupIds||[]).includes(currentGroupId));
-    const otherSongs = allSongs.filter(s => !(s.groupIds||[]).includes(currentGroupId));
-    body.innerHTML = `
-      <div style="padding-bottom:80px;">
-        ${groupSongs.length ? groupSongs.map(s => `
-          <div class="db-song-card">
-            <div class="db-song-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="18" r="3"/><path d="M11 18V7l9-2v11"/></svg></div>
-            <div class="db-song-info" style="flex:1;">
-              <div class="db-song-title">${esc(s.title)}</div>
-              <div class="db-song-meta">${[s.artist,s.key,s.bpm?s.bpm+' BPM':''].filter(Boolean).join(' · ')}</div>
-            </div>
-            ${isOwner ? `<button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeFromGroup('song','${s.id}')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-            </button>` : ''}
-          </div>`).join('') : '<div class="empty-view" style="padding:32px 16px;"><p style="color:var(--text3)">No songs assigned to this group yet.</p></div>'}
-        ${isOwner && otherSongs.length ? `<div style="padding:12px 16px;border-top:1px solid var(--border);margin-top:8px;">
-          <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:10px;">Add Song to Group</div>
-          ${otherSongs.map(s => `<div class="db-song-card" style="cursor:pointer;" onclick="addToGroup('song','${s.id}')">
-            <div class="db-song-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="18" r="3"/><path d="M11 18V7l9-2v11"/></svg></div>
-            <div class="db-song-info" style="flex:1;">
-              <div class="db-song-title">${esc(s.title)}</div>
-              <div class="db-song-meta">${[s.artist,s.key].filter(Boolean).join(' · ')}</div>
-            </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--accent)"><path d="M12 5v14M5 12h14"/></svg>
-          </div>`).join('')}
-        </div>` : ''}
-      </div>`;
-  }
-}
-
-async function addToGroup(type, itemId) {
-  if (type === 'set') {
-    const s = await dbGet('setlists', itemId);
-    if (!s) return;
-    s.groupIds = [...new Set([...(s.groupIds||[]), currentGroupId])];
-    await dbPut('setlists', s);
-  } else {
-    const s = await dbGet('songs', itemId);
-    if (!s) return;
-    s.groupIds = [...new Set([...(s.groupIds||[]), currentGroupId])];
-    await dbPut('songs', s);
-  }
-  await syncOut();
-  await renderGroupDetail();
-}
-
-async function removeFromGroup(type, itemId) {
-  if (type === 'set') {
-    const s = await dbGet('setlists', itemId);
-    if (!s) return;
-    s.groupIds = (s.groupIds||[]).filter(id => id !== currentGroupId);
-    await dbPut('setlists', s);
-  } else {
-    const s = await dbGet('songs', itemId);
-    if (!s) return;
-    s.groupIds = (s.groupIds||[]).filter(id => id !== currentGroupId);
-    await dbPut('songs', s);
-  }
-  await syncOut();
-  await renderGroupDetail();
-}
-
-async function removeMember(username) {
-  const g = await dbGet('groups', currentGroupId);
-  if (!g) return;
-  g.members = (g.members||[]).filter(m => m !== username);
+  g.members = [...new Set([...(g.members||[]), username])];
   g.updatedAt = Date.now();
   await dbPut('groups', g);
   await syncOut();
-  await renderGroupDetail();
-  showToast(`${username} removed`);
+  closeAddMemberModal();
+  updateGroupMembersInModal();
+  showToast(`${username} added to group`, 'ok');
 }
 
 let _pendingLeaveGroupId = null;
@@ -5488,60 +5385,20 @@ async function leaveGroup(groupId) {
   g.updatedAt = Date.now();
   await dbPut('groups', g);
   await syncOut();
-  // if this group was the active filter, clear it
-  if (activeGroupFilter === groupId) {
-    activeGroupFilter = null;
-    renderGroupMembersStrip(null);
-    await renderSetsList();
-    await renderDB();
-    await updateGroupFilterChips();
-  }
-  await renderGroups();
+  // switch to private group
+  const privateGroupId = getPrivateGroupId();
+  await setGroupFilter(privateGroupId);
+  updateGroupFilterChips();
   showToast('Left group');
 }
 
 async function deleteGroup(groupId) {
+  if (!groupId) return;
   await dbDel('groups', groupId);
   await syncOut();
-  goBack();
-  await renderGroups();
+  const privateGroupId = getPrivateGroupId();
+  await setGroupFilter(privateGroupId);
   showToast('Group deleted');
-}
-
-function openAddMemberModal() {
-  const users = getUsers();
-  const el = document.getElementById('addMemberList');
-  dbGet('groups', currentGroupId).then(g => {
-    const members = g?.members || [];
-    const available = users.filter(u => !members.includes(u.username));
-    if (!available.length) {
-      el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">All users are already in this group.</div>';
-    } else {
-      el.innerHTML = available.map(u => `
-        <div class="admin-user-row" style="cursor:pointer;" onclick="addMemberToGroup('${esc(u.username)}')">
-          <div class="admin-user-avatar">${u.username[0].toUpperCase()}</div>
-          <div class="admin-user-info">
-            <div class="admin-user-name">${esc(u.username)}</div>
-            <div class="admin-user-role">${u.email ? esc(u.email) : 'no email'}</div>
-          </div>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M12 5v14M5 12h14"/></svg>
-        </div>`).join('');
-    }
-    document.getElementById('addMemberModal').classList.remove('hidden');
-  });
-}
-function closeAddMemberModal() { document.getElementById('addMemberModal').classList.add('hidden'); }
-
-async function addMemberToGroup(username) {
-  const g = await dbGet('groups', currentGroupId);
-  if (!g) return;
-  g.members = [...new Set([...(g.members||[]), username])];
-  g.updatedAt = Date.now();
-  await dbPut('groups', g);
-  await syncOut();
-  closeAddMemberModal();
-  await renderGroupDetail();
-  showToast(`${username} added to group`, 'ok');
 }
 
 // ── PDF.js VIEWER & MARKUP ──
@@ -6501,7 +6358,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 18:05</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.5 · 2026-03-17 18:18</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
