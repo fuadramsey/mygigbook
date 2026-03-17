@@ -4212,7 +4212,6 @@ async function openSongGroupModal(songId) {
   const song = await dbGet('songs', songId);
   if (!song) return;
   const allGroups = await dbAll('groups');
-  // only show groups the user owns or is a member of
   const myGroups = allGroups.filter(g =>
     g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin
   );
@@ -4225,33 +4224,16 @@ async function openSongGroupModal(songId) {
   } else {
     body.innerHTML = myGroups.map(g => {
       const inGroup = (song.groupIds||[]).includes(g.id);
-      return `<label style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;">
-        <div class="select-checkbox ${inGroup?'checked':''}" id="sgcheck_${g.id}" style="flex-shrink:0;">
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="toggleSongGroup('${songId}','${g.id}')">
+        <div class="select-checkbox ${inGroup?'checked':''}" id="sgcheck_${g.id}" style="flex-shrink:0;pointer-events:none;">
           <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div style="flex:1;">
           <div style="font-size:15px;font-weight:500;">${esc(g.name)}</div>
           <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${g.createdBy === currentUser ? 'You own this group' : 'Member'}</div>
         </div>
-        <input type="checkbox" ${inGroup?'checked':''} style="display:none;" onchange="toggleSongGroup('${songId}','${g.id}',this.checked)">
-      </label>`;
+      </div>`;
     }).join('');
-    // wire up the visual checkboxes
-    myGroups.forEach(g => {
-      const box = document.getElementById(`sgcheck_${g.id}`);
-      const label = box?.closest('label');
-      if (label) {
-        const cb = label.querySelector('input[type="checkbox"]');
-        label.addEventListener('click', e => {
-          if (e.target.tagName === 'INPUT') return;
-          if (cb) {
-            cb.checked = !cb.checked;
-            toggleSongGroup(songId, g.id, cb.checked);
-            box.classList.toggle('checked', cb.checked);
-          }
-        });
-      }
-    });
   }
   document.getElementById('songGroupModal').classList.remove('hidden');
 }
@@ -4260,30 +4242,36 @@ function closeSongGroupModal() {
   document.getElementById('songGroupModal').classList.add('hidden');
 }
 
-async function toggleSongGroup(songId, groupId, add) {
+async function toggleSongGroup(songId, groupId) {
   const song = await dbGet('songs', songId);
   if (!song) return;
   let groupIds = [...(song.groupIds||[])];
-  if (add) {
-    if (!groupIds.includes(groupId)) groupIds.push(groupId);
-  } else {
+  const inGroup = groupIds.includes(groupId);
+  if (inGroup) {
     groupIds = groupIds.filter(id => id !== groupId);
+  } else {
+    groupIds.push(groupId);
   }
   song.groupIds = groupIds;
   song.updatedAt = Date.now();
   await dbPut('songs', song);
   await syncOut();
-  // refresh group badges on the card
+  // update visual checkbox
+  const box = document.getElementById(`sgcheck_${groupId}`);
+  if (box) box.classList.toggle('checked', !inGroup);
+  // update group badges on the card
   const badgeEl = document.getElementById(`songGroupBadges_${songId}`);
-  if (badgeEl && groupIds.length) {
-    const groups = await Promise.all(groupIds.map(id => dbGet('groups', id)));
-    badgeEl.innerHTML = groups.filter(Boolean).map(g =>
-      `<span style="font-size:10px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'DM Mono',monospace;white-space:nowrap;">${esc(g.name)}</span>`
-    ).join('');
-  } else if (badgeEl) {
-    badgeEl.innerHTML = '';
+  if (badgeEl) {
+    if (groupIds.length) {
+      const groups = await Promise.all(groupIds.map(id => dbGet('groups', id)));
+      badgeEl.innerHTML = groups.filter(Boolean).map(g =>
+        `<span style="font-size:10px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'DM Mono',monospace;white-space:nowrap;">${esc(g.name)}</span>`
+      ).join('');
+    } else {
+      badgeEl.innerHTML = '';
+    }
   }
-  showToast(add ? 'Added to group' : 'Removed from group', 'ok');
+  showToast(!inGroup ? 'Added to group' : 'Removed from group', 'ok');
 }
 
 async function quickAdd(songId) {
@@ -6304,7 +6292,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:15</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:24</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
