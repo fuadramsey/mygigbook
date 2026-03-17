@@ -3968,12 +3968,19 @@ async function openSongModal(id) {
     window._seCurrentSong = {};
     seEditMode = true; // new song starts in edit mode
     const editBtn = document.getElementById('seEditBtn');
+    const cancelBtn = document.getElementById('seCancelBtn');
     const saveBtn = document.getElementById('seSaveBtn');
     if (editBtn) editBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'flex';
     if (saveBtn) saveBtn.style.display = 'flex';
     const titleEl = document.getElementById('sePageTitle');
     if (titleEl) titleEl.textContent = 'New Song';
     renderSETab();
+    // focus the Title input after render
+    requestAnimationFrame(() => {
+      const titleInput = document.getElementById('fTitle');
+      if (titleInput) titleInput.focus();
+    });
   }
 }
 
@@ -6204,7 +6211,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:03</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 17:08</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
