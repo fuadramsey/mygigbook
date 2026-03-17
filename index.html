@@ -3860,6 +3860,13 @@ function renderSETab() {
 async function openSongModal(id) {
   seTab = 'details';
   seEditMode = false;
+  // reset topbar buttons to view state
+  const _editBtn = document.getElementById('seEditBtn');
+  const _cancelBtn = document.getElementById('seCancelBtn');
+  const _saveBtn = document.getElementById('seSaveBtn');
+  if (_editBtn) _editBtn.style.display = 'flex';
+  if (_cancelBtn) _cancelBtn.style.display = 'none';
+  if (_saveBtn) _saveBtn.style.display = 'none';
   window._seCurrentSong = null;
   window._modalPendingAudio = null;
   window._seMyNotesHtml = '';
@@ -4056,6 +4063,13 @@ async function saveSong() {
     window._modalPendingAudio = null;
   }
   seEditMode = false;
+  // reset topbar button visibility
+  const _editBtn = document.getElementById('seEditBtn');
+  const _cancelBtn = document.getElementById('seCancelBtn');
+  const _saveBtn = document.getElementById('seSaveBtn');
+  if (_editBtn) _editBtn.style.display = 'flex';
+  if (_cancelBtn) _cancelBtn.style.display = 'none';
+  if (_saveBtn) _saveBtn.style.display = 'none';
   goBack(); await renderDB(); await syncOut(); showToast('Song saved','ok');
 }
 
@@ -6115,7 +6129,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 16:32</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">v1.4 · 2026-03-17 16:37</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
