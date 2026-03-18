@@ -5179,19 +5179,56 @@ function setupDBSwipe(currentId) {
   if (page._dbSwipeTs) { page.removeEventListener('touchstart', page._dbSwipeTs); page.removeEventListener('touchend', page._dbSwipeTe); }
   let sx = 0, sy = 0;
   page._dbSwipeTs = e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; };
-  page._dbSwipeTe = e => {
-    if (seEditMode) return; // don't swipe while editing
+  page._dbSwipeTe = async e => {
+    if (seEditMode) return;
     const dx = e.changedTouches[0].clientX - sx;
     const dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
     const list = window._dbSongList || [];
     const idx = list.findIndex(s => s.id === currentId);
     if (idx < 0) return;
-    if (dx < 0 && idx < list.length - 1) openSongModal(list[idx + 1].id);
-    else if (dx > 0 && idx > 0) openSongModal(list[idx - 1].id);
+    const nextSong = dx < 0 ? list[idx + 1] : list[idx - 1];
+    if (!nextSong) return;
+    // Load content in-place — don't call showPage() to avoid slide animation
+    await loadSongIntoSEPage(nextSong.id);
+    setupDBSwipe(nextSong.id);
   };
   page.addEventListener('touchstart', page._dbSwipeTs, { passive: true });
   page.addEventListener('touchend', page._dbSwipeTe, { passive: true });
+}
+
+// Load a song into pg-song-edit without triggering the page slide transition
+async function loadSongIntoSEPage(id) {
+  const savedTab = id ? localStorage.getItem('mgb_tab_' + id) : null;
+  seTab = (savedTab === 'mynotes') ? 'mynotes' : 'details';
+  seEditMode = false;
+
+  // reset edit buttons
+  const dEditBtn = document.getElementById('dbDetailEditBtn');
+  const dSaveBtn = document.getElementById('dbDetailSaveBtn');
+  const dCancelBtn = document.getElementById('dbDetailCancelBtn');
+  if (dEditBtn) dEditBtn.style.display = '';
+  if (dSaveBtn) dSaveBtn.style.display = 'none';
+  if (dCancelBtn) dCancelBtn.style.display = 'none';
+
+  document.getElementById('editSongId').value = id || '';
+  ['details','mynotes','links','attachments','horns'].forEach(t => {
+    const b1 = document.getElementById(`se-tab-${t}`);
+    const b2 = document.getElementById(`sep-tab-${t}`);
+    if (b1) b1.classList.toggle('active', t === seTab);
+    if (b2) b2.classList.toggle('active', t === seTab);
+  });
+
+  const [s, noteEntry] = await Promise.all([
+    dbGet('songs', id),
+    dbGet('notes', `${currentUser||'me'}_${id}`)
+  ]);
+  window._seCurrentSong = s || {};
+  window._seMyNotesHtml = noteEntry?.text || '';
+  await loadAudioHybrid(id);
+  const titleEl = document.getElementById('sePageTitle');
+  if (titleEl) titleEl.textContent = s?.title || '';
+  renderSETab();
 }
 
 function closeSongPage() { tryCloseSongPage(); }
@@ -8156,7 +8193,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:34</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:40</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
