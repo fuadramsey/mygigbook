@@ -1619,6 +1619,7 @@ async function fbDeleteFileMeta(fileId) {
 // Fetch file from Firebase Storage using SDK (avoids CORS issues with plain fetch)
 async function fetchFromStorage(path, downloadUrl) {
   const fb = window._fb;
+  let lastError = null;
   try {
     // Try using Firebase SDK getDownloadURL first (handles auth/CORS properly)
     if (fb?.storageRef && fb?.storage && fb?.getDownloadURL) {
@@ -1626,14 +1627,25 @@ async function fetchFromStorage(path, downloadUrl) {
       const sdkUrl = await fb.getDownloadURL(fileRef);
       const resp = await fetch(sdkUrl);
       if (resp.ok) return await resp.arrayBuffer();
+      lastError = `HTTP ${resp.status} from SDK URL`;
     }
+  } catch(e) {
+    lastError = e.message || String(e);
+    console.warn('[fetchFromStorage] SDK attempt failed:', path, e);
+  }
+  try {
     // Fallback to stored downloadUrl
     if (downloadUrl) {
       const resp = await fetch(downloadUrl);
       if (resp.ok) return await resp.arrayBuffer();
+      lastError = `HTTP ${resp.status} from stored URL`;
     }
-  } catch(e) { console.warn('[fetchFromStorage] Error:', path, e); }
-  return null;
+  } catch(e) {
+    lastError = e.message || String(e);
+    console.warn('[fetchFromStorage] Fallback fetch failed:', downloadUrl, e);
+  }
+  console.warn('[fetchFromStorage] Both attempts failed for:', path, '| Error:', lastError);
+  throw new Error(lastError || 'Download failed');
 }
 
 async function syncFilesFromStorage() {
@@ -5447,7 +5459,7 @@ async function downloadAudioNow() {
     const songMap = {};
     allSongs.forEach(s => songMap[s.id] = s);
 
-    let downloaded = 0, skipped = 0, failed = 0;
+    let downloaded = 0, skipped = 0, failed = 0, firstError = null;
     for (const meta of audioFiles) {
       const { fileId, name, mimeType, downloadUrl, songId } = meta;
       if (!downloadUrl || !fileId) { console.warn('[Audio Sync] Missing URL or fileId:', meta); failed++; continue; }
@@ -5462,7 +5474,6 @@ async function downloadAudioNow() {
       try {
         console.log('[Audio Sync] Downloading:', name, 'path: songs/' + songId + '/audio/' + fileId);
         const ab = await fetchFromStorage(`songs/${songId}/audio/${fileId}`, downloadUrl);
-        if (!ab) { console.warn('[Audio Sync] fetchFromStorage returned null for:', fileId); failed++; continue; }
         await dbPut('audio', { id: fileId, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
         if (window._audioCache?.[fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fileId].blobUrl);
         const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
@@ -5472,13 +5483,14 @@ async function downloadAudioNow() {
         console.log('[Audio Sync] Downloaded OK:', name);
       } catch(e) {
         console.warn('[Audio Sync] Download error:', fileId, e);
+        firstError = firstError || (e?.message || String(e));
         failed++;
       }
     }
 
     if (downloaded > 0) showToast(`Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`, 'ok');
     else if (skipped > 0 && !failed) showToast('All audio already on this device', 'ok');
-    else if (failed > 0) showToast(`${failed} file${failed > 1 ? 's' : ''} failed — check console for details`, 'err');
+    else if (failed > 0) showToast(`Failed: ${firstError || 'unknown error'}`, 'err');
     else showToast('No audio available to download', 'err');
 
   } catch(e) {
@@ -7849,7 +7861,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-18 03:12</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-18 04:22</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
