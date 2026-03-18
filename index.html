@@ -1364,6 +1364,15 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
           </label>
         </div>
       </div>
+      <button class="settings-row" onclick="closeSettings();downloadAudioNow()">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <span class="settings-row-label">Download audio files now
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Force-download all audio to this device</span>
+        </span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
 
       <div class="settings-section-label" style="margin-top:8px">Data</div>
       <button class="settings-row" onclick="closeSettings();exportCSV()">
@@ -5397,6 +5406,48 @@ function audioDownloadPromptAnswer(val) {
   }
 }
 
+async function downloadAudioNow() {
+  if (!online) { showToast('No internet connection', 'err'); return; }
+  if (!fbReady) { showToast('Not connected to cloud', 'err'); return; }
+  showToast('Downloading audio files…');
+  const fb = window._fb;
+  if (!fb?.storage) { showToast('Storage not available', 'err'); return; }
+  try {
+    const snap = await fb.getDocs(fb.collection(fb.db, 'files'));
+    const allSongs = await dbAll('songs');
+    const songMap = {};
+    allSongs.forEach(s => songMap[s.id] = s);
+    const tasks = [];
+    for (const d of snap.docs) {
+      const meta = d.data();
+      if (meta.type !== 'audio') continue;
+      const song = songMap[meta.songId];
+      if (!song) continue;
+      if (!await canAccessSong(song)) continue;
+      const { fileId, name, mimeType, downloadUrl } = meta;
+      if (!downloadUrl || !fileId) continue;
+      const existing = await dbGet('audio', fileId);
+      if (existing?.data) continue; // already cached
+      tasks.push((async () => {
+        try {
+          const resp = await fetch(downloadUrl);
+          if (!resp.ok) return;
+          const ab = await resp.arrayBuffer();
+          await dbPut('audio', { id: fileId, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
+          if (window._audioCache?.[fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fileId].blobUrl);
+          const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
+          window._audioCache = window._audioCache || {};
+          window._audioCache[fileId] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: false };
+        } catch(e) { console.warn('Audio download error:', fileId, e); }
+      })());
+    }
+    await Promise.all(tasks);
+    showToast(tasks.length ? `Downloaded ${tasks.length} audio file${tasks.length > 1 ? 's' : ''}` : 'All audio already downloaded', 'ok');
+  } catch(e) {
+    showToast('Download failed: ' + (e?.message || e), 'err');
+  }
+}
+
 function maybePromptAudioDownload(callback) {
   // only prompt once per device, and only if user hasn't already set a preference
   const prompted = localStorage.getItem(AUTO_DOWNLOAD_PROMPTED_KEY);
@@ -7759,7 +7810,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-18 02:41</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-18 02:56</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
