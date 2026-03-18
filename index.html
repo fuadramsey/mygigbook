@@ -47,31 +47,33 @@
   const fbStorage = getStorage(fbApp);
   const fbAuth = getAuth(fbApp);
 
-  // Sign in anonymously — gives Firebase a real auth token so rules can require request.auth != null
-  // This is silent and invisible to the user — your username/password system is unchanged
-
-  // expose to global scope for use in main script
-  window._fb = {
-    db: fbDb,
-    collection, doc, setDoc, getDocs, deleteDoc, serverTimestamp, writeBatch,
-    storage: fbStorage,
-    storageRef: ref,
-    uploadBytes, getDownloadURL, deleteObject, listAll,
-    auth: fbAuth
-  };
-
-  // Wait for anonymous auth token before signalling ready
-  // This ensures all Firestore/Storage calls have a valid auth token
-  onAuthStateChanged(fbAuth, (user) => {
-    if (user) {
-      window.dispatchEvent(new Event('firebase-ready'));
-    }
-  });
-  // Also try signing in (in case onAuthStateChanged fires before sign-in completes)
-  signInAnonymously(fbAuth).catch(e => {
-    // Auth failed — still fire ready so app works (rules will be in open mode)
-    console.warn('Anonymous auth failed, firing ready anyway:', e);
+  // Sign in anonymously first, then expose Firebase and fire ready
+  // This guarantees auth token exists before any Firestore/Storage call
+  let _fbReadyFired = false;
+  function _fireReady() {
+    if (_fbReadyFired) return;
+    _fbReadyFired = true;
+    window._fb = {
+      db: fbDb,
+      collection, doc, setDoc, getDocs, deleteDoc, serverTimestamp, writeBatch,
+      storage: fbStorage,
+      storageRef: ref,
+      uploadBytes, getDownloadURL, deleteObject, listAll,
+      auth: fbAuth
+    };
     window.dispatchEvent(new Event('firebase-ready'));
+  }
+
+  signInAnonymously(fbAuth)
+    .then(() => _fireReady())
+    .catch(e => {
+      console.warn('Anonymous sign-in failed:', e);
+      _fireReady(); // fire anyway so app doesn't hang
+    });
+
+  // Also handle case where user is already signed in (page refresh)
+  onAuthStateChanged(fbAuth, (user) => {
+    if (user) _fireReady();
   });
 </script>
 <style>
@@ -1480,7 +1482,7 @@ const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(
 const SYNC_KEY = 'stageset_shared_v3'; // kept for BroadcastChannel cross-tab only
 let online = navigator.onLine;
 let bc; try { bc = new BroadcastChannel('stageset3'); } catch(e) {}
-let fbReady = false;
+let fbReady = !!(window._fb); // true if Firebase already ready before this script ran
 let syncInProgress = false;
 let audioSyncCount = 0; // tracks active audio uploads/downloads
 
@@ -1494,6 +1496,11 @@ function _debouncedSyncUI() {
 let lastSyncTime = parseInt(localStorage.getItem('mgb_last_sync')) || null;
 
 window.addEventListener('firebase-ready', () => { fbReady = true; });
+// Also poll in case event already fired before listener registered
+(function checkFbReady() {
+  if (window._fb) { fbReady = true; return; }
+  setTimeout(checkFbReady, 100);
+})();
 
 // ── ANDROID BACK BUTTON INTERCEPTION ──
 // Push an initial state so the back button triggers popstate instead of exiting
@@ -1889,7 +1896,8 @@ async function manualSync() {
     await new Promise(resolve => {
       const check = setInterval(() => {
         waited += 300;
-        if (fbReady || waited >= 10000) { clearInterval(check); resolve(); }
+        if (window._fb) fbReady = true;
+        if (fbReady || waited >= 15000) { clearInterval(check); resolve(); }
       }, 300);
     });
     if (!fbReady) { showToast('Cloud unavailable — try again', 'err'); return; }
@@ -8141,7 +8149,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:06</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:21</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
