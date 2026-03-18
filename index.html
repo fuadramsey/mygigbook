@@ -10,6 +10,11 @@
 <meta name="apple-mobile-web-app-title" content="MyGigBook">
 <meta name="description" content="Band setlist manager — lyrics, notes, audio and more">
 <link rel="manifest" href="/mygigbook/manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/mygigbook/sw.js').catch(() => {});
+  }
+</script>
 <title>MyGigBook</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -8181,7 +8186,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:50</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:58</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
