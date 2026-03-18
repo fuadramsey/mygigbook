@@ -1267,7 +1267,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay hidden" id="settingsModal" onclick="if(event.target===this)closeSettings()">
-  <div class="modal-sheet" style="max-height:60vh">
+  <div class="modal-sheet" style="max-height:80vh">
     <div class="modal-header">
       <span class="modal-title">Settings</span>
       <div class="modal-close" onclick="closeSettings()">✕</div>
@@ -1316,35 +1316,6 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         </div>
       </button>
 
-      <div class="settings-section-label" style="margin-top:8px">Account</div>
-
-      <div class="settings-row" style="cursor:default;">
-        <div class="settings-row-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        </div>
-        <span class="settings-row-label" id="settingsNameLabel">Signed in as</span>
-      </div>
-
-      <button class="settings-row" onclick="closeSettings();openChangePass(false)">
-        <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
-        <span class="settings-row-label">Change Password</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
-      </button>
-
-      <div id="adminSettingsRow" style="display:none">
-        <div class="settings-section-label" style="margin-top:8px">Admin</div>
-        <button class="settings-row" onclick="closeSettings();openAdmin()">
-          <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
-          <span class="settings-row-label">Manage Users</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
-        <button class="settings-row" onclick="closeSettings();openBackup()">
-          <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/><path d="M3 7h3a2 2 0 002-2V2"/></svg></div>
-          <span class="settings-row-label">Backup & Restore</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
-      </div>
-
       <div class="settings-section-label" style="margin-top:8px">Sync</div>
       <div class="settings-row" style="cursor:default;">
         <div class="settings-row-icon">
@@ -1373,6 +1344,35 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         </span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
       </button>
+
+      <div class="settings-section-label" style="margin-top:8px">Account</div>
+
+      <div class="settings-row" style="cursor:default;">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </div>
+        <span class="settings-row-label" id="settingsNameLabel">Signed in as</span>
+      </div>
+
+      <button class="settings-row" onclick="closeSettings();openChangePass(false)">
+        <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <span class="settings-row-label">Change Password</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+
+      <div id="adminSettingsRow" style="display:none">
+        <div class="settings-section-label" style="margin-top:8px">Admin</div>
+        <button class="settings-row" onclick="closeSettings();openAdmin()">
+          <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+          <span class="settings-row-label">Manage Users</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="settings-row" onclick="closeSettings();openBackup()">
+          <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/><path d="M3 7h3a2 2 0 002-2V2"/></svg></div>
+          <span class="settings-row-label">Backup & Restore</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
 
       <div class="settings-section-label" style="margin-top:8px">Data</div>
       <button class="settings-row" onclick="closeSettings();exportCSV()">
@@ -1616,6 +1616,26 @@ async function fbDeleteFileMeta(fileId) {
 }
 
 // Pull missing PDFs and images from Firebase Storage for visible songs
+// Fetch file from Firebase Storage using SDK (avoids CORS issues with plain fetch)
+async function fetchFromStorage(path, downloadUrl) {
+  const fb = window._fb;
+  try {
+    // Try using Firebase SDK getDownloadURL first (handles auth/CORS properly)
+    if (fb?.storageRef && fb?.storage && fb?.getDownloadURL) {
+      const fileRef = fb.storageRef(fb.storage, path);
+      const sdkUrl = await fb.getDownloadURL(fileRef);
+      const resp = await fetch(sdkUrl);
+      if (resp.ok) return await resp.arrayBuffer();
+    }
+    // Fallback to stored downloadUrl
+    if (downloadUrl) {
+      const resp = await fetch(downloadUrl);
+      if (resp.ok) return await resp.arrayBuffer();
+    }
+  } catch(e) { console.warn('[fetchFromStorage] Error:', path, e); }
+  return null;
+}
+
 async function syncFilesFromStorage() {
   if (!fbReady || !online) return;
   if (!autoDownloadFiles) return; // user opted out of auto-download on this device
@@ -1650,11 +1670,9 @@ async function syncFilesFromStorage() {
       // download and cache
       tasks.push((async () => {
         try {
-          const resp = await fetch(downloadUrl);
-          if (!resp.ok) return;
-          const ab = await resp.arrayBuffer();
+          const ab = await fetchFromStorage(`songs/${meta.songId}/${type === 'audio' ? 'audio' : type === 'pdf' ? 'pdfs' : 'images'}/${fileId}`, downloadUrl);
+          if (!ab) { console.warn('[Sync] Download returned null:', fileId); return; }
           await dbPut(store, { id: fileId, name, data: ab, mimeType, updatedAt: meta.updatedAt || Date.now() });
-          // for audio, also populate the cache so it plays immediately
           if (type === 'audio') {
             if (window._audioCache?.[fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fileId].blobUrl);
             const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
@@ -1704,9 +1722,8 @@ async function loadAudioHybrid(songId) {
   if (!url) return null;
   audioSyncStart();
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    const ab = await resp.arrayBuffer();
+    const ab = await fetchFromStorage(`songs/${songId}/audio/audio_${songId}`, url);
+    if (!ab) { audioSyncEnd(); return null; }
     // get name from file metadata
     const fb = window._fb;
     let name = 'audio';
@@ -5409,42 +5426,64 @@ function audioDownloadPromptAnswer(val) {
 async function downloadAudioNow() {
   if (!online) { showToast('No internet connection', 'err'); return; }
   if (!fbReady) { showToast('Not connected to cloud', 'err'); return; }
-  showToast('Downloading audio files…');
   const fb = window._fb;
   if (!fb?.storage) { showToast('Storage not available', 'err'); return; }
+
+  showToast('Checking cloud for audio…');
   try {
     const snap = await fb.getDocs(fb.collection(fb.db, 'files'));
+    const allFiles = snap.docs.map(d => d.data());
+    const audioFiles = allFiles.filter(m => m.type === 'audio');
+
+    console.log('[Audio Sync] Total files in Firestore:', allFiles.length);
+    console.log('[Audio Sync] Audio files found:', audioFiles.length, audioFiles);
+
+    if (!audioFiles.length) {
+      showToast('No audio files found in cloud — upload audio first from the original device', 'err');
+      return;
+    }
+
     const allSongs = await dbAll('songs');
     const songMap = {};
     allSongs.forEach(s => songMap[s.id] = s);
-    const tasks = [];
-    for (const d of snap.docs) {
-      const meta = d.data();
-      if (meta.type !== 'audio') continue;
-      const song = songMap[meta.songId];
-      if (!song) continue;
-      if (!await canAccessSong(song)) continue;
-      const { fileId, name, mimeType, downloadUrl } = meta;
-      if (!downloadUrl || !fileId) continue;
+
+    let downloaded = 0, skipped = 0, failed = 0;
+    for (const meta of audioFiles) {
+      const { fileId, name, mimeType, downloadUrl, songId } = meta;
+      if (!downloadUrl || !fileId) { console.warn('[Audio Sync] Missing URL or fileId:', meta); failed++; continue; }
+
+      const song = songMap[songId];
+      if (!song) { console.warn('[Audio Sync] Song not found locally:', songId); skipped++; continue; }
+      if (!await canAccessSong(song)) { skipped++; continue; }
+
       const existing = await dbGet('audio', fileId);
-      if (existing?.data) continue; // already cached
-      tasks.push((async () => {
-        try {
-          const resp = await fetch(downloadUrl);
-          if (!resp.ok) return;
-          const ab = await resp.arrayBuffer();
-          await dbPut('audio', { id: fileId, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
-          if (window._audioCache?.[fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fileId].blobUrl);
-          const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
-          window._audioCache = window._audioCache || {};
-          window._audioCache[fileId] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: false };
-        } catch(e) { console.warn('Audio download error:', fileId, e); }
-      })());
+      if (existing?.data) { skipped++; continue; }
+
+      try {
+        console.log('[Audio Sync] Downloading:', name, 'path: songs/' + songId + '/audio/' + fileId);
+        const ab = await fetchFromStorage(`songs/${songId}/audio/${fileId}`, downloadUrl);
+        if (!ab) { console.warn('[Audio Sync] fetchFromStorage returned null for:', fileId); failed++; continue; }
+        await dbPut('audio', { id: fileId, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
+        if (window._audioCache?.[fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fileId].blobUrl);
+        const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
+        window._audioCache = window._audioCache || {};
+        window._audioCache[fileId] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: false };
+        downloaded++;
+        console.log('[Audio Sync] Downloaded OK:', name);
+      } catch(e) {
+        console.warn('[Audio Sync] Download error:', fileId, e);
+        failed++;
+      }
     }
-    await Promise.all(tasks);
-    showToast(tasks.length ? `Downloaded ${tasks.length} audio file${tasks.length > 1 ? 's' : ''}` : 'All audio already downloaded', 'ok');
+
+    if (downloaded > 0) showToast(`Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`, 'ok');
+    else if (skipped > 0 && !failed) showToast('All audio already on this device', 'ok');
+    else if (failed > 0) showToast(`${failed} file${failed > 1 ? 's' : ''} failed — check console for details`, 'err');
+    else showToast('No audio available to download', 'err');
+
   } catch(e) {
-    showToast('Download failed: ' + (e?.message || e), 'err');
+    console.error('[Audio Sync] Error:', e);
+    showToast('Error: ' + (e?.message || e), 'err');
   }
 }
 
@@ -7810,7 +7849,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-18 02:56</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-18 03:12</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
