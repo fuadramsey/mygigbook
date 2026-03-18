@@ -700,10 +700,14 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .toast.show { transform: none; }
 
   /* Disable split-panel DB view on mobile — full width list only */
-  #dbLeftPanel { width: 100% !important; border-right: none !important; }
+  #dbLeftPanel { width: 100% !important; max-width: 100vw !important; border-right: none !important; flex-shrink: 0 !important; }
   #dbRightPanel { display: none !important; }
   #dbPeekTab { display: none !important; }
   #dbPinBtn { display: none !important; }
+  #dbResizeDivider { display: none !important; }
+  #dbSplitBody { overflow-x: hidden !important; }
+  #pg-db { overflow-x: hidden !important; max-width: 100vw !important; }
+  #pg-song-edit { overflow-x: hidden !important; max-width: 100vw !important; }
 }
 
 /* ── LOGIN SCREEN ── */
@@ -5126,6 +5130,9 @@ async function openSongModal(id) {
       if (card) card.classList.add('db-song-selected');
     }
   } else {
+    // Mobile — reset any inline width that resize logic may have set
+    const lp = document.getElementById('dbLeftPanel');
+    if (lp) lp.style.width = '';
     showPage('pg-song-edit');
   }
 
@@ -8149,7 +8156,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:21</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:34</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
