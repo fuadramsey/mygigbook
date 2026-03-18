@@ -1345,6 +1345,26 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         </button>
       </div>
 
+      <div class="settings-section-label" style="margin-top:8px">Sync</div>
+      <div class="settings-row" style="cursor:default;">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <span class="settings-row-label">
+          Auto-download files on sync
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Audio, PDFs &amp; images download to this device</span>
+        </span>
+        <div style="flex-shrink:0;">
+          <label style="position:relative;display:inline-block;width:42px;height:24px;">
+            <input type="checkbox" id="autoDownloadToggle" onchange="setAutoDownload(this.checked)"
+              style="opacity:0;width:0;height:0;position:absolute;">
+            <span id="autoDownloadSlider" style="position:absolute;inset:0;background:var(--surface3);border-radius:12px;border:1px solid var(--border2);transition:background 0.2s;cursor:pointer;">
+              <span id="autoDownloadThumb" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></span>
+            </span>
+          </label>
+        </div>
+      </div>
+
       <div class="settings-section-label" style="margin-top:8px">Data</div>
       <button class="settings-row" onclick="closeSettings();exportCSV()">
         <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
@@ -1589,6 +1609,7 @@ async function fbDeleteFileMeta(fileId) {
 // Pull missing PDFs and images from Firebase Storage for visible songs
 async function syncFilesFromStorage() {
   if (!fbReady || !online) return;
+  if (!autoDownloadFiles) return; // user opted out of auto-download on this device
   const fb = window._fb;
   if (!fb?.storage) return;
   try {
@@ -1611,11 +1632,9 @@ async function syncFilesFromStorage() {
       const { type, fileId, name, mimeType, downloadUrl, songId } = meta;
       if (!downloadUrl || !fileId) continue;
 
-      // skip audio — handled separately (stream on demand)
-      if (type === 'audio') continue;
-
-      // check if already cached locally
-      const store = type === 'pdf' ? 'pdfs' : 'images';
+      // determine store by type
+      const store = type === 'audio' ? 'audio' : type === 'pdf' ? 'pdfs' : 'images';
+      if (!['audio','pdf','image'].includes(type)) continue;
       const existing = await dbGet(store, fileId);
       if (existing?.data) continue; // already have it
 
@@ -1626,6 +1645,13 @@ async function syncFilesFromStorage() {
           if (!resp.ok) return;
           const ab = await resp.arrayBuffer();
           await dbPut(store, { id: fileId, name, data: ab, mimeType, updatedAt: meta.updatedAt || Date.now() });
+          // for audio, also populate the cache so it plays immediately
+          if (type === 'audio') {
+            if (window._audioCache?.[fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fileId].blobUrl);
+            const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
+            window._audioCache = window._audioCache || {};
+            window._audioCache[fileId] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: false };
+          }
         } catch(e) { console.warn('File download error:', fileId, e); }
       })());
     }
@@ -1746,6 +1772,11 @@ async function syncIn() {
 async function manualSync() {
   if (!online) { showToast('No internet connection', 'err'); return; }
   if (syncInProgress) return;
+  // show first-time audio download prompt if needed
+  if (!localStorage.getItem(AUTO_DOWNLOAD_PROMPTED_KEY)) {
+    maybePromptAudioDownload(() => manualSync());
+    return;
+  }
   if (!fbReady) {
     showToast('Connecting to cloud…');
     let waited = 0;
@@ -2621,8 +2652,12 @@ async function renderSongPage(idx) {
         ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + buildListenContent(s)
         : noteTab === 'horns'
         ? `<div id="hornsContent" style="padding:16px;">Loading…</div>`
-        : buildNoteContent(activeNote, idx)}
-    </div>`;
+        : buildNoteContent(activeNote, idx, true)}
+    </div>
+    ${(noteTab === 'default' || noteTab === 'mine') && !editingNote
+      ? buildUploadBar(activeNote, idx)
+      : ''}
+    `;
 
   setupSwipe(idx);
   // apply zoom to note content area
@@ -3209,11 +3244,7 @@ function buildNoteContent(text, idx) {
           >${text ? text : ''}</div>
         <button class="save-btn" onclick="saveCurrentNote(${idx})">Save Notes</button>
        </div>`
-    : `<div class="note-display${text?'':' empty'}">${text ? text : 'No notes yet.'}</div>
-       <button class="edit-note-btn" onclick="startEditNote(${idx})">
-         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-         ${text ? 'Edit notes' : 'Add notes'}
-       </button>`;
+    : `<div class="note-display${text?'':' empty'}">${text ? text : 'No notes yet.'}</div>`;
 
   const pdfSection = pdfEntry
     ? `<div style="margin-top:16px;">
@@ -3287,27 +3318,39 @@ function buildNoteContent(text, idx) {
     </div>
   </div>` : '';
 
-  // Upload zones always at the bottom (only shown when no PDF attached)
-  const uploadZones = !pdfEntry ? `<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
-    <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;font-family:'DM Mono',monospace;">Attachments</div>
-    <div style="display:flex;gap:8px;">
-      <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:8px;justify-content:center;" onclick="document.getElementById('pdfInput_${idx}').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="handlePdfDrop(event,${idx},'${pdfKey}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
-        <span style="font-size:12px;color:var(--text2);">PDF</span>
-      </div>
-      <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:8px;justify-content:center;" onclick="document.getElementById('noteImgInput_${idx}').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="handleNoteImgDrop(event,${idx},'${imgPrefix}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <span style="font-size:12px;color:var(--text2);">Image</span>
-      </div>
-    </div>
-    <input type="file" id="pdfInput_${idx}" accept="application/pdf,.pdf" style="display:none" onchange="handlePdfFile(event,${idx},'${pdfKey}')">
-    <input type="file" id="noteImgInput_${idx}" accept="image/*" multiple style="display:none" onchange="handleImageFile(event,${idx},'${imgPrefix}')">
-  </div>` : `<div>
+  // Upload zones — moved to pinned bottom bar, but keep hidden file inputs here always
+  const hiddenInputs = `<div>
     <input type="file" id="pdfInput_${idx}" accept="application/pdf,.pdf" style="display:none" onchange="handlePdfFile(event,${idx},'${pdfKey}')">
     <input type="file" id="noteImgInput_${idx}" accept="image/*" multiple style="display:none" onchange="handleImageFile(event,${idx},'${imgPrefix}')">
   </div>`;
 
-  return audioBar + textSection + pdfSection + imageSection + uploadZones;
+  return audioBar + textSection + pdfSection + imageSection + hiddenInputs;
+}
+
+function buildUploadBar(noteData, idx) {
+  const s = currentSetSongs[idx];
+  if (!s || s.type === 'note') return '';
+  const pdfKey = noteTab === 'default' ? `default_${s.id}` : `${currentUser||'me'}_${s.id}`;
+  const imgPrefix = noteTab === 'default' ? `img_default_${s.id}` : `img_${currentUser||'me'}_${s.id}`;
+  const pdfEntry = window._pdfCache?.[pdfKey];
+
+  return `<div style="flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:8px 12px;">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="edit-note-btn" style="margin-top:0;flex:1;padding:8px;" onclick="startEditNote(${idx})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Edit Notes
+      </button>
+      ${!pdfEntry ? `
+      <button class="edit-note-btn" style="margin-top:0;flex:1;padding:8px;" onclick="document.getElementById('pdfInput_${idx}').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+        Add PDF
+      </button>` : ''}
+      <button class="edit-note-btn" style="margin-top:0;flex:1;padding:8px;" onclick="document.getElementById('noteImgInput_${idx}').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Add Image
+      </button>
+    </div>
+  </div>`;
 }
 
 async function switchNoteTab(tab, idx) { noteTab=tab; editingNote=false; await renderSongPage(idx); }
@@ -5332,6 +5375,47 @@ function applyTheme(mode) {
   document.body.classList.toggle('hc', mode === 'hc');
   document.body.classList.toggle('dim', mode === 'dim');
 }
+const AUTO_DOWNLOAD_KEY = 'mgb_auto_download';
+const AUTO_DOWNLOAD_PROMPTED_KEY = 'mgb_auto_download_prompted';
+let autoDownloadFiles = localStorage.getItem(AUTO_DOWNLOAD_KEY) === '1'; // default OFF
+
+function setAutoDownload(val) {
+  autoDownloadFiles = val;
+  localStorage.setItem(AUTO_DOWNLOAD_KEY, val ? '1' : '0');
+  localStorage.setItem(AUTO_DOWNLOAD_PROMPTED_KEY, '1');
+  updateAutoDownloadUI();
+}
+
+function audioDownloadPromptAnswer(val) {
+  document.getElementById('audioDownloadPromptModal').classList.add('hidden');
+  setAutoDownload(val);
+  showToast(val ? 'Audio will download on sync' : 'Audio loads on demand', 'ok');
+  if (window._audioPromptCallback) {
+    const cb = window._audioPromptCallback;
+    window._audioPromptCallback = null;
+    cb();
+  }
+}
+
+function maybePromptAudioDownload(callback) {
+  // only prompt once per device, and only if user hasn't already set a preference
+  const prompted = localStorage.getItem(AUTO_DOWNLOAD_PROMPTED_KEY);
+  if (prompted) { callback(); return; }
+  // show prompt, callback runs after answer
+  document.getElementById('audioDownloadPromptModal').classList.remove('hidden');
+  // store callback to run after answer
+  window._audioPromptCallback = callback;
+}
+
+function updateAutoDownloadUI() {
+  const toggle = document.getElementById('autoDownloadToggle');
+  const slider = document.getElementById('autoDownloadSlider');
+  const thumb = document.getElementById('autoDownloadThumb');
+  if (toggle) toggle.checked = autoDownloadFiles;
+  if (slider) slider.style.background = autoDownloadFiles ? 'var(--accent)' : 'var(--surface3)';
+  if (thumb) { thumb.style.left = autoDownloadFiles ? '21px' : '3px'; thumb.style.background = autoDownloadFiles ? '#000' : '#fff'; }
+}
+
 function updateSettingsUI() {
   const mode = localStorage.getItem('stageset_theme') || 'light';
   document.getElementById('check-dark').classList.toggle('visible', mode === 'dark');
@@ -5348,6 +5432,7 @@ function updateSettingsUI() {
   if (bugLogRow) bugLogRow.style.display = currentIsAdmin ? 'block' : 'none';
   if (currentIsAdmin) updateBugBadge();
   updateSidebarName();
+  updateAutoDownloadUI();
 }
 function settingsChangeName() { /* identity is login username */ }
 
@@ -5998,18 +6083,45 @@ async function postLoginInit() {
 const PRIVATE_GROUP_KEY = 'mgb_private_group_'; // + username
 
 async function ensurePrivateGroup() {
-  if (currentIsAdmin) return; // admin has no private group
+  if (currentIsAdmin) return;
   const privateKey = PRIVATE_GROUP_KEY + (currentUser||'me');
   let privateGroupId = localStorage.getItem(privateKey);
   const allGroups = await dbAll('groups');
 
-  // check if saved private group still exists
-  if (privateGroupId) {
-    const existing = allGroups.find(g => g.id === privateGroupId);
-    if (!existing) privateGroupId = null; // was deleted, recreate
+  // check if saved private group still exists in DB
+  if (privateGroupId && !allGroups.find(g => g.id === privateGroupId)) {
+    privateGroupId = null; // deleted, will search or recreate
   }
 
-  // create private group if needed
+  // if no localStorage entry, look for an existing private group for this user
+  // (covers new device login after sync)
+  if (!privateGroupId) {
+    const existing = allGroups.find(g =>
+      g.isPrivate && g.createdBy === currentUser
+    );
+    if (existing) {
+      privateGroupId = existing.id;
+      localStorage.setItem(privateKey, privateGroupId);
+    }
+  }
+
+  // also clean up any duplicate private groups for this user — keep the oldest
+  const myPrivateGroups = allGroups.filter(g => g.isPrivate && g.createdBy === currentUser);
+  if (myPrivateGroups.length > 1) {
+    myPrivateGroups.sort((a, b) => (a.createdAt||0) - (b.createdAt||0));
+    const keep = myPrivateGroups[0];
+    privateGroupId = keep.id;
+    localStorage.setItem(privateKey, privateGroupId);
+    // delete duplicates
+    for (let i = 1; i < myPrivateGroups.length; i++) {
+      await dbDel('groups', myPrivateGroups[i].id);
+      if (window._fb?.deleteDoc && window._fb?.doc && window._fb?.db) {
+        try { await window._fb.deleteDoc(window._fb.doc(window._fb.db, 'groups', myPrivateGroups[i].id)); } catch(e) {}
+      }
+    }
+  }
+
+  // create private group only if none exists anywhere
   if (!privateGroupId) {
     const newGroup = {
       id: uid(),
@@ -6024,7 +6136,7 @@ async function ensurePrivateGroup() {
     privateGroupId = newGroup.id;
     localStorage.setItem(privateKey, privateGroupId);
   } else {
-    // ensure name is always "Private" and isPrivate flag is set
+    // ensure name and flag are correct
     const g = allGroups.find(g => g.id === privateGroupId);
     if (g && (g.name !== 'Private' || !g.isPrivate)) {
       g.name = 'Private';
@@ -6034,7 +6146,7 @@ async function ensurePrivateGroup() {
     }
   }
 
-  // migrate all ungrouped songs and setlists to private group
+  // migrate ungrouped songs/setlists to private group
   const songs = await dbAll('songs');
   for (const s of songs) {
     if (s.createdBy === currentUser && (!s.groupIds || !s.groupIds.length)) {
@@ -7647,7 +7759,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-17 23:27</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.5 · 2026-03-18 02:41</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
@@ -7996,6 +8108,34 @@ init().catch(console.error);
         <img id="imgMarkupSource" style="display:block;max-width:100%;max-height:calc(100vh - 120px);border-radius:4px;user-select:none;-webkit-user-drag:none;">
         <canvas id="imgMarkupCanvas" style="position:absolute;inset:0;border-radius:4px;cursor:crosshair;touch-action:none;"></canvas>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIO DOWNLOAD PROMPT MODAL -->
+<div class="modal-overlay hidden" id="audioDownloadPromptModal">
+  <div class="modal-sheet" style="max-width:380px;">
+    <div class="modal-header">
+      <span class="modal-title">Download Audio to This Device?</span>
+    </div>
+    <div class="modal-body" style="padding:16px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(232,255,71,0.12);border:1px solid rgba(232,255,71,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" style="width:20px;height:20px;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.6;margin:0;">
+          Would you like to automatically download audio files to this device when you sync?
+        </p>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:12px;color:var(--text3);line-height:1.6;">
+        <strong style="color:var(--text2);">Yes</strong> — audio downloads automatically. Best for your main performance device.<br><br>
+        <strong style="color:var(--text2);">No</strong> — audio loads on demand when you open a song. Better for tablets or devices with limited storage.
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-top:10px;text-align:center;">You can change this any time in Settings → Sync.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" onclick="audioDownloadPromptAnswer(false)" style="flex:1;">No, load on demand</button>
+      <button class="btn primary" onclick="audioDownloadPromptAnswer(true)" style="flex:1;">Yes, download audio</button>
     </div>
   </div>
 </div>
