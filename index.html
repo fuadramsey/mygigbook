@@ -904,7 +904,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
                padding:5px 10px;flex-shrink:0;min-width:64px;max-width:84px;cursor:pointer;color:var(--text);
                transition:background 0.15s;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;"><path d="M15 18l-6-6 6-6"/></svg>
-        <span id="songNavPrevLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;letter-spacing:0.2px;text-align:center;display:block;"></span>
+        <span id="songNavPrevLabel" style="font-size:11px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;text-align:center;display:block;"></span>
       </button>
 
       <!-- Center: set name + counter only (song title already in page body) -->
@@ -920,7 +920,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
                padding:5px 10px;flex-shrink:0;min-width:64px;max-width:84px;cursor:pointer;color:var(--text);
                transition:background 0.15s;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
-        <span id="songNavNextLabel" style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;letter-spacing:0.2px;text-align:center;display:block;"></span>
+        <span id="songNavNextLabel" style="font-size:11px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;text-align:center;display:block;"></span>
       </button>
 
       <!-- Tuning fork only — audio player is in the note area -->
@@ -959,9 +959,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:20px;height:20px;flex-shrink:0"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
         <span id="topbarNameLabelDb" style="font-size:13px;font-family:'DM Mono',monospace;letter-spacing:0.5px;color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
       </button>
-      <button class="top-action" id="editSongsBtn" onclick="toggleEditSongs()" title="Edit songs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </button>
+
     </div>
 
     <!-- Split body: left list + right detail -->
@@ -974,18 +972,15 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
             <input class="search-input" id="dbSearch" placeholder="Search songs…" oninput="renderDB()">
           </div>
-          <select class="filter-sel" id="dbFilterKey" onchange="renderDB()">
-            <option value="">Key</option>
-            <option>A</option><option>A#/Bb</option><option>B</option><option>C</option>
-            <option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option>
-            <option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option>
-          </select>
+          <select class="filter-sel" id="dbFilterArtist" onchange="renderDB()"><option value="">Artist</option></select>
+          <select class="filter-sel" id="dbFilterTag" onchange="renderDB()"><option value="">Tag</option></select>
         </div>
         <div class="sort-bar" style="display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;align-items:center;">
           <button class="sort-btn active" id="sort-title" onclick="setSort('title')">Title</button>
           <button class="sort-btn" id="sort-key" onclick="setSort('key')">Key</button>
           <button class="sort-btn" id="sort-bpm" onclick="setSort('bpm')">BPM</button>
           <button class="sort-btn" id="sort-duration" onclick="setSort('duration')">Time</button>
+          <button class="sort-btn" id="sort-tag" onclick="setSort('tag')">Tag</button>
           <span style="flex:1;"></span>
           <button id="dbPinBtn" onclick="dbTogglePin()" title="Pin list"
             style="display:flex;align-items:center;gap:4px;padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);cursor:pointer;white-space:nowrap;">
@@ -1035,7 +1030,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
               <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
               <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" >Links</button>
               <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" >Attachments</button>
-              <button class="note-tab" id="se-tab-horns" onclick="switchSETab('horns')" >Horns</button>
+              <button class="note-tab" id="se-tab-horns" onclick="switchSETab('charts')" >Charts</button>
             </div>
             <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
               <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
@@ -1106,7 +1101,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
       <button class="note-tab" id="sep-tab-links" onclick="switchSETab('links')" >Links</button>
       <button class="note-tab" id="sep-tab-attachments" onclick="switchSETab('attachments')" >Attachments</button>
-      <button class="note-tab" id="sep-tab-horns" onclick="switchSETab('horns')" >Horns</button>
+      <button class="note-tab" id="sep-tab-horns" onclick="switchSETab('charts')" >Charts</button>
     </div>
     <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
       <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
@@ -1154,6 +1149,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <input class="form-input" id="newSetNameInput" placeholder="e.g. Friday Night Set"
           onkeydown="if(event.key==='Enter') confirmNewSetlist()">
       </div>
+      <div class="form-group">
+        <label class="form-label">Gig Date</label>
+        <input class="form-input" id="newSetDateInput" type="date">
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn ghost" onclick="document.getElementById('newSetModal').classList.add('hidden')">Cancel</button>
@@ -1180,7 +1179,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 </div>
 
 <!-- CONFIRM DELETE MODAL -->
-<div class="modal-overlay hidden" id="confirmDeleteModal">
+<div class="modal-overlay hidden" id="confirmDeleteModal" style="z-index:500;">
   <div class="modal-sheet" style="max-height:auto;">
     <div class="modal-header">
       <span class="modal-title">Delete Setlist</span>
@@ -1476,7 +1475,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.19</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.20</span>
       </div>
 
     </div>
@@ -2160,7 +2159,12 @@ async function renderSetsList() {
   if (activeGroupFilter) {
     sets = sets.filter(s => (s.groupIds||[]).includes(activeGroupFilter));
   }
-  sets.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  sets.sort((a,b)=>{
+    // sort by gig date newest first; sets without a gig date sort by updatedAt
+    const aDate = a.gigDate ? new Date(a.gigDate).getTime() : (a.updatedAt||0);
+    const bDate = b.gigDate ? new Date(b.gigDate).getTime() : (b.updatedAt||0);
+    return bDate - aDate;
+  });
   const el = document.getElementById('setsList');
   const emp = document.getElementById('setsEmpty');
   if (!sets.length) { emp.style.display='flex'; el.innerHTML=''; removeBulkBar('sets'); return; }
@@ -2178,7 +2182,7 @@ async function renderSetsList() {
       }
       <div class="set-item-info">
         <div class="set-item-name">${esc(s.name)}</div>
-        <div class="set-item-meta">${s.songs.length} song${s.songs.length!==1?'s':''} · ${fmtDate(s.updatedAt)}${s.createdBy && s.createdBy!==currentUser ? ` · <span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}</div>
+        <div class="set-item-meta">${s.gigDate ? `<span style="color:var(--accent);font-weight:600;">${new Date(s.gigDate+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</span> · ` : ''}${s.songs.length} song${s.songs.length!==1?'s':''}${s.createdBy && s.createdBy!==currentUser ? ` · <span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}</div>
         ${groupBadges}
       </div>
       ${!editingSets ? `<div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>` : ''}
@@ -2424,7 +2428,7 @@ async function renderSetDetail() {
       <div class="song-row" draggable="true" data-idx="${i}"
         ondragstart="dStart(event,${i})" ondragover="dOver(event,${i})" ondrop="dDrop(event,${i})" ondragend="dEnd(event)"
         onclick="openSongPage(${i})">
-        <div class="drag-grip" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h8M8 12h8M8 18h8"/></svg></div>
+        <div class="drag-grip" onclick="event.stopPropagation()" ontouchstart="touchDragStart(event,${i})" ontouchmove="touchDragMove(event)" ontouchend="touchDragEnd(event,${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h8M8 12h8M8 18h8"/></svg></div>
         <span class="song-num">${songIdx+1}</span>
         <div class="song-row-info">
           <div class="song-row-title">${esc(item.title)}</div>
@@ -2447,16 +2451,20 @@ async function renderSetDetail() {
 function newSetlist() {
   const modal = document.getElementById('newSetModal');
   const input = document.getElementById('newSetNameInput');
+  const dateInput = document.getElementById('newSetDateInput');
   input.value = '';
+  if (dateInput) dateInput.value = '';
   modal.classList.remove('hidden');
   setTimeout(() => input.focus(), 80);
 }
 async function confirmNewSetlist() {
   const input = document.getElementById('newSetNameInput');
+  const dateInput = document.getElementById('newSetDateInput');
   const name = input.value.trim() || `Set ${new Date().toLocaleDateString()}`;
+  const gigDate = dateInput?.value || '';
   document.getElementById('newSetModal').classList.add('hidden');
   const groupIds = activeGroupFilter ? [activeGroupFilter] : [];
-  const set={id:uid(),name,songs:[],groupIds,createdBy:currentUser,createdAt:Date.now(),updatedAt:Date.now()};
+  const set={id:uid(),name,songs:[],groupIds,gigDate,createdBy:currentUser,createdAt:Date.now(),updatedAt:Date.now()};
   await dbPut('setlists',set); await renderSetsList(); await syncOut(); await openSet(set.id);
 }
 async function renameCurrentSet(name) {
@@ -2555,6 +2563,54 @@ async function dDrop(e,toIdx){
   const moved=set.songs.splice(dragIdx,1)[0]; set.songs.splice(toIdx,0,moved); set.updatedAt=Date.now();
   await dbPut('setlists',set); dragIdx=null; await renderSetDetail(); await syncOut();
 }
+
+// Touch drag reorder for mobile
+let _touchDragIdx = null;
+let _touchDragStartY = 0;
+let _touchDragEl = null;
+let _touchDragGhost = null;
+
+function touchDragStart(e, idx) {
+  e.stopPropagation();
+  _touchDragIdx = idx;
+  _touchDragStartY = e.touches[0].clientY;
+  _touchDragEl = e.currentTarget.closest('.song-row');
+  if (_touchDragEl) _touchDragEl.style.opacity = '0.5';
+}
+
+function touchDragMove(e) {
+  if (_touchDragIdx === null) return;
+  e.preventDefault();
+  const y = e.touches[0].clientY;
+  // highlight target row
+  const rows = document.querySelectorAll('.song-row');
+  rows.forEach(r => r.classList.remove('drag-over'));
+  const el = document.elementFromPoint(e.touches[0].clientX, y);
+  const targetRow = el?.closest('.song-row');
+  if (targetRow && targetRow !== _touchDragEl) targetRow.classList.add('drag-over');
+}
+
+async function touchDragEnd(e, startIdx) {
+  if (_touchDragIdx === null) return;
+  const rows = document.querySelectorAll('.song-row');
+  let toIdx = null;
+  rows.forEach(r => {
+    if (r.classList.contains('drag-over')) {
+      toIdx = parseInt(r.dataset.idx);
+    }
+    r.classList.remove('drag-over');
+  });
+  if (_touchDragEl) _touchDragEl.style.opacity = '';
+  _touchDragIdx = null; _touchDragEl = null;
+  if (toIdx === null || toIdx === startIdx) return;
+  const set = await dbGet('setlists', currentSetId);
+  const moved = set.songs.splice(startIdx, 1)[0];
+  set.songs.splice(toIdx, 0, moved);
+  set.updatedAt = Date.now();
+  await dbPut('setlists', set);
+  await renderSetDetail();
+  await syncOut();
+}
 // ── SONG NOTE PAGE ──
 let currentSongIdx = 0;
 let scrollTimer = null;
@@ -2590,7 +2646,140 @@ let tuningOscillator = null;
 let tuningGain = null;
 let tuningPlaying = false;
 
+// ── DB DETAILS ZOOM ──
+function changeDBZoom(delta, key) {
+  const cur = parseFloat(localStorage.getItem(key) || '1');
+  const newZoom = Math.round(Math.max(0.5, Math.min(3, cur + delta)) * 10) / 10;
+  localStorage.setItem(key, newZoom);
+  const label = document.getElementById('dbZoomLabel');
+  if (label) label.textContent = Math.round(newZoom * 100) + '%';
+  const note = document.getElementById('dbDetailsNote');
+  if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
+}
+
+// ── DOUBLE-TAP FULLSCREEN for note area ──
+function setupNoteFullscreen(idx) {
+  const area = document.getElementById('noteArea');
+  if (!area || area._dblTapSet) return;
+  area._dblTapSet = true;
+  let lastTap = 0;
+  area.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      openNoteFullscreen(idx);
+    }
+    lastTap = now;
+  }, { passive: true });
+  area.addEventListener('dblclick', () => openNoteFullscreen(idx));
+}
+
+function openNoteFullscreen(idx) {
+  const existing = document.getElementById('noteFullscreenOverlay');
+  if (existing) { existing.remove(); return; }
+
+  const s = currentSetSongs[idx];
+  if (!s || s.type === 'note') return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'noteFullscreenOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:8000;display:flex;flex-direction:column;';
+
+  // toolbar
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;';
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button onclick="changeNoteZoom(-1,${idx})" style="width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:18px;color:var(--text2);">−</button>
+      <span class="note-zoom-label" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
+      <button onclick="changeNoteZoom(1,${idx})" style="width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:18px;color:var(--text2);">+</button>
+    </div>
+    <div class="scroll-toolbar" id="fsScrollToolbar" style="display:flex;align-items:center;gap:4px;">
+      <button class="scroll-play-btn" onclick="toggleScroll()" title="Auto-scroll">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
+      </button>
+      <button class="scroll-speed-btn" onclick="changeSpeed(-1)">−</button>
+      <span class="scroll-speed-label">×${scrollSpeed}</span>
+      <button class="scroll-speed-btn" onclick="changeSpeed(1)">+</button>
+    </div>
+    <button onclick="document.getElementById('noteFullscreenOverlay').remove()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>`;
+
+  // note content (clone current note area content)
+  const scrollArea = document.createElement('div');
+  scrollArea.id = 'noteArea'; // reuse id so scroll + zoom target it
+  scrollArea.style.cssText = 'flex:1;overflow-y:auto;padding:24px;-webkit-overflow-scrolling:touch;';
+  const noteArea = document.getElementById('noteArea');
+  scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
+  applyNoteZoom(); // apply current zoom
+
+  overlay.appendChild(bar);
+  overlay.appendChild(scrollArea);
+  document.body.appendChild(overlay);
+}
+
 function toggleTuningFork() {
+let _tapTimes = [];
+let _tapTimer = null;
+function tapTempo() {
+  const now = Date.now();
+  _tapTimes.push(now);
+  clearTimeout(_tapTimer);
+  _tapTimer = setTimeout(() => { _tapTimes = []; }, 2500);
+  if (_tapTimes.length > 1) {
+    const intervals = [];
+    for (let i = 1; i < _tapTimes.length; i++) intervals.push(_tapTimes[i] - _tapTimes[i-1]);
+    const avg = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+    const bpm = Math.round(60000 / avg);
+    const fBpm = document.getElementById('fBpm');
+    if (fBpm) fBpm.value = bpm;
+    const btn = document.getElementById('tapTempoBtn');
+    if (btn) btn.style.color = 'var(--accent)';
+    setTimeout(() => { if (btn) btn.style.color = ''; }, 300);
+  }
+}
+
+// ── TAG MANAGEMENT ──
+function addTagFromSelect(sel) {
+  const val = sel.value;
+  if (!val) return;
+  sel.value = '';
+  if (val === '__new__') {
+    const newTag = prompt('Enter new tag:');
+    if (!newTag?.trim()) return;
+    addTag(newTag.trim());
+  } else {
+    addTag(val);
+  }
+}
+function addTag(tag) {
+  window._seTagsEdit = window._seTagsEdit || [...(window._seCurrentSong?.tags||[])];
+  if (window._seTagsEdit.includes(tag)) return;
+  window._seTagsEdit.push(tag);
+  // add to dropdown if custom
+  const sel = document.getElementById('tagSelect');
+  if (sel && !Array.from(sel.options).find(o => o.value === tag)) {
+    const opt = document.createElement('option');
+    opt.value = tag; opt.textContent = tag;
+    sel.insertBefore(opt, sel.options[2]);
+  }
+  // re-render tag chips
+  const container = document.getElementById('tagContainer');
+  if (container) {
+    container.innerHTML = window._seTagsEdit.map(t =>
+      `<span style="display:flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:12px;">${esc(t)}<button type="button" onclick="removeTag('${esc(t)}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0 0 0 2px;">×</button></span>`
+    ).join('');
+  }
+}
+function removeTag(tag) {
+  window._seTagsEdit = window._seTagsEdit || [...(window._seCurrentSong?.tags||[])];
+  window._seTagsEdit = window._seTagsEdit.filter(t => t !== tag);
+  const container = document.getElementById('tagContainer');
+  if (container) {
+    container.innerHTML = window._seTagsEdit.map(t =>
+      `<span style="display:flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:12px;">${esc(t)}<button type="button" onclick="removeTag('${esc(t)}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0 0 0 2px;">×</button></span>`
+    ).join('');
+  }
+}
+
   tuningPlaying ? stopTuningFork() : startTuningFork();
 }
 
@@ -2834,11 +3023,11 @@ async function renderSongPage(idx) {
           <button class="note-tab ${noteTab==='default'?'active':''}" onclick="switchNoteTab('default',${idx})">Lyrics</button>
           <button class="note-tab ${noteTab==='mine'?'active':''}" onclick="switchNoteTab('mine',${idx})">My Notes</button>
           <button class="note-tab ${noteTab==='all'?'active':''}" onclick="switchNoteTab('all',${idx})">All Notes</button>
+          ${(s.groupIds||[]).length ? `<button class="note-tab ${noteTab==='charts'?'active':''}" onclick="switchNoteTab('charts',${idx})">Charts</button>` : ''}
           <button class="note-tab ${noteTab==='listen'?'active':''}" onclick="switchNoteTab('listen',${idx})">Links</button>
-          ${(s.groupIds||[]).length ? `<button class="note-tab ${noteTab==='horns'?'active':''}" onclick="switchNoteTab('horns',${idx})">Horns</button>` : ''}
         </div>
       </div>
-      ${noteTab !== 'listen' && noteTab !== 'horns' ? `
+      ${noteTab !== 'listen' && noteTab !== 'charts' ? `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
         <div style="display:flex;align-items:center;gap:4px;">
           <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="font-size:18px;width:32px;height:32px;">−</button>
@@ -2864,7 +3053,7 @@ async function renderSongPage(idx) {
         ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + allNotesHtml
         : noteTab === 'listen'
         ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + buildListenContent(s)
-        : noteTab === 'horns'
+        : noteTab === 'charts'
         ? `<div id="hornsContent" style="padding:16px;">Loading…</div>`
         : buildNoteContent(activeNote, idx, true)}
     </div>
@@ -2874,10 +3063,15 @@ async function renderSongPage(idx) {
     `;
 
   setupSwipe(idx);
+  // set up double-tap fullscreen for note area
+  requestAnimationFrame(() => {
+    const area = document.getElementById('noteArea');
+    if (area) { area._dblTapSet = false; setupNoteFullscreen(idx); }
+  });
   // apply zoom to note content area
   applyNoteZoom();
   // trigger PDF.js rendering for any PDF viewers in the note area
-  if (noteTab !== 'listen' && noteTab !== 'all' && noteTab !== 'horns') {
+  if (noteTab !== 'listen' && noteTab !== 'all' && noteTab !== 'charts') {
     const s2 = currentSetSongs[idx];
     if (s2 && s2.type !== 'note') {
       const pdfKey = noteTab === 'default' ? `default_${s2.id}` : `${currentUser||'me'}_${s2.id}`;
@@ -2889,7 +3083,7 @@ async function renderSongPage(idx) {
       if (imgEntries2.length) loadImageMarkupOverlays(imgEntries2);
     }
   }
-  if (noteTab === 'horns') {
+  if (noteTab === 'charts') {
     const s2 = currentSetSongs[idx];
     if (s2 && s2.type !== 'note') renderHornsTab(s2.id, idx);
   }
@@ -4889,9 +5083,12 @@ async function renderPicker() {
         <div class="picker-meta">${[s.artist,s.key,s.bpm?s.bpm+' BPM':''].filter(Boolean).join(' · ')}</div>
       </div>
       ${positions.length > 0
-        ? `<div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end;flex-shrink:0;max-width:80px;">
-            ${positions.map(p=>`<span style="font-size:10px;font-family:'DM Mono',monospace;background:var(--accent);color:#000;border-radius:4px;padding:1px 6px;font-weight:700;">#${p}</span>`).join('')}
-           </div>`
+        ? `<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0;">
+            ${positions.map(p=>`<div style="display:flex;align-items:center;gap:4px;">
+              <span style="font-size:11px;font-family:'DM Mono',monospace;background:var(--surface3);color:var(--text);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-weight:700;">#${p}</span>
+              <button onclick="event.stopPropagation();pickerRemove('${s.id}',${p-1})" style="background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.3);color:var(--red);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;">✕</button>
+            </div>`).join('')}
+          </div>`
         : ''}
     </div>`;
   }).join('');
@@ -4901,6 +5098,22 @@ async function pickerAdd(songId) {
   const set=await dbGet('setlists',currentSetId);
   set.songs.push(songId); set.updatedAt=Date.now();
   await dbPut('setlists',set); await renderSetDetail(); await renderSetsList(); await syncOut();
+  await renderPicker();
+}
+
+async function pickerRemove(songId, idx) {
+  const set = await dbGet('setlists', currentSetId);
+  // find the idx-th occurrence of this songId and remove it
+  let count = -1;
+  const newSongs = set.songs.filter(s => {
+    if ((typeof s === 'string' ? s : s.id) === songId) {
+      count++;
+      return count !== idx;
+    }
+    return true;
+  });
+  set.songs = newSongs; set.updatedAt = Date.now();
+  await dbPut('setlists', set); await renderSetDetail(); await renderSetsList(); await syncOut();
   await renderPicker();
 }
 
@@ -4944,15 +5157,32 @@ async function renderDB() {
     }
   }
   const q = document.getElementById('dbSearch').value.toLowerCase();
-  const key = document.getElementById('dbFilterKey').value;
+  const artistFilter = document.getElementById('dbFilterArtist')?.value || '';
+  const tagFilter = document.getElementById('dbFilterTag')?.value || '';
   if (q) songs = songs.filter(s => (s.title+' '+(s.artist||'')).toLowerCase().includes(q));
-  if (key) songs = songs.filter(s => s.key === key);
+  if (artistFilter) songs = songs.filter(s => s.artist === artistFilter);
+  if (tagFilter) songs = songs.filter(s => (s.tags||[]).includes(tagFilter));
+  // populate artist dropdown
+  const artistEl = document.getElementById('dbFilterArtist');
+  if (artistEl) {
+    const allArtists = [...new Set(songs.map(s => s.artist).filter(Boolean))].sort();
+    const cur = artistEl.value;
+    artistEl.innerHTML = '<option value="">Artist</option>' + allArtists.map(a => `<option${cur===a?' selected':''}>${esc(a)}</option>`).join('');
+  }
+  // populate tag dropdown
+  const tagEl = document.getElementById('dbFilterTag');
+  if (tagEl) {
+    const allTags = [...new Set(songs.flatMap(s => s.tags||[]).filter(Boolean))].sort();
+    const curTag = tagEl.value;
+    tagEl.innerHTML = '<option value="">Tag</option>' + allTags.map(t => `<option${curTag===t?' selected':''}>${esc(t)}</option>`).join('');
+  }
 
   songs.sort((a, b) => {
     if (dbSortField === 'title') return a.title.localeCompare(b.title);
     if (dbSortField === 'key')   return (a.key||'zzz').localeCompare(b.key||'zzz') || a.title.localeCompare(b.title);
     if (dbSortField === 'bpm')   return (a.bpm||0) - (b.bpm||0);
     if (dbSortField === 'duration') return durationToSecs(a.duration) - durationToSecs(b.duration);
+    if (dbSortField === 'tag') return ((a.tags||[])[0]||'zzz').localeCompare((b.tags||[])[0]||'zzz') || a.title.localeCompare(b.title);
     return 0;
   });
 
@@ -4976,6 +5206,7 @@ async function renderDB() {
           ${s.key ? `<span class="key-pill">${esc(s.key)}</span>` : ''}
           ${s.bpm ? `<span>${s.bpm} BPM</span>` : ''}
           ${s.duration ? `<span>⏱ ${esc(s.duration)}</span>` : ''}
+          ${(s.tags||[]).map(t=>`<span style="background:var(--surface3);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--text3);">${esc(t)}</span>`).join('')}
           ${s.createdBy && s.createdBy !== currentUser ? `<span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}
         </div>
         <div id="songGroupBadges_${s.id}" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
@@ -5100,7 +5331,7 @@ function switchSETab(tab) {
   sePersistCurrentTab();
   seTab = tab;
   // update both DB panel tabs and pg-song-edit tabs
-  ['details','mynotes','links','attachments','horns'].forEach(t => {
+  ['details','mynotes','links','attachments','charts'].forEach(t => {
     const btn1 = document.getElementById(`se-tab-${t}`);
     const btn2 = document.getElementById(`sep-tab-${t}`);
     if (btn1) btn1.classList.toggle('active', t === tab);
@@ -5121,6 +5352,7 @@ function sePersistCurrentTab() {
   if (seTab === 'details') {
     s.title    = document.getElementById('fTitle')?.value.trim() || s.title;
     s.artist   = document.getElementById('fArtist')?.value.trim() || s.artist;
+    s.tags     = window._seTagsEdit || s.tags || [];
     s.key      = document.getElementById('fKey')?.value || s.key;
     s.bpm      = document.getElementById('fBpm')?.value || s.bpm;
     s.duration = document.getElementById('fDuration')?.value.trim() || s.duration;
@@ -5180,16 +5412,24 @@ function renderSETab() {
     }
     if (!seEditMode) {
       // READ-ONLY view
+      const dbZoomKey = 'mgb_zoom_db_details';
+      const dbZoom = parseFloat(localStorage.getItem(dbZoomKey) || '1');
       body.innerHTML = `
         ${sePlayer}
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:10px;">
+          <button onclick="changeDBZoom(-0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
+          <span id="dbZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(dbZoom*100)}%</span>
+          <button onclick="changeDBZoom(0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
+        </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             ${s.key ? `<span class="chip accent">${esc(s.key)}</span>` : ''}
             ${s.bpm ? `<span class="chip">${s.bpm} BPM</span>` : ''}
             ${s.duration ? `<span class="chip">⏱ ${esc(s.duration)}</span>` : ''}
           </div>
+          ${(s.tags||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;">${(s.tags).map(t=>`<span style="background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--text2);">${esc(t)}</span>`).join('')}</div>` : ''}
           ${s.artist ? `<div style="font-size:15px;color:var(--text2);">${esc(s.artist)}</div>` : ''}
-          ${s.notes ? `<div style="margin-top:8px;"><div class="form-label" style="margin-bottom:6px;">Lyrics</div><div class="note-display" style="white-space:pre-wrap;">${s.notes}</div></div>` : '<div style="color:var(--text3);font-style:italic;font-size:14px;">No lyrics added.</div>'}
+          ${s.notes ? `<div style="margin-top:8px;"><div class="form-label" style="margin-bottom:6px;">Lyrics</div><div class="note-display" id="dbDetailsNote" style="white-space:pre-wrap;font-size:${Math.round(20*dbZoom)}px;line-height:${1.9*dbZoom};">${s.notes}</div></div>` : '<div style="color:var(--text3);font-style:italic;font-size:14px;">No lyrics added.</div>'}
         </div>`;
     } else {
       // EDIT view
@@ -5203,11 +5443,35 @@ function renderSETab() {
           <div class="form-group"><label class="form-label">Key</label>
             <select class="form-input" id="fKey"><option value="">—</option><option>A</option><option>A#/Bb</option><option>B</option><option>C</option><option>C#/Db</option><option>D</option><option>D#/Eb</option><option>E</option><option>F</option><option>F#/Gb</option><option>G</option><option>G#/Ab</option></select>
           </div>
-          <div class="form-group"><label class="form-label">BPM</label><input class="form-input" id="fBpm" type="number" placeholder="" value="${esc(s.bpm||'')}"></div>
+          <div class="form-group"><label class="form-label">BPM</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input class="form-input" id="fBpm" type="number" placeholder="" value="${esc(s.bpm||'')}" style="flex:1;">
+              <button type="button" onclick="tapTempo()" title="Tap tempo" id="tapTempoBtn"
+                style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:11px;font-family:'DM Mono',monospace;white-space:nowrap;flex-shrink:0;">
+                TAP
+              </button>
+            </div>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">Duration</label><input class="form-input" id="fDuration" placeholder="3:30" value="${esc(s.duration||'')}"></div>
           <div class="form-group"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tags</label>
+          <div id="tagContainer" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+            ${(s.tags||[]).map(t=>`<span style="display:flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:12px;">${esc(t)}<button type="button" onclick="removeTag('${esc(t)}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0 0 0 2px;">×</button></span>`).join('')}
+          </div>
+          <div style="display:flex;gap:6px;">
+            <select id="tagSelect" class="form-input" style="flex:1;" onchange="addTagFromSelect(this)">
+              <option value="">Add tag…</option>
+              <option value="__new__">+ New tag…</option>
+              <option disabled>──────────</option>
+              <option>Instrumental</option>
+              <option>Vocal</option>
+              <option>Cover</option>
+            </select>
+          </div>
         </div>
         <div class="form-label" style="margin-bottom:6px;">Lyrics</div>
         <div class="rte-toolbar">
@@ -5376,7 +5640,7 @@ function renderSETab() {
       });
       dbAll('images').then(imgs => refreshModalImgGrid(id, imgs.filter(e => e.id.startsWith(`img_default_${id}_`))));
     }
-  } else if (seTab === 'horns') {
+  } else if (seTab === 'charts') {
     const songGroups = (window._seCurrentSong?.groupIds || []);
     if (!songGroups.length) {
       body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3);">
@@ -5534,7 +5798,7 @@ async function openSongModal(id) {
   if (dCancelBtn) dCancelBtn.style.display = 'none';
 
   document.getElementById('editSongId').value = id || '';
-  ['details','mynotes','links','attachments','horns'].forEach(t => {
+  ['details','mynotes','links','attachments','charts'].forEach(t => {
     const btn1 = document.getElementById(`se-tab-${t}`);
     const btn2 = document.getElementById(`sep-tab-${t}`);
     if (btn1) btn1.classList.toggle('active', t === seTab);
@@ -5567,6 +5831,7 @@ async function openSongModal(id) {
     ]);
     window._seCurrentSong = s || {};
     window._seMyNotesHtml = noteEntry?.text || '';
+    window._seTagsEdit = [...(s?.tags || [])]; // initialize tag edit state
     await loadAudioHybrid(id);
     // Update title display
     const titleEl = document.getElementById('sePageTitle');
@@ -5636,7 +5901,7 @@ async function loadSongIntoSEPage(id) {
   if (dCancelBtn) dCancelBtn.style.display = 'none';
 
   document.getElementById('editSongId').value = id || '';
-  ['details','mynotes','links','attachments','horns'].forEach(t => {
+  ['details','mynotes','links','attachments','charts'].forEach(t => {
     const b1 = document.getElementById(`se-tab-${t}`);
     const b2 = document.getElementById(`sep-tab-${t}`);
     if (b1) b1.classList.toggle('active', t === seTab);
@@ -5821,7 +6086,9 @@ async function saveSong() {
   const bpm = parseInt(s.bpm || document.getElementById('fBpm')?.value) || null;
   const duration = (s.duration || document.getElementById('fDuration')?.value || '').trim();
   const artist = (s.artist || document.getElementById('fArtist')?.value || '').trim();
-  await dbPut('songs',{id,title,artist,key,bpm,duration,notes,spotifyUrl,youtubeUrl,createdBy,groupIds,updatedAt:Date.now()});
+  const tags = window._seTagsEdit || s.tags || [];
+  await dbPut('songs',{id,title,artist,key,bpm,duration,notes,spotifyUrl,youtubeUrl,createdBy,groupIds,tags,updatedAt:Date.now()});
+  window._seTagsEdit = null; // clear after save
   // save My Notes if any content
   const myNotesHtml = window._seMyNotesHtml || document.getElementById('seMyNotes')?.innerHTML || '';
   if (myNotesHtml.trim() && myNotesHtml.trim() !== '<br>') {
@@ -8659,7 +8926,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.19</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.20</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
