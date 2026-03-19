@@ -1,5 +1,6 @@
-// MyGigBook Service Worker v2
-const CACHE = 'mygigbook-v2';
+// MyGigBook Service Worker
+// Version: β1.7 · 2026-03-19 15:05
+const CACHE = 'mygigbook-202603191505';
 const ASSETS = [
   '/mygigbook/',
   '/mygigbook/index.html',
@@ -10,15 +11,19 @@ const ASSETS = [
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(cache => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting())  // activate immediately, don't wait
   );
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())  // take control of all open tabs immediately
   );
 });
 
