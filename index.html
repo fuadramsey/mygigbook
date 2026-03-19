@@ -14,6 +14,19 @@
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/mygigbook/sw.js').catch(() => {});
   }
+  // Capture install prompt for in-app install button
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    window._installPrompt = e;
+    // show install button in settings if visible
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'flex';
+  });
+  window.addEventListener('appinstalled', () => {
+    window._installPrompt = null;
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'none';
+  });
 </script>
 <title>MyGigBook</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1310,6 +1323,16 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <div class="modal-close" onclick="closeSettings()">✕</div>
     </div>
     <div class="modal-body" style="padding:8px 0">
+
+      <!-- Install app button — only shown when browser supports PWA install -->
+      <button id="pwaInstallBtn" class="settings-row" onclick="triggerPWAInstall()" style="display:none;background:rgba(232,255,71,0.06);border-bottom:1px solid rgba(232,255,71,0.15);">
+        <div class="settings-row-icon" style="color:var(--accent);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <span class="settings-row-label" style="color:var(--accent);">Install MyGigBook
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Add to home screen as a standalone app</span>
+        </span>
+      </button>
 
       <div class="settings-section-label">Appearance</div>
 
@@ -5666,8 +5689,21 @@ function saveNameModal() {
 function promptUserName() { openSettings(); }
 
 // ── SETTINGS ──
+function triggerPWAInstall() {
+  if (!window._installPrompt) return;
+  window._installPrompt.prompt();
+  window._installPrompt.userChoice.then(() => {
+    window._installPrompt = null;
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'none';
+  });
+}
+
 function openSettings() {
   updateSettingsUI();
+  // show install button if browser has offered install prompt
+  const btn = document.getElementById('pwaInstallBtn');
+  if (btn) btn.style.display = window._installPrompt ? 'flex' : 'none';
   document.getElementById('settingsModal').classList.remove('hidden');
 }
 function closeSettings() {
@@ -8186,7 +8222,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 22:58</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 23:05</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
