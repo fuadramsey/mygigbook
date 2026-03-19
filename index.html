@@ -1475,7 +1475,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.26</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.27</span>
       </div>
 
     </div>
@@ -3119,16 +3119,22 @@ async function renderSongPage(idx) {
           <span class="note-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
           <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:18px;width:32px;height:32px;">+</button>
         </div>
-        <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;">
-          <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
-            ${scrollPlaying
-              ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`}
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;">
+            <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
+              ${scrollPlaying
+                ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`}
+            </button>
+            <div style="width:8px;flex-shrink:0;"></div>
+            <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
+            <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
+            <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
+          </div>
+          <button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
+            style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
           </button>
-          <div style="width:8px;flex-shrink:0;"></div>
-          <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
-          <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
-          <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
         </div>
       </div>` : `
       <div style="height:1px;background:var(--border);flex-shrink:0;"></div>`}
@@ -3148,11 +3154,6 @@ async function renderSongPage(idx) {
     `;
 
   setupSwipe(idx);
-  // set up double-tap fullscreen for note area
-  requestAnimationFrame(() => {
-    const area = document.getElementById('noteArea');
-    if (area) { area._dblTapSet = false; setupNoteFullscreen(idx); }
-  });
   // apply zoom to note content area
   applyNoteZoom();
   // trigger PDF.js rendering for any PDF viewers in the note area
@@ -9005,7 +9006,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.26</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.27</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
