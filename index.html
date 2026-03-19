@@ -1476,7 +1476,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.18</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.19</span>
       </div>
 
     </div>
@@ -2699,6 +2699,9 @@ async function renderSongPage(idx) {
 
   // ── NOTE SLIDE ──
   if (s.type === 'note') {
+    // restore saved zoom for inline notes (shared across all inline notes)
+    const savedInlineZoom = localStorage.getItem('mgb_zoom_inline_note');
+    noteZoom = savedInlineZoom ? parseFloat(savedInlineZoom) : NOTE_ZOOM_DEFAULT;
     document.getElementById('songPageBody').innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
         <div style="display:flex;align-items:center;gap:4px;">
@@ -3379,13 +3382,19 @@ function changeSpeed(delta) {
 function changeNoteZoom(delta, idx) {
   const step = 0.1;
   noteZoom = Math.round(Math.max(0.5, Math.min(3.0, noteZoom + delta * step)) * 10) / 10;
-  // save zoom for this specific song only
   const s = currentSetSongs[idx];
-  if (s && s.id) saveSongZoom(s.id);
+  if (s?.type === 'note') {
+    // inline note — save shared zoom for all inline notes
+    if (noteZoom === NOTE_ZOOM_DEFAULT) {
+      localStorage.removeItem('mgb_zoom_inline_note');
+    } else {
+      localStorage.setItem('mgb_zoom_inline_note', noteZoom);
+    }
+  } else if (s?.id) {
+    // regular song — save per-song per-tab zoom
+    saveSongZoom(s.id);
+  }
   applyNoteZoom();
-  // update the % label without full re-render
-  const labels = document.querySelectorAll('.note-zoom-label');
-  labels.forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
 }
 
 function applyNoteZoom() {
@@ -8650,7 +8659,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.18</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.19</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
