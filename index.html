@@ -328,7 +328,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .listen-confirm-row input::placeholder { color: var(--text3); }
 .note-content { padding: 16px; }
 .note-display { font-family: 'DM Mono', monospace; font-size: 20px; line-height: 1.9; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
-.note-display * { font-size: inherit; line-height: inherit; }
 .note-display.empty { color: var(--text3); font-style: italic; }
 .note-edit-area { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; resize: none; min-height: 200px; }
 .note-edit-area:focus { outline: none; border-color: rgba(220,38,38,0.4); }
@@ -1477,7 +1476,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.15</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.16</span>
       </div>
 
     </div>
@@ -3392,13 +3391,13 @@ function changeNoteZoom(delta, idx) {
 function applyNoteZoom() {
   const area = document.getElementById('noteArea');
   if (!area) return;
-  // apply zoom to text content only — not the audio player or attachment zones
+  const basePx = 20; // matches .note-display base font-size
   const targets = area.querySelectorAll('.note-display, .rte-body, .note-edit-area');
   targets.forEach(el => {
-    el.style.fontSize = noteZoom !== 1 ? `${noteZoom}em` : '';
-    el.style.lineHeight = noteZoom !== 1 ? `${1.6 * noteZoom}` : '';
+    el.style.fontSize = `${Math.round(basePx * noteZoom)}px`;
+    el.style.lineHeight = `${1.9 * noteZoom}`;
   });
-  // also update zoom label if present
+}  // also update zoom label if present
   const labels = area.querySelectorAll('.note-zoom-label');
   labels.forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
 }
@@ -8638,7 +8637,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.15</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.16</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
