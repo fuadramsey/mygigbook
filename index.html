@@ -308,10 +308,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .chip.accent { background: rgba(220,38,38,0.1); border-color: rgba(220,38,38,0.3); color: var(--accent); font-size: 13px; font-weight: 500; }
 .chip svg { width: 12px; height: 12px; }
 
-.note-tabs { display: flex; padding: 12px 16px 0; gap: 4px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x; }
+.note-tabs { display: flex; padding: 8px 12px 0; gap: 4px; border-bottom: 2px solid var(--border2); background: var(--surface); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x; }
 .note-tabs::-webkit-scrollbar { display: none; }
-.note-tab { padding: 10px 18px; border-radius: 8px 8px 0 0; font-size: 14px; border: 1px solid transparent; cursor: pointer; background: none; color: var(--text3); font-family: inherit; transition: all 0.15s; min-height: 44px; display: flex; align-items: center; white-space: nowrap; }
-.note-tab.active { background: var(--surface2); color: var(--text); border-color: var(--border); border-bottom-color: var(--surface2); }
+.note-tab { padding: 10px 18px; border-radius: 8px 8px 0 0; font-size: 14px; border: 1px solid var(--border2); border-bottom: none; cursor: pointer; background: var(--surface2); color: var(--text3); font-family: inherit; transition: all 0.15s; min-height: 44px; display: flex; align-items: center; white-space: nowrap; }
+.note-tab.active { background: var(--surface3); color: var(--text); border-color: var(--border2); border-bottom: 2px solid var(--accent); font-weight: 600; }
+.note-tab:not(.active):hover { color: var(--text2); background: var(--surface3); }
 
 /* ── LISTEN TAB ── */
 .listen-platform-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; text-decoration: none; color: inherit; }
@@ -326,7 +327,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .listen-confirm-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--text); font-family: 'DM Mono', monospace; min-width: 0; }
 .listen-confirm-row input::placeholder { color: var(--text3); }
 .note-content { padding: 16px; }
-.note-display { font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
+.note-display { font-family: 'DM Mono', monospace; font-size: 17px; line-height: 1.9; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
 .note-display.empty { color: var(--text3); font-style: italic; }
 .note-edit-area { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; resize: none; min-height: 200px; }
 .note-edit-area:focus { outline: none; border-color: rgba(220,38,38,0.4); }
@@ -488,7 +489,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 .toast.ok { border-color: rgba(45,219,118,0.4); }
 .toast.err { border-color: rgba(255,68,68,0.4); }
 
-.note-tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; overscroll-behavior-x: contain; touch-action: pan-x; }
+.note-tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; overscroll-behavior-x: contain; touch-action: pan-x; border-bottom: 2px solid var(--border2); background: var(--surface); }
 .note-tab-bar::-webkit-scrollbar { display: none; }
 
 ::-webkit-scrollbar { width: 3px; }
@@ -688,7 +689,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .form-label { font-size: 12px; letter-spacing: 0.5px; }
 
   /* Note/lyrics body */
-  .note-display { font-size: 16px; }
+  .note-display { font-size: 19px; }
   .rte-body { font-size: 16px; }
 
   /* Song page */
@@ -1099,7 +1100,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <button id="seSaveBtn" class="btn primary" style="padding:6px 16px;font-size:13px;flex-shrink:0;display:none;" onclick="saveSong()">Save</button>
   </div>
   <!-- Tab bar -->
-  <div class="note-tab-bar" style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+  <div class="note-tab-bar" style="display:flex;align-items:center;flex-shrink:0;">
     <div style="flex:1;display:flex;">
       <button class="note-tab active" id="sep-tab-details" onclick="switchSETab('details')" >Details</button>
       <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
@@ -1475,7 +1476,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.10</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.11</span>
       </div>
 
     </div>
@@ -2818,7 +2819,7 @@ async function renderSongPage(idx) {
           </div>
         </div>
       </div>
-      <div class="note-tab-bar" style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);">
+      <div class="note-tab-bar" style="display:flex;align-items:center;">
         <div class="note-tabs" style="border-bottom:none;flex:1;padding-bottom:0;">
           <button class="note-tab ${noteTab==='default'?'active':''}" onclick="switchNoteTab('default',${idx})">Lyrics</button>
           <button class="note-tab ${noteTab==='mine'?'active':''}" onclick="switchNoteTab('mine',${idx})">My Notes</button>
@@ -8621,7 +8622,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.10</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.11</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
