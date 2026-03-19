@@ -301,16 +301,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 /* SONG NOTE PAGE */
 .song-page-header { padding: 12px 16px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
-.song-page-title { font-family: 'Bebas Neue', sans-serif; font-size: 60px; letter-spacing: 1px; line-height: 1; margin-bottom: 4px; }
+.song-page-title { font-family: 'Bebas Neue', sans-serif; font-size: 60px; letter-spacing: 1px; line-height: 1; margin-bottom: 4px; text-align: center; }
 .song-page-artist { font-size: 16px; color: var(--text2); margin-bottom: 14px; }
 .song-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: 'DM Mono', monospace; }
 .chip.accent { background: rgba(220,38,38,0.1); border-color: rgba(220,38,38,0.3); color: var(--accent); font-size: 13px; font-weight: 500; }
 .chip svg { width: 12px; height: 12px; }
 
-.note-tabs { display: flex; padding: 12px 16px 0; gap: 4px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.note-tabs { display: flex; padding: 12px 16px 0; gap: 4px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x; }
 .note-tabs::-webkit-scrollbar { display: none; }
-.note-tab { padding: 7px 16px; border-radius: 8px 8px 0 0; font-size: 13px; border: 1px solid transparent; cursor: pointer; background: none; color: var(--text3); font-family: inherit; transition: all 0.15s; }
+.note-tab { padding: 10px 18px; border-radius: 8px 8px 0 0; font-size: 14px; border: 1px solid transparent; cursor: pointer; background: none; color: var(--text3); font-family: inherit; transition: all 0.15s; min-height: 44px; display: flex; align-items: center; white-space: nowrap; }
 .note-tab.active { background: var(--surface2); color: var(--text); border-color: var(--border); border-bottom-color: var(--surface2); }
 
 /* ── LISTEN TAB ── */
@@ -385,8 +385,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* ── IMAGE ATTACHMENTS ── */
 .img-upload-zone { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.15s; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .img-upload-zone:hover { border-color: var(--accent); }
-.note-image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
-.note-image-item { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--surface2); }
+.note-image-grid { display: block; margin-top: 12px; }
+.note-image-item { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--surface2); width: 100%; margin-bottom: 10px; display: block; }
 .note-image-item img { width: 100%; height: auto; display: block; cursor: pointer; border-radius: var(--radius); object-fit: contain; }
 .note-image-item .img-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; }
 .note-image-item .img-remove:hover { background: var(--red); }
@@ -488,7 +488,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 .toast.ok { border-color: rgba(45,219,118,0.4); }
 .toast.err { border-color: rgba(255,68,68,0.4); }
 
-.note-tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
+.note-tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; overscroll-behavior-x: contain; touch-action: pan-x; }
 .note-tab-bar::-webkit-scrollbar { display: none; }
 
 ::-webkit-scrollbar { width: 3px; }
@@ -630,14 +630,14 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .form-row { grid-template-columns: 1fr; }
 
   /* Shrink note tabs to fit 4 on screen */
-  .note-tab { padding: 8px 12px; font-size: 14px; }
+  .note-tab { padding: 10px 14px; font-size: 15px; min-height: 48px; }
 
   /* Topbar tighter on mobile */
   .topbar { padding: 0 10px; gap: 6px; }
   .topbar-logo { font-size: 20px; }
 
   /* Song title smaller on phones */
-  .song-page-title { font-size: 33px !important; }
+  .song-page-title { font-size: clamp(44px,10vw,80px); }
 
   /* Loop controls wrap nicely */
   .loop-controls { gap: 4px; }
@@ -1021,7 +1021,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <div id="dbRightPanel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
         <!-- detail topbar: song title + pin + edit buttons -->
         <div id="dbDetailBar" style="display:none;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-          <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+          <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
           <button id="dbDetailEditBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;" onclick="enterSEEditMode()">Edit</button>
           <button id="dbDetailSaveBtn" class="btn primary" style="padding:4px 12px;font-size:12px;display:none;" onclick="saveSong()">Save</button>
           <button id="dbDetailCancelBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;color:var(--text2);" onclick="cancelSEEdit()">Cancel</button>
@@ -1030,11 +1030,11 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <div id="dbDetailTabBar" style="display:none;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
           <div style="display:flex;align-items:center;">
             <div style="flex:1;display:flex;">
-              <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" style="border-radius:0;">Details</button>
-              <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" style="border-radius:0;">My Notes</button>
-              <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
-              <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
-              <button class="note-tab" id="se-tab-horns" onclick="switchSETab('horns')" style="border-radius:0;">Horns</button>
+              <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" >Details</button>
+              <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
+              <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" >Links</button>
+              <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" >Attachments</button>
+              <button class="note-tab" id="se-tab-horns" onclick="switchSETab('horns')" >Horns</button>
             </div>
             <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
               <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
@@ -1089,7 +1089,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
     <div style="flex:1;min-width:0;">
-      <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text)">New Song</div>
+      <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text)">New Song</div>
     </div>
     <button id="seEditBtn" class="btn ghost" style="padding:6px 14px;font-size:13px;flex-shrink:0;display:flex;align-items:center;gap:6px;" onclick="enterSEEditMode()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1101,11 +1101,11 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   <!-- Tab bar -->
   <div class="note-tab-bar" style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
     <div style="flex:1;display:flex;">
-      <button class="note-tab active" id="sep-tab-details" onclick="switchSETab('details')" style="border-radius:0;">Details</button>
-      <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" style="border-radius:0;">My Notes</button>
-      <button class="note-tab" id="sep-tab-links" onclick="switchSETab('links')" style="border-radius:0;">Links</button>
-      <button class="note-tab" id="sep-tab-attachments" onclick="switchSETab('attachments')" style="border-radius:0;">Attachments</button>
-      <button class="note-tab" id="sep-tab-horns" onclick="switchSETab('horns')" style="border-radius:0;">Horns</button>
+      <button class="note-tab active" id="sep-tab-details" onclick="switchSETab('details')" >Details</button>
+      <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
+      <button class="note-tab" id="sep-tab-links" onclick="switchSETab('links')" >Links</button>
+      <button class="note-tab" id="sep-tab-attachments" onclick="switchSETab('attachments')" >Attachments</button>
+      <button class="note-tab" id="sep-tab-horns" onclick="switchSETab('horns')" >Horns</button>
     </div>
     <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
       <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
@@ -2800,16 +2800,12 @@ async function renderSongPage(idx) {
   document.getElementById('songPageBody').innerHTML = `
     <div class="song-page-fixed">
       <div class="song-page-header">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;min-width:0;">
-          <div style="flex:1;min-width:0;">
-            <div class="song-page-title" style="font-size:clamp(38px,7vw,65px);">${esc(s.title)}</div>
-            ${s.artist?`<div class="song-page-artist" style="margin-bottom:0;">${esc(s.artist)}</div>`:''}
-          </div>
-          <div class="song-chips" style="flex-direction:column;align-items:flex-end;flex-shrink:0;gap:5px;">
-            <div style="display:flex;gap:5px;align-items:center;">
-              ${s.key?`<span class="chip accent">${esc(s.key)}</span>`:''}
-              ${s.duration?`<span class="chip">${esc(s.duration)}</span>`:''}
-            </div>
+        <div style="text-align:center;min-width:0;">
+          <div class="song-page-title" style="font-size:clamp(44px,10vw,80px);">${esc(s.title)}</div>
+          ${s.artist?`<div class="song-page-artist" style="margin-bottom:6px;">${esc(s.artist)}</div>`:''}
+          <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+            ${s.key?`<span class="chip accent">${esc(s.key)}</span>`:''}
+            ${s.duration?`<span class="chip">${esc(s.duration)}</span>`:''}
             ${s.bpm?`<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
               ${s.bpm} BPM<span class="bpm-hint">▶</span>
@@ -3468,7 +3464,7 @@ function buildNoteContent(text, idx) {
           </button>
         </div>
         <div id="pdfViewerWrap_${pdfKey}" style="position:relative;">
-          <div id="pdfCanvasContainer_${pdfKey}" style="width:100%;overflow-y:auto;max-height:70vh;background:#525659;border-radius:var(--radius);">
+          <div id="pdfCanvasContainer_${pdfKey}" style="width:100%;overflow-y:auto;background:#525659;border-radius:var(--radius);cursor:pointer;position:relative;" onclick="openFullscreenPdf('${pdfKey}')">
             <div style="padding:20px;text-align:center;color:#ccc;font-size:13px;">Loading PDF…</div>
           </div>
           <!-- Markup toolbar (hidden until edit mode) -->
@@ -3513,20 +3509,16 @@ function buildNoteContent(text, idx) {
     : `<div></div>`;
 
   const imageSection = imgEntries.length ? `<div style="margin-top:12px;">
-    <div class="note-image-grid">
-      ${imgEntries.map(([key, img]) => `
-        <div class="note-image-item" style="position:relative;">
-          <div style="position:relative;width:100%;">
-            <img src="${esc(img.blobUrl)}" alt="${esc(img.name)}" onclick="openImageMarkup('${esc(key)}','${esc(img.blobUrl)}',${idx})" style="cursor:pointer;display:block;width:100%;border-radius:6px;">
-            <canvas id="imgMarkupOverlay_${key}" style="position:absolute;inset:0;width:100%;height:100%;border-radius:6px;pointer-events:none;"></canvas>
-          </div>
-          <button class="edit-note-btn" style="margin-top:4px;font-size:11px;" onclick="openImageMarkup('${esc(key)}','${esc(img.blobUrl)}',${idx})">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit / Markup
-          </button>
-          <button class="img-remove" onclick="removeNoteImage('${esc(key)}',${idx})" title="Remove image">✕</button>
-        </div>`).join('')}
-    </div>
+    ${imgEntries.map(([key, img]) => `
+      <div style="position:relative;width:100%;margin-bottom:10px;border-radius:var(--radius);overflow:hidden;background:var(--surface2);cursor:pointer;" onclick="openFullscreenImage('${esc(key)}','${esc(img.blobUrl)}',${idx})">
+        <img src="${esc(img.blobUrl)}" alt="${esc(img.name)}" style="display:block;width:100%;height:auto;border-radius:var(--radius);">
+        <canvas id="imgMarkupOverlay_${key}" style="position:absolute;inset:0;width:100%;height:100%;border-radius:var(--radius);pointer-events:none;"></canvas>
+        <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.55);border-radius:20px;padding:4px 10px;font-size:11px;color:#fff;display:flex;align-items:center;gap:5px;pointer-events:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
+          View
+        </div>
+        <button class="img-remove" onclick="event.stopPropagation();removeNoteImage('${esc(key)}',${idx})" title="Remove image">✕</button>
+      </div>`).join('')}
   </div>` : '';
 
   // Upload zones — moved to pinned bottom bar, but keep hidden file inputs here always
@@ -3915,7 +3907,374 @@ function viewFullImage(blobUrl) {
   });
 }
 
-// Also handle paste events on the note area for clipboard images
+// ── FULLSCREEN IMAGE viewer with pinch-zoom + markup editor ──
+async function openFullscreenImage(imageId, blobUrl, idx) {
+  // Remove any existing overlay
+  const existing = document.getElementById('fsImageOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'fsImageOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9000;display:flex;flex-direction:column;touch-action:none;';
+
+  let editMode = false;
+  const ms = { tool:'pen', color:'#e8ff47', size:3, strokes:[], redoStack:[], drawing:false, current:null };
+
+  // load saved strokes
+  const saved = await dbGet('imagemarkup', imageId);
+  if (saved?.strokes) ms.strokes = saved.strokes;
+
+  // ── TOP BAR ──
+  const topBar = document.createElement('div');
+  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,0.85);flex-shrink:0;gap:10px;';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+  closeBtn.textContent = '✕';
+
+  const editBtn = document.createElement('button');
+  editBtn.style.cssText = 'background:rgba(232,255,71,0.12);border:1px solid rgba(232,255,71,0.4);color:#e8ff47;padding:8px 20px;border-radius:20px;font-size:14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;';
+  editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit';
+
+  topBar.appendChild(closeBtn);
+  topBar.appendChild(editBtn);
+
+  // ── VIEW AREA ──
+  const viewArea = document.createElement('div');
+  viewArea.style.cssText = 'flex:1;position:relative;overflow:hidden;';
+
+  // Image element (pan/zoom layer)
+  const img = document.createElement('img');
+  img.src = blobUrl;
+  img.style.cssText = 'position:absolute;transform-origin:top left;user-select:none;-webkit-user-drag:none;touch-action:none;max-width:none;';
+
+  // Markup canvas (sits on top of image, same size)
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:absolute;transform-origin:top left;touch-action:none;pointer-events:none;display:block;';
+
+  viewArea.appendChild(img);
+  viewArea.appendChild(canvas);
+
+  // ── MARKUP TOOLBAR ──
+  const mkBar = document.createElement('div');
+  mkBar.style.cssText = 'display:none;flex-shrink:0;background:#111114;border-top:1px solid rgba(255,255,255,0.1);padding:10px 12px;';
+
+  const mkColors = ['#e8ff47','#ff4444','#4488ff','#44ff88','#ffffff'];
+  mkBar.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button data-tool="pen" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(232,255,71,0.15);color:#e8ff47;cursor:pointer;font-size:12px;">Pen</button>
+      <button data-tool="highlight" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:none;color:#ccc;cursor:pointer;font-size:12px;">Highlight</button>
+      <button data-tool="arrow" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:none;color:#ccc;cursor:pointer;font-size:12px;">Arrow</button>
+      <div style="display:flex;gap:6px;margin-left:4px;">
+        ${mkColors.map(col => `<div data-color="${col}" style="width:22px;height:22px;border-radius:50%;background:${col};cursor:pointer;border:2px solid transparent;flex-shrink:0;"></div>`).join('')}
+      </div>
+      <input type="range" min="1" max="16" value="3" data-size style="width:70px;accent-color:#e8ff47;flex-shrink:0;">
+      <button data-undo style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:none;color:#ccc;cursor:pointer;font-size:12px;">Undo</button>
+      <button data-save style="padding:6px 16px;border-radius:8px;border:1px solid rgba(232,255,71,0.4);background:rgba(232,255,71,0.15);color:#e8ff47;cursor:pointer;font-size:12px;margin-left:auto;">Save</button>
+    </div>`;
+
+  overlay.appendChild(topBar);
+  overlay.appendChild(viewArea);
+  overlay.appendChild(mkBar);
+  document.body.appendChild(overlay);
+
+  // ── PAN/ZOOM STATE ──
+  let scale = 1, minScale = 1, tx = 0, ty = 0;
+  let dragging = false, dragStartX = 0, dragStartY = 0, dragStartTx = 0, dragStartTy = 0;
+  let touches = {}, lastDist = 0, lastMidX = 0, lastMidY = 0;
+
+  function applyTransform() {
+    // clamp pan
+    const vw = viewArea.clientWidth, vh = viewArea.clientHeight;
+    const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale;
+    const maxTx = Math.max(0, iw - vw);
+    const maxTy = Math.max(0, ih - vh);
+    tx = Math.max(-maxTx, Math.min(0, tx));
+    ty = Math.max(-maxTy, Math.min(0, ty));
+    const t = `translate(${tx}px,${ty}px) scale(${scale})`;
+    img.style.transform = t;
+    canvas.style.transform = t;
+  }
+
+  function fitImage() {
+    const vw = viewArea.clientWidth, vh = viewArea.clientHeight;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    if (!iw || !ih) return;
+    scale = Math.min(vw / iw, vh / ih);
+    minScale = scale;
+    tx = (vw - iw * scale) / 2;
+    ty = (vh - ih * scale) / 2;
+    // position canvas to match
+    canvas.width = iw; canvas.height = ih;
+    canvas.style.width = iw + 'px'; canvas.style.height = ih + 'px';
+    canvas.style.left = '0'; canvas.style.top = '0';
+    img.style.left = '0'; img.style.top = '0';
+    applyTransform();
+    redrawMarkup();
+  }
+
+  img.onload = fitImage;
+  if (img.complete && img.naturalWidth) fitImage();
+
+  // ── MARKUP DRAWING ──
+  function redrawMarkup() {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ms.strokes.forEach(s => drawStroke(ctx, s));
+    if (ms.current) drawStroke(ctx, ms.current);
+  }
+
+  function drawStroke(ctx, s) {
+    if (!s.pts || s.pts.length < 1) return;
+    ctx.save();
+    if (s.tool === 'pen') {
+      ctx.strokeStyle = s.color; ctx.lineWidth = s.size * 2;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.globalAlpha = 1;
+      ctx.beginPath();
+      s.pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+    } else if (s.tool === 'highlight') {
+      ctx.strokeStyle = s.color; ctx.lineWidth = s.size * 10;
+      ctx.lineCap = 'round'; ctx.globalAlpha = 0.35;
+      ctx.beginPath();
+      s.pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+    } else if (s.tool === 'arrow' && s.pts.length >= 2) {
+      const a = s.pts[0], b = s.pts[s.pts.length - 1];
+      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      const hw = s.size * 6;
+      ctx.strokeStyle = s.color; ctx.fillStyle = s.color;
+      ctx.lineWidth = s.size * 2; ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x - hw * Math.cos(angle - 0.4), b.y - hw * Math.sin(angle - 0.4));
+      ctx.lineTo(b.x - hw * Math.cos(angle + 0.4), b.y - hw * Math.sin(angle + 0.4));
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function canvasPos(e) {
+    const r = viewArea.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    // convert screen coords back through transform to canvas coords
+    return {
+      x: (src.clientX - r.left - tx) / scale,
+      y: (src.clientY - r.top - ty) / scale
+    };
+  }
+
+  // ── TOUCH/MOUSE on viewArea ──
+  viewArea.addEventListener('touchstart', e => {
+    const ids = Array.from(e.changedTouches).map(t => { touches[t.identifier] = {x: t.clientX, y: t.clientY}; return t.identifier; });
+    if (editMode && Object.keys(touches).length === 1) {
+      // drawing
+      e.preventDefault();
+      ms.drawing = true;
+      ms.current = { tool: ms.tool, color: ms.color, size: ms.size, pts: [canvasPos(e)] };
+    } else if (Object.keys(touches).length === 2) {
+      // pinch start
+      ms.drawing = false; ms.current = null;
+      const ts2 = Object.values(touches);
+      lastDist = Math.hypot(ts2[1].x - ts2[0].x, ts2[1].y - ts2[0].y);
+      lastMidX = (ts2[0].x + ts2[1].x) / 2;
+      lastMidY = (ts2[0].y + ts2[1].y) / 2;
+    } else if (!editMode) {
+      dragging = true; dragStartX = e.touches[0].clientX; dragStartY = e.touches[0].clientY;
+      dragStartTx = tx; dragStartTy = ty;
+    }
+  }, { passive: false });
+
+  viewArea.addEventListener('touchmove', e => {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(t => { touches[t.identifier] = {x: t.clientX, y: t.clientY}; });
+    const ids = Object.keys(touches);
+    if (editMode && ms.drawing && ids.length === 1) {
+      ms.current.pts.push(canvasPos(e));
+      redrawMarkup();
+    } else if (ids.length === 2) {
+      const ts2 = Object.values(touches);
+      const dist = Math.hypot(ts2[1].x - ts2[0].x, ts2[1].y - ts2[0].y);
+      const midX = (ts2[0].x + ts2[1].x) / 2;
+      const midY = (ts2[0].y + ts2[1].y) / 2;
+      const vr = viewArea.getBoundingClientRect();
+      const pivot = { x: midX - vr.left, y: midY - vr.top };
+      const factor = dist / (lastDist || dist);
+      const newScale = Math.max(minScale, Math.min(8, scale * factor));
+      tx = pivot.x - (pivot.x - tx) * (newScale / scale);
+      ty = pivot.y - (pivot.y - ty) * (newScale / scale);
+      scale = newScale;
+      tx += midX - lastMidX; ty += midY - lastMidY;
+      lastDist = dist; lastMidX = midX; lastMidY = midY;
+      applyTransform();
+    } else if (!editMode && dragging && ids.length === 1) {
+      tx = dragStartTx + (e.touches[0].clientX - dragStartX);
+      ty = dragStartTy + (e.touches[0].clientY - dragStartY);
+      applyTransform();
+    }
+  }, { passive: false });
+
+  viewArea.addEventListener('touchend', e => {
+    Array.from(e.changedTouches).forEach(t => delete touches[t.identifier]);
+    if (ms.drawing && ms.current && ms.current.pts.length > 1) {
+      ms.strokes.push(ms.current);
+      ms.redoStack = [];
+    }
+    ms.drawing = false; ms.current = null;
+    dragging = false;
+    redrawMarkup();
+  });
+
+  // Mouse support
+  viewArea.addEventListener('mousedown', e => {
+    if (editMode) {
+      ms.drawing = true;
+      ms.current = { tool: ms.tool, color: ms.color, size: ms.size, pts: [canvasPos(e)] };
+    } else {
+      dragging = true; dragStartX = e.clientX; dragStartY = e.clientY; dragStartTx = tx; dragStartTy = ty;
+    }
+  });
+  viewArea.addEventListener('mousemove', e => {
+    if (editMode && ms.drawing) {
+      ms.current.pts.push(canvasPos(e)); redrawMarkup();
+    } else if (!editMode && dragging) {
+      tx = dragStartTx + (e.clientX - dragStartX); ty = dragStartTy + (e.clientY - dragStartY); applyTransform();
+    }
+  });
+  viewArea.addEventListener('mouseup', e => {
+    if (ms.drawing && ms.current?.pts?.length > 1) { ms.strokes.push(ms.current); ms.redoStack = []; }
+    ms.drawing = false; ms.current = null; dragging = false; redrawMarkup();
+  });
+  viewArea.addEventListener('wheel', e => {
+    e.preventDefault();
+    const vr = viewArea.getBoundingClientRect();
+    const pivot = { x: e.clientX - vr.left, y: e.clientY - vr.top };
+    const factor = e.deltaY < 0 ? 1.12 : 0.88;
+    const newScale = Math.max(minScale, Math.min(8, scale * factor));
+    tx = pivot.x - (pivot.x - tx) * (newScale / scale);
+    ty = pivot.y - (pivot.y - ty) * (newScale / scale);
+    scale = newScale; applyTransform();
+  }, { passive: false });
+
+  // ── TOOLBAR BUTTONS ──
+  // Tool buttons
+  mkBar.querySelectorAll('[data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ms.tool = btn.dataset.tool;
+      mkBar.querySelectorAll('[data-tool]').forEach(b => {
+        b.style.background = 'none'; b.style.color = '#ccc';
+      });
+      btn.style.background = 'rgba(232,255,71,0.15)'; btn.style.color = '#e8ff47';
+    });
+  });
+
+  // Color swatches
+  mkBar.querySelectorAll('[data-color]').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      ms.color = swatch.dataset.color;
+      mkBar.querySelectorAll('[data-color]').forEach(s => s.style.borderColor = 'transparent');
+      swatch.style.borderColor = '#fff';
+    });
+  });
+  // Set first color as active
+  const firstSwatch = mkBar.querySelector('[data-color]');
+  if (firstSwatch) firstSwatch.style.borderColor = '#fff';
+
+  // Size slider
+  mkBar.querySelector('[data-size]').addEventListener('input', e => { ms.size = +e.target.value; });
+
+  // Undo
+  mkBar.querySelector('[data-undo]').addEventListener('click', () => {
+    if (ms.strokes.length) { ms.redoStack.push(ms.strokes.pop()); redrawMarkup(); }
+  });
+
+  // Save
+  mkBar.querySelector('[data-save]').addEventListener('click', async () => {
+    await dbPut('imagemarkup', { id: imageId, strokes: ms.strokes, updatedAt: Date.now() });
+    // upload merged PNG
+    if (fbReady && online) {
+      const merge = document.createElement('canvas');
+      merge.width = img.naturalWidth; merge.height = img.naturalHeight;
+      const ctx = merge.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      ms.strokes.forEach(s => drawStroke(ctx, s));
+      merge.toBlob(async blob => {
+        if (!blob) return;
+        try {
+          const fb = window._fb;
+          const ref = fb.storageRef(fb.storage, `images/markup/${imageId}.png`);
+          await fb.uploadBytes(ref, blob, { contentType: 'image/png' });
+          showToast('Markup saved', 'ok');
+        } catch(e) { showToast('Save failed: ' + (e.message||e), 'err'); }
+      }, 'image/png');
+    } else {
+      showToast('Markup saved locally', 'ok');
+    }
+  });
+
+  // Close
+  closeBtn.addEventListener('click', () => overlay.remove());
+
+  // Edit toggle
+  editBtn.addEventListener('click', () => {
+    editMode = !editMode;
+    if (editMode) {
+      editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="20 6 9 17 4 12"/></svg> Done';
+      editBtn.style.background = 'rgba(232,255,71,0.3)';
+      canvas.style.pointerEvents = 'auto';
+      canvas.style.cursor = 'crosshair';
+      mkBar.style.display = 'block';
+    } else {
+      editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit';
+      editBtn.style.background = 'rgba(232,255,71,0.12)';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.cursor = '';
+      mkBar.style.display = 'none';
+    }
+  });
+}
+
+// ── FULLSCREEN PDF ──
+function openFullscreenPdf(pdfKey) {
+  const existing = document.getElementById('fsPdfOverlay');
+  if (existing) existing.remove();
+  const src = document.getElementById('pdfCanvasContainer_' + pdfKey);
+  if (!src) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'fsPdfOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#525659;z-index:9000;display:flex;flex-direction:column;';
+
+  const topBar = document.createElement('div');
+  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,0.75);flex-shrink:0;';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+  closeBtn.textContent = '✕';
+  closeBtn.addEventListener('click', () => overlay.remove());
+
+  const title = document.createElement('span');
+  title.style.cssText = 'color:#fff;font-size:13px;font-family:"DM Mono",monospace;opacity:0.7;';
+  title.textContent = 'PDF';
+
+  topBar.appendChild(closeBtn);
+  topBar.appendChild(title);
+  topBar.appendChild(document.createElement('div'));
+
+  const scrollArea = document.createElement('div');
+  scrollArea.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+
+  const clone = src.cloneNode(true);
+  clone.style.cssText = 'width:100%;background:#525659;cursor:default;pointer-events:none;';
+  clone.removeAttribute('onclick');
+  scrollArea.appendChild(clone);
+
+  overlay.appendChild(topBar);
+  overlay.appendChild(scrollArea);
+  document.body.appendChild(overlay);
+}
+
 function setupNotePaste(idx, imgPrefix) {
   const area = document.getElementById('noteArea');
   if (!area || area._pasteHandler) return;
@@ -4412,9 +4771,15 @@ function swipeTo(idx) {
 
 function setupSwipe(idx) {
   const body = document.getElementById('songPageBody');
-  let sx=0, sy=0;
-  const ts = e => { sx=e.touches[0].clientX; sy=e.touches[0].clientY; };
+  let sx=0, sy=0, ignore=false;
+  const ts = e => {
+    // ignore swipes that start on the tab bar area
+    const target = e.target;
+    ignore = !!(target.closest('.note-tab-bar') || target.closest('.note-tabs') || target.closest('.note-tab'));
+    sx=e.touches[0].clientX; sy=e.touches[0].clientY;
+  };
   const te = e => {
+    if (ignore) return;
     const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
     if (Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx)) return;
     if (dx<0&&idx<currentSetSongs.length-1) swipeTo(idx+1);
@@ -8251,7 +8616,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-19 01:54</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-19 13:09</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
