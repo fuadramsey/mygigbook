@@ -274,8 +274,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .set-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .set-icon svg { width: 20px; height: 20px; color: var(--accent); opacity: 0.8; }
 .set-item-info { flex: 1; min-width: 0; }
-.set-item-name { font-weight: 600; font-size: 16px; margin-bottom: 2px; }
-.set-item-meta { font-size: 12px; color: var(--text2); }
+.set-item-name { font-weight: 600; font-size: 19px; margin-bottom: 2px; }
+.set-item-meta { font-size: 13px; color: var(--text2); }
 .chevron { color: var(--text3); }
 .chevron svg { width: 16px; height: 16px; }
 .set-delete-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,68,68,0.3); background: rgba(255,68,68,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--red); flex-shrink: 0; transition: background 0.15s; }
@@ -301,8 +301,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 /* SONG NOTE PAGE */
 .song-page-header { padding: 12px 16px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
-.song-page-title { font-family: 'Bebas Neue', sans-serif; font-size: 38px; letter-spacing: 1px; line-height: 1; margin-bottom: 4px; }
-.song-page-artist { font-size: 15px; color: var(--text2); margin-bottom: 14px; }
+.song-page-title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 1px; line-height: 1; margin-bottom: 4px; }
+.song-page-artist { font-size: 16px; color: var(--text2); margin-bottom: 14px; }
 .song-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: 'DM Mono', monospace; }
 .chip.accent { background: rgba(220,38,38,0.1); border-color: rgba(220,38,38,0.3); color: var(--accent); font-size: 13px; font-weight: 500; }
@@ -678,8 +678,8 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .db-song-meta { font-size: 13px; }
 
   /* Setlist and song rows */
-  .set-item-name { font-size: 17px; }
-  .set-item-meta { font-size: 13px; }
+  .set-item-name { font-size: 20px; }
+  .set-item-meta { font-size: 14px; }
   .song-row-title { font-size: 17px; }
   .song-row-sub { font-size: 13px; }
 
@@ -706,12 +706,12 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .toast.show { transform: none; }
 
   /* Disable split-panel DB view on mobile — full width list only */
-  #dbLeftPanel { width: 100% !important; max-width: 100vw !important; border-right: none !important; flex-shrink: 0 !important; }
-  #dbRightPanel { display: none !important; }
+  #dbSplitBody { overflow: hidden !important; width: 100% !important; max-width: 100vw !important; }
+  #dbLeftPanel { width: 100% !important; max-width: 100vw !important; min-width: 0 !important; border-right: none !important; flex-shrink: 1 !important; }
+  #dbRightPanel { display: none !important; width: 0 !important; overflow: hidden !important; }
   #dbPeekTab { display: none !important; }
   #dbPinBtn { display: none !important; }
-  #dbResizeDivider { display: none !important; }
-  #dbSplitBody { overflow-x: hidden !important; }
+  #dbResizeDivider { display: none !important; width: 0 !important; }
   #pg-db { overflow-x: hidden !important; max-width: 100vw !important; }
   #pg-song-edit { overflow-x: hidden !important; max-width: 100vw !important; }
 }
@@ -967,7 +967,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <div id="dbSplitBody" style="display:flex;flex:1;overflow:hidden;position:relative;">
 
       <!-- LEFT PANEL: song list -->
-      <div id="dbLeftPanel" style="width:52%;flex-shrink:0;display:flex;flex-direction:column;border-right:none;transition:width 0.25s ease;overflow:hidden;background:var(--surface);">
+      <div id="dbLeftPanel" style="flex-shrink:0;display:flex;flex-direction:column;border-right:none;transition:width 0.25s ease;overflow:hidden;background:var(--surface);">
         <div class="songs-toolbar" style="flex-shrink:0;">
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
@@ -2802,7 +2802,7 @@ async function renderSongPage(idx) {
       <div class="song-page-header">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;min-width:0;">
           <div style="flex:1;min-width:0;">
-            <div class="song-page-title" style="font-size:clamp(22px,5vw,34px);">${esc(s.title)}</div>
+            <div class="song-page-title" style="font-size:clamp(30px,6vw,52px);">${esc(s.title)}</div>
             ${s.artist?`<div class="song-page-artist" style="margin-bottom:0;">${esc(s.artist)}</div>`:''}
           </div>
           <div class="song-chips" style="flex-direction:column;align-items:flex-end;flex-shrink:0;gap:5px;">
@@ -6498,6 +6498,25 @@ async function postLoginInit() {
   await renderDB();
   await renderGroups();
 
+  // On a new device (no localStorage group saved), sync first to get groups from Firestore
+  // before ensurePrivateGroup runs — prevents duplicate private group creation
+  const isNewDevice = !localStorage.getItem(GROUP_FILTER_KEY + '_' + (currentUser||'me')) &&
+                      !localStorage.getItem(PRIVATE_GROUP_KEY + (currentUser||'me'));
+  if (isNewDevice && online && fbReady) {
+    try {
+      // Pull groups from Firestore first so we know what already exists
+      const fb = window._fb;
+      if (fb) {
+        const groupSnap = await fb.getDocs(fb.collection(fb.db, 'groups'));
+        for (const d of groupSnap.docs) {
+          const g = d.data();
+          if (!g.id) g.id = d.id;
+          await dbPut('groups', g);
+        }
+      }
+    } catch(e) { console.warn('Pre-login group sync failed:', e); }
+  }
+
   // ensure private group exists for non-admin users, migrate ungrouped content
   if (!currentIsAdmin) {
     await ensurePrivateGroup();
@@ -6505,16 +6524,26 @@ async function postLoginInit() {
     if (fbReady && online) cleanDuplicatePrivateGroups().then(() => renderGroups());
   }
 
-  // restore last group context, falling back to private group
+  // restore last group context
   const savedGroup = localStorage.getItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'));
   const allGroups = await dbAll('groups');
   const myGroups = allGroups.filter(g =>
     g.createdBy === currentUser || (g.members||[]).includes(currentUser) || currentIsAdmin
   );
   const privateGroupId = getPrivateGroupId();
+
+  // non-private groups this user belongs to
+  const assignedGroups = myGroups.filter(g => !g.isPrivate && g.id !== privateGroupId);
+
   if (savedGroup && myGroups.find(g => g.id === savedGroup)) {
+    // restore last used group
     activeGroupFilter = savedGroup;
+  } else if (assignedGroups.length > 0) {
+    // new device or first login — prefer assigned group over private
+    activeGroupFilter = assignedGroups[0].id;
+    localStorage.setItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'), assignedGroups[0].id);
   } else if (privateGroupId && myGroups.find(g => g.id === privateGroupId)) {
+    // fall back to private only if no other groups
     activeGroupFilter = privateGroupId;
     localStorage.setItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'), privateGroupId);
   } else if (myGroups.length > 0) {
@@ -8222,7 +8251,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-18 23:05</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.6 · 2026-03-19 01:50</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
