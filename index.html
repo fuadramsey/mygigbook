@@ -327,7 +327,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .listen-confirm-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--text); font-family: 'DM Mono', monospace; min-width: 0; }
 .listen-confirm-row input::placeholder { color: var(--text3); }
 .note-content { padding: 16px; }
-.note-display { font-family: 'DM Mono', monospace; font-size: 17px; line-height: 1.9; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
+.note-display { font-family: 'DM Mono', monospace; font-size: 20px; line-height: 1.9; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
+.note-display * { font-size: inherit; line-height: inherit; }
 .note-display.empty { color: var(--text3); font-style: italic; }
 .note-edit-area { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; resize: none; min-height: 200px; }
 .note-edit-area:focus { outline: none; border-color: rgba(220,38,38,0.4); }
@@ -689,7 +690,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .form-label { font-size: 12px; letter-spacing: 0.5px; }
 
   /* Note/lyrics body */
-  .note-display { font-size: 19px; }
+  .note-display { font-size: 22px; }
   .rte-body { font-size: 16px; }
 
   /* Song page */
@@ -1476,7 +1477,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.11</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.15</span>
       </div>
 
     </div>
@@ -2700,9 +2701,16 @@ async function renderSongPage(idx) {
   // ── NOTE SLIDE ──
   if (s.type === 'note') {
     document.getElementById('songPageBody').innerHTML = `
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" style="font-size:18px;width:32px;height:32px;">−</button>
+          <span class="note-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" style="font-size:18px;width:32px;height:32px;">+</button>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;color:var(--accent);opacity:0.6;flex-shrink:0;"><path d="M8 6h8M8 10h8M8 14h5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-        <div style="font-family:'DM Mono',monospace;font-size:18px;line-height:1.7;color:var(--text);text-align:center;white-space:pre-wrap;word-break:break-word;max-width:480px;">${s.text ? esc(s.text) : '<span style="color:var(--text3);font-style:italic;font-size:15px;">No note text.</span>'}</div>
+        <div class="note-display" style="text-align:center;max-width:560px;min-height:unset;font-size:${noteZoom}em;">${s.text ? esc(s.text) : '<span style="color:var(--text3);font-style:italic;font-size:15px;">No note text.</span>'}</div>
       </div>`;
     setupSwipe(idx);
     return;
@@ -2827,25 +2835,27 @@ async function renderSongPage(idx) {
           <button class="note-tab ${noteTab==='listen'?'active':''}" onclick="switchNoteTab('listen',${idx})">Links</button>
           ${(s.groupIds||[]).length ? `<button class="note-tab ${noteTab==='horns'?'active':''}" onclick="switchNoteTab('horns',${idx})">Horns</button>` : ''}
         </div>
-        <div style="display:flex;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
-          ${noteTab !== 'listen' && noteTab !== 'horns' ? `
-          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="font-size:16px;">−</button>
-          <span class="note-zoom-label scroll-speed-label" style="min-width:36px;text-align:center;">${Math.round(noteZoom*100)}%</span>
-          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:16px;">+</button>
-          <div style="width:1px;height:16px;background:var(--border);margin:0 6px;"></div>` : ''}
-          <div class="scroll-toolbar" id="scrollToolbar" style="${noteTab==='listen'||noteTab==='horns'?'visibility:hidden;':''}">
-            <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
-              ${scrollPlaying
-                ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`}
-            </button>
-            <div style="width:12px;flex-shrink:0;"></div>
-            <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
-            <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
-            <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
-          </div>
-        </div>
       </div>
+      ${noteTab !== 'listen' && noteTab !== 'horns' ? `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="font-size:18px;width:32px;height:32px;">−</button>
+          <span class="note-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:18px;width:32px;height:32px;">+</button>
+        </div>
+        <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;">
+          <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
+            ${scrollPlaying
+              ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`}
+          </button>
+          <div style="width:8px;flex-shrink:0;"></div>
+          <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
+          <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
+          <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
+        </div>
+      </div>` : `
+      <div style="height:1px;background:var(--border);flex-shrink:0;"></div>`}
     </div>
     <div class="note-area" id="noteArea">
       ${noteTab === 'all'
@@ -3990,13 +4000,19 @@ async function openFullscreenImage(imageId, blobUrl, idx) {
   let touches = {}, lastDist = 0, lastMidX = 0, lastMidY = 0;
 
   function applyTransform() {
-    // clamp pan
     const vw = viewArea.clientWidth, vh = viewArea.clientHeight;
     const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale;
-    const maxTx = Math.max(0, iw - vw);
-    const maxTy = Math.max(0, ih - vh);
-    tx = Math.max(-maxTx, Math.min(0, tx));
-    ty = Math.max(-maxTy, Math.min(0, ty));
+    // when image is smaller than viewport, keep it centered; when larger, clamp pan
+    if (iw <= vw) {
+      tx = (vw - iw) / 2;
+    } else {
+      tx = Math.max(vw - iw, Math.min(0, tx));
+    }
+    if (ih <= vh) {
+      ty = (vh - ih) / 2;
+    } else {
+      ty = Math.max(vh - ih, Math.min(0, ty));
+    }
     const t = `translate(${tx}px,${ty}px) scale(${scale})`;
     img.style.transform = t;
     canvas.style.transform = t;
@@ -4269,10 +4285,10 @@ function openFullscreenPdf(pdfKey) {
   topBar.appendChild(document.createElement('div'));
 
   const scrollArea = document.createElement('div');
-  scrollArea.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+  scrollArea.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;';
 
   const clone = src.cloneNode(true);
-  clone.style.cssText = 'width:100%;background:#525659;cursor:default;pointer-events:none;';
+  clone.style.cssText = 'width:100%;max-width:900px;background:#525659;cursor:default;pointer-events:none;';
   clone.removeAttribute('onclick');
   scrollArea.appendChild(clone);
 
@@ -8622,7 +8638,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.11</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.15</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
