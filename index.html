@@ -158,7 +158,7 @@ body.hc .note-tab.active { background: var(--surface3); color: #ffffff; border-c
 body.hc .tab-sidebar-btn.active { background: rgba(255,255,255,0.1); color: #ffffff; }
 body.hc .side-rail .rail-btn.active { background: rgba(255,255,255,0.1); color: #ffffff; }
 body.hc .nav-btn.active { color: #ffffff; }
-body.hc .song-page-title { font-size: clamp(35px,7vw,60px); letter-spacing: 2px; }
+body.hc .song-page-title { font-size: clamp(26px,5vw,45px); letter-spacing: 2px; }
 body.hc .note-display { font-size: 17px; line-height: 1.8; }
 body.hc .set-row { border: 1px solid rgba(255,255,255,0.15); margin-bottom: 6px; }
 body.hc .song-row { border: 1px solid rgba(255,255,255,0.1); margin-bottom: 4px; }
@@ -274,7 +274,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .set-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .set-icon svg { width: 20px; height: 20px; color: var(--accent); opacity: 0.8; }
 .set-item-info { flex: 1; min-width: 0; }
-.set-item-name { font-weight: 600; font-size: 24px; margin-bottom: 2px; }
+.set-item-name { font-weight: 600; font-size: 18px; margin-bottom: 2px; }
 .set-item-meta { font-size: 13px; color: var(--text2); }
 .chevron { color: var(--text3); }
 .chevron svg { width: 16px; height: 16px; }
@@ -293,7 +293,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .song-row.drag-over { border-top: 2px solid var(--accent); }
 .song-num { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text3); width: 22px; text-align: right; flex-shrink: 0; }
 .song-row-info { flex: 1; min-width: 0; }
-.song-row-title { font-weight: 600; font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-row-title { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-row-sub { font-size: 12px; color: var(--text2); margin-top: 2px; display: flex; gap: 8px; align-items: center; }
 .key-pill { font-family: 'DM Mono', monospace; font-size: 11px; background: rgba(220,38,38,0.12); color: var(--accent); padding: 2px 8px; border-radius: 5px; border: 1px solid rgba(220,38,38,0.2); }
 .drag-grip { color: var(--text3); padding: 4px; cursor: grab; }
@@ -301,7 +301,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 /* SONG NOTE PAGE */
 .song-page-header { padding: 12px 16px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
-.song-page-title { font-family: 'Bebas Neue', sans-serif; font-size: 60px; letter-spacing: 1px; line-height: 1; margin-bottom: 4px; text-align: center; }
+.song-page-title { font-family: 'Bebas Neue', sans-serif; font-size: 45px; letter-spacing: 1px; line-height: 1; margin-bottom: 4px; text-align: center; }
 .song-page-artist { font-size: 16px; color: var(--text2); margin-bottom: 14px; }
 .song-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: 'DM Mono', monospace; }
@@ -426,7 +426,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-song-dot { width: 40px; height: 40px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .db-song-dot svg { width: 18px; height: 18px; color: var(--text3); }
 .db-song-info { flex: 1; min-width: 0; }
-.db-song-title { font-weight: 600; font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-song-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .db-song-meta { font-size: 12px; color: var(--text2); margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .db-song-actions { display: flex; gap: 6px; }
 .sm-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text2); flex-shrink: 0; }
@@ -1021,7 +1021,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <div id="dbRightPanel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
         <!-- detail topbar: song title + pin + edit buttons -->
         <div id="dbDetailBar" style="display:none;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-          <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+          <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
           <button id="dbDetailEditBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;" onclick="enterSEEditMode()">Edit</button>
           <button id="dbDetailSaveBtn" class="btn primary" style="padding:4px 12px;font-size:12px;display:none;" onclick="saveSong()">Save</button>
           <button id="dbDetailCancelBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;color:var(--text2);" onclick="cancelSEEdit()">Cancel</button>
@@ -1089,7 +1089,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
     <div style="flex:1;min-width:0;">
-      <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text)">New Song</div>
+      <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text)">New Song</div>
     </div>
     <button id="seEditBtn" class="btn ghost" style="padding:6px 14px;font-size:13px;flex-shrink:0;display:flex;align-items:center;gap:6px;" onclick="enterSEEditMode()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1474,8 +1474,8 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       </div>
 
       <!-- Version -->
-      <div style="padding:20px 16px 8px;text-align:center;">
-        <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.7 · 2026-03-19</span>
+      <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.10</span>
       </div>
 
     </div>
@@ -2806,7 +2806,7 @@ async function renderSongPage(idx) {
     <div class="song-page-fixed">
       <div class="song-page-header">
         <div style="text-align:center;min-width:0;">
-          <div class="song-page-title" style="font-size:clamp(44px,10vw,80px);">${esc(s.title)}</div>
+          <div class="song-page-title" style="font-size:clamp(33px,7.5vw,60px);">${esc(s.title)}</div>
           ${s.artist?`<div class="song-page-artist" style="margin-bottom:6px;">${esc(s.artist)}</div>`:''}
           <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
             ${s.key?`<span class="chip accent">${esc(s.key)}</span>`:''}
@@ -8621,7 +8621,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.7 · 2026-03-19 15:05</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.10</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
