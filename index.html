@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.38</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.39</span>
       </div>
 
     </div>
@@ -4094,64 +4094,15 @@ function rteUpdateToolbar() {
   if (underlineBtn) underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
 }
 
-// Shared paste handler — preserves bold/italic/underline/highlights/font-size
-// but strips external styles, scripts, images, and unwanted tags
+// Shared paste handler — plain text only, no extra trailing whitespace
 function rteHandlePaste(e) {
   e.preventDefault();
-  const html = e.clipboardData?.getData('text/html');
-  const plain = e.clipboardData?.getData('text/plain') || '';
-
-  if (html) {
-    // parse the HTML and keep only safe inline formatting
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-
-    // remove unsafe elements entirely
-    doc.querySelectorAll('script,style,meta,link,iframe,object,embed,img,video,audio,svg,form,input,button').forEach(el => el.remove());
-
-    // walk all elements and strip everything except safe tags + safe attributes
-    const SAFE_TAGS = new Set(['b','strong','i','em','u','span','p','br','div','ul','ol','li','h1','h2','h3','h4','a','mark','s','sub','sup','table','tr','td','th','thead','tbody']);
-    const SAFE_STYLES = ['font-weight','font-style','text-decoration','background-color','color','font-size'];
-
-    function cleanNode(node) {
-      if (node.nodeType === Node.TEXT_NODE) return;
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const tag = node.tagName.toLowerCase();
-        if (!SAFE_TAGS.has(tag)) {
-          // replace with just its children
-          while (node.firstChild) node.parentNode.insertBefore(node.firstChild, node);
-          node.remove();
-          return;
-        }
-        // remove all attributes except style and href
-        Array.from(node.attributes).forEach(attr => {
-          if (attr.name !== 'style' && attr.name !== 'href') node.removeAttribute(attr.name);
-        });
-        // filter style to only safe properties
-        if (node.style && node.getAttribute('style')) {
-          const allowed = {};
-          SAFE_STYLES.forEach(prop => {
-            if (node.style[prop]) allowed[prop] = node.style[prop];
-          });
-          if (Object.keys(allowed).length > 0) {
-            node.setAttribute('style', Object.entries(allowed).map(([k,v]) => `${k}:${v}`).join(';'));
-          } else {
-            node.removeAttribute('style');
-          }
-        }
-      }
-      // recurse children (copy array since we may mutate)
-      Array.from(node.childNodes).forEach(cleanNode);
-    }
-
-    cleanNode(doc.body);
-    const clean = doc.body.innerHTML;
-    document.execCommand('insertHTML', false, clean);
-  } else {
-    // no HTML — insert plain text preserving newlines as <br>
-    const lines = plain.split('\n');
-    document.execCommand('insertHTML', false, lines.map(l => l || '<br>').join('<br>'));
-  }
+  const plain = (e.clipboardData?.getData('text/plain') || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd();
+  if (!plain) return;
+  // Split on newlines, insert each line separated by <br>, no trailing <br>
+  const lines = plain.split('\n');
+  const html = lines.map(l => l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')).join('<br>');
+  document.execCommand('insertHTML', false, html);
 }
 
 function rtePaste(e) { rteHandlePaste(e); }
@@ -9500,7 +9451,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.38</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.39</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
