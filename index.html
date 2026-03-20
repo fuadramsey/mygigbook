@@ -192,6 +192,49 @@ body.dim .nav-btn.active { color: #a78bfa; }
 body.dim .note-edit-area:focus { border-color: rgba(167,139,250,0.4); }
 body.dim .admin-badge { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.25); color: #a78bfa; }
 body.dim .markup-tool-btn.active { background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.35); color: #a78bfa; }
+
+/* ── CUSTOM PALETTES ── */
+body.palette-ocean {
+  --bg: #0c1a2e; --surface: #0f2340; --surface2: #132d50; --surface3: #1a3a62;
+  --border: rgba(56,189,248,0.1); --border2: rgba(56,189,248,0.18);
+  --accent: #38bdf8; --text: #bae6fd; --text2: #7dd3fc; --text3: #4a9cc4;
+  --green: #34d399; --red: #f87171;
+}
+body.palette-ember {
+  --bg: #1a0a00; --surface: #2a1200; --surface2: #3d1a00; --surface3: #4f2200;
+  --border: rgba(251,146,60,0.1); --border2: rgba(251,146,60,0.2);
+  --accent: #fb923c; --text: #fed7aa; --text2: #fdba74; --text3: #c2753a;
+  --green: #4ade80; --red: #f87171;
+}
+body.palette-forest {
+  --bg: #071a0e; --surface: #0d2618; --surface2: #133220; --surface3: #1a4028;
+  --border: rgba(74,222,128,0.08); --border2: rgba(74,222,128,0.15);
+  --accent: #4ade80; --text: #bbf7d0; --text2: #86efac; --text3: #3d9960;
+  --green: #4ade80; --red: #f87171;
+}
+/* neon = default dark, already styled */
+
+/* ── FONT SIZE SCALING ── */
+/* Medium = default (1×). Small = 0.85×, Large = 1.15×, XL = 1.3× */
+body.fs-small  { font-size: 13px; }
+body.fs-large  { font-size: 17px; }
+body.fs-xl     { font-size: 19px; }
+/* scale key UI text elements */
+body.fs-small .song-row-title  { font-size: 13px; }
+body.fs-small .db-song-title   { font-size: 12px; }
+body.fs-small .set-item-name   { font-size: 15px; }
+body.fs-small .note-display    { font-size: 17px; }
+body.fs-small .note-tab        { font-size: 12px; }
+body.fs-large .song-row-title  { font-size: 17px; }
+body.fs-large .db-song-title   { font-size: 16px; }
+body.fs-large .set-item-name   { font-size: 21px; }
+body.fs-large .note-display    { font-size: 23px; }
+body.fs-large .note-tab        { font-size: 16px; }
+body.fs-xl    .song-row-title  { font-size: 20px; }
+body.fs-xl    .db-song-title   { font-size: 18px; }
+body.fs-xl    .set-item-name   { font-size: 24px; }
+body.fs-xl    .note-display    { font-size: 26px; }
+body.fs-xl    .note-tab        { font-size: 17px; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 img, video, svg { max-width: 100%; }
 html { height: 100%; height: 100dvh; width: 100%; overflow: hidden; }
@@ -1376,6 +1419,52 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         </div>
       </button>
 
+      <!-- Custom palette option -->
+      <button class="settings-row" id="opt-custom" onclick="setTheme('custom')">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2v-.5c0-.28-.11-.53-.29-.71-.17-.18-.29-.43-.29-.71 0-.55.45-1 1-1h1.5c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/><circle cx="6.5" cy="11.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="11.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <span class="settings-row-label">Custom palette</span>
+        <div class="settings-check" id="check-custom">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-9"/></svg>
+        </div>
+      </button>
+
+      <!-- Palette picker — shown when Custom is selected -->
+      <div id="palettePickerRow" style="display:none;padding:10px 16px 14px;gap:12px;flex-wrap:wrap;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-family:'DM Mono',monospace;width:100%;margin-bottom:4px;">Choose palette</div>
+        <button onclick="setPalette('neon')" id="pal-neon" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:2px solid var(--border2);border-radius:10px;padding:10px 14px;cursor:pointer;flex:1;min-width:70px;">
+          <div style="display:flex;gap:4px;"><div style="width:16px;height:16px;border-radius:50%;background:#e8ff47;"></div><div style="width:16px;height:16px;border-radius:50%;background:#0a0a0b;"></div><div style="width:16px;height:16px;border-radius:50%;background:#111114;"></div></div>
+          <span style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;">Neon</span>
+        </button>
+        <button onclick="setPalette('ocean')" id="pal-ocean" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:2px solid var(--border2);border-radius:10px;padding:10px 14px;cursor:pointer;flex:1;min-width:70px;">
+          <div style="display:flex;gap:4px;"><div style="width:16px;height:16px;border-radius:50%;background:#38bdf8;"></div><div style="width:16px;height:16px;border-radius:50%;background:#0c1a2e;"></div><div style="width:16px;height:16px;border-radius:50%;background:#0f2340;"></div></div>
+          <span style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;">Ocean</span>
+        </button>
+        <button onclick="setPalette('ember')" id="pal-ember" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:2px solid var(--border2);border-radius:10px;padding:10px 14px;cursor:pointer;flex:1;min-width:70px;">
+          <div style="display:flex;gap:4px;"><div style="width:16px;height:16px;border-radius:50%;background:#fb923c;"></div><div style="width:16px;height:16px;border-radius:50%;background:#1a0a00;"></div><div style="width:16px;height:16px;border-radius:50%;background:#2a1200;"></div></div>
+          <span style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;">Ember</span>
+        </button>
+        <button onclick="setPalette('forest')" id="pal-forest" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:2px solid var(--border2);border-radius:10px;padding:10px 14px;cursor:pointer;flex:1;min-width:70px;">
+          <div style="display:flex;gap:4px;"><div style="width:16px;height:16px;border-radius:50%;background:#4ade80;"></div><div style="width:16px;height:16px;border-radius:50%;background:#071a0e;"></div><div style="width:16px;height:16px;border-radius:50%;background:#0d2618;"></div></div>
+          <span style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;">Forest</span>
+        </button>
+      </div>
+
+      <!-- Font size -->
+      <div class="settings-section-label" style="margin-top:8px">Font Size</div>
+      <div class="settings-row" style="cursor:default;gap:8px;">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        </div>
+        <div style="display:flex;gap:6px;flex:1;flex-wrap:wrap;">
+          <button id="fs-small" onclick="setFontSize('small')" style="flex:1;min-width:50px;padding:7px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-family:inherit;">Small</button>
+          <button id="fs-medium" onclick="setFontSize('medium')" style="flex:1;min-width:50px;padding:7px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;font-family:inherit;">Medium</button>
+          <button id="fs-large" onclick="setFontSize('large')" style="flex:1;min-width:50px;padding:7px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:14px;font-family:inherit;">Large</button>
+          <button id="fs-xl" onclick="setFontSize('xl')" style="flex:1;min-width:50px;padding:7px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:15px;font-family:inherit;">X-Large</button>
+        </div>
+      </div>
+
       <div class="settings-section-label" style="margin-top:8px">Audio on This Device</div>
 
       <!-- Download all audio toggle -->
@@ -1482,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.29</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.32</span>
       </div>
 
     </div>
@@ -2689,105 +2778,130 @@ function setupNoteFullscreen(idx) {
 }
 
 function openNoteFullscreen(idx) {
-  // double-tap again = exit
+  // toggle — if already open, close
   const existing = document.getElementById('noteFullscreenOverlay');
-  if (existing) { existing.remove(); return; }
+  if (existing) { existing._close(); return; }
 
   const s = currentSetSongs[idx];
   if (!s || s.type === 'note') return;
 
   const overlay = document.createElement('div');
   overlay.id = 'noteFullscreenOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:8000;display:flex;flex-direction:column;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:8000;display:flex;flex-direction:column;touch-action:pan-y;';
 
-  // toolbar
-  const bar = document.createElement('div');
-  bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;';
+  // ── TITLE BAR ──
+  const titleBar = document.createElement('div');
+  titleBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 14px;background:var(--surface2);border-bottom:1px solid var(--border2);flex-shrink:0;min-height:44px;gap:8px;';
+  titleBar.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${esc(s.title||'')}</div><button id="fsDismissBtn" style="background:none;border:none;color:var(--text3);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>`;
 
-  const scrollArea = document.createElement('div');
-  scrollArea.id = 'fsNoteArea';
-  scrollArea.style.cssText = 'flex:1;overflow-y:auto;padding:24px;-webkit-overflow-scrolling:touch;';
-  const noteArea = document.getElementById('noteArea');
-  scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
-
-  // apply current zoom to fullscreen area immediately
-  function applyFsZoom() {
-    const basePx = 20;
-    const fs = `${Math.round(basePx * noteZoom)}px`;
-    const lh = `${1.9 * noteZoom}`;
-    scrollArea.querySelectorAll('.note-display, .rte-body').forEach(el => {
-      el.style.fontSize = fs;
-      el.style.lineHeight = lh;
+  // ── TAB BAR ──
+  const tabBar = document.createElement('div');
+  tabBar.style.cssText = 'display:flex;align-items:center;border-bottom:2px solid var(--border2);background:var(--surface);flex-shrink:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x;';
+  const tabs = [
+    { key: 'default', label: 'Lyrics' },
+    { key: 'mine', label: 'My Notes' },
+    { key: 'all', label: 'All Notes' },
+    ...(s.groupIds?.length ? [{ key: 'charts', label: 'Charts' }] : []),
+    { key: 'listen', label: 'Links' },
+  ];
+  let activeTab = noteTab;
+  function renderTabBar() {
+    tabBar.innerHTML = tabs.map(t => `<button data-tab="${t.key}" style="padding:10px 16px;border:none;border-radius:0;background:${activeTab===t.key?'var(--surface3)':'none'};color:${activeTab===t.key?'var(--text)':'var(--text3)'};font-family:inherit;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:${activeTab===t.key?'2px solid var(--accent)':'2px solid transparent'};font-weight:${activeTab===t.key?'600':'400'};flex-shrink:0;">${t.label}</button>`).join('');
+    tabBar.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => { activeTab = btn.dataset.tab; renderTabBar(); loadTabContent(); });
     });
-    bar.querySelectorAll('.fs-zoom-label').forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
   }
 
-  bar.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;">
-      <button id="fsZoomMinus" style="width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:18px;color:var(--text2);">−</button>
-      <span class="fs-zoom-label note-zoom-label" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
-      <button id="fsZoomPlus" style="width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:18px;color:var(--text2);">+</button>
-    </div>
+  // ── TOOLBAR ──
+  const toolbar = document.createElement('div');
+  toolbar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;';
+  toolbar.innerHTML = `
     <div style="display:flex;align-items:center;gap:4px;">
+      <button id="fsZoomMinus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">−</button>
+      <span class="fs-zoom-label note-zoom-label" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:38px;text-align:center;">${Math.round(noteZoom*100)}%</span>
+      <button id="fsZoomPlus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">+</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:4px;" id="fsScrollControls">
       <button id="fsScrollBtn" class="scroll-play-btn" title="Auto-scroll">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
       </button>
       <button id="fsSpeedMinus" class="scroll-speed-btn">−</button>
       <span id="fsSpeedLabel" class="scroll-speed-label">×${scrollSpeed}</span>
       <button id="fsSpeedPlus" class="scroll-speed-btn">+</button>
-    </div>
-    <button id="fsDismissBtn" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>`;
+    </div>`;
 
-  overlay.appendChild(bar);
+  // ── CONTENT ──
+  const scrollArea = document.createElement('div');
+  scrollArea.id = 'fsNoteArea';
+  scrollArea.style.cssText = 'flex:1;overflow-y:auto;padding:20px 24px;-webkit-overflow-scrolling:touch;';
+
+  overlay.appendChild(titleBar);
+  overlay.appendChild(tabBar);
+  overlay.appendChild(toolbar);
   overlay.appendChild(scrollArea);
   document.body.appendChild(overlay);
 
-  applyFsZoom();
+  renderTabBar();
 
-  // zoom buttons — update noteZoom and reapply
-  bar.querySelector('#fsZoomMinus').addEventListener('click', () => {
+  function applyFsZoom() {
+    const basePx = 20;
+    const fs = `${Math.round(basePx * noteZoom)}px`;
+    const lh = `${1.9 * noteZoom}`;
+    scrollArea.querySelectorAll('.note-display, .rte-body').forEach(el => { el.style.fontSize = fs; el.style.lineHeight = lh; });
+    toolbar.querySelectorAll('.fs-zoom-label').forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
+  }
+
+  function loadTabContent() {
+    const showScroll = activeTab !== 'listen' && activeTab !== 'charts';
+    toolbar.querySelector('#fsScrollControls').style.display = showScroll ? 'flex' : 'none';
+    if (activeTab === noteTab) {
+      const noteArea = document.getElementById('noteArea');
+      scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
+      applyFsZoom();
+    } else {
+      switchNoteTab(activeTab, idx);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const noteArea = document.getElementById('noteArea');
+        scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
+        applyFsZoom();
+      }));
+    }
+  }
+
+  toolbar.querySelector('#fsZoomMinus').addEventListener('click', () => {
     noteZoom = Math.round(Math.max(0.5, noteZoom - 0.1) * 10) / 10;
-    const s2 = currentSetSongs[idx];
-    if (s2?.id) saveSongZoom(s2.id);
-    applyNoteZoom(); // also update background note area
-    applyFsZoom();
+    if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
   });
-  bar.querySelector('#fsZoomPlus').addEventListener('click', () => {
+  toolbar.querySelector('#fsZoomPlus').addEventListener('click', () => {
     noteZoom = Math.round(Math.min(3.0, noteZoom + 0.1) * 10) / 10;
-    const s2 = currentSetSongs[idx];
-    if (s2?.id) saveSongZoom(s2.id);
-    applyNoteZoom();
-    applyFsZoom();
+    if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
   });
 
-  // scroll controls targeting fsNoteArea
   let fsScrollTimer = null;
-  bar.querySelector('#fsScrollBtn').addEventListener('click', () => {
-    if (fsScrollTimer) { clearInterval(fsScrollTimer); fsScrollTimer = null; bar.querySelector('#fsScrollBtn').style.background = '#0ea5e9'; return; }
-    bar.querySelector('#fsScrollBtn').style.background = '#0284c7';
-    fsScrollTimer = setInterval(() => { scrollArea.scrollTop += scrollSpeed; }, 50);
+  toolbar.querySelector('#fsScrollBtn').addEventListener('click', () => {
+    if (fsScrollTimer) { clearInterval(fsScrollTimer); fsScrollTimer = null; toolbar.querySelector('#fsScrollBtn').style.background = '#0ea5e9'; }
+    else { toolbar.querySelector('#fsScrollBtn').style.background = '#0284c7'; fsScrollTimer = setInterval(() => { scrollArea.scrollTop += scrollSpeed; }, 50); }
   });
-  bar.querySelector('#fsSpeedMinus').addEventListener('click', () => {
-    scrollSpeed = Math.max(1, scrollSpeed - 1);
-    bar.querySelector('#fsSpeedLabel').textContent = `×${scrollSpeed}`;
-  });
-  bar.querySelector('#fsSpeedPlus').addEventListener('click', () => {
-    scrollSpeed = Math.min(10, scrollSpeed + 1);
-    bar.querySelector('#fsSpeedLabel').textContent = `×${scrollSpeed}`;
-  });
+  toolbar.querySelector('#fsSpeedMinus').addEventListener('click', () => { scrollSpeed = Math.max(1, scrollSpeed - 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
+  toolbar.querySelector('#fsSpeedPlus').addEventListener('click', () => { scrollSpeed = Math.min(10, scrollSpeed + 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
 
-  // close
   const close = () => { if (fsScrollTimer) clearInterval(fsScrollTimer); overlay.remove(); };
-  bar.querySelector('#fsDismissBtn').addEventListener('click', close);
+  overlay._close = close;
+  titleBar.querySelector('#fsDismissBtn').addEventListener('click', close);
 
-  // double-tap note area to exit
-  let lastFsTap = 0;
+  // swipe left/right to navigate songs (exits fullscreen)
+  let swipeSx = 0, swipeSy = 0;
+  scrollArea.addEventListener('touchstart', e => { swipeSx = e.touches[0].clientX; swipeSy = e.touches[0].clientY; }, { passive: true });
   scrollArea.addEventListener('touchend', e => {
-    const now = Date.now();
-    if (now - lastFsTap < 300) close();
-    lastFsTap = now;
+    const dx = e.changedTouches[0].clientX - swipeSx;
+    const dy = e.changedTouches[0].clientY - swipeSy;
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+    close();
+    if (dx < 0 && idx < currentSetSongs.length - 1) swipeTo(idx + 1);
+    else if (dx > 0 && idx > 0) swipeTo(idx - 1);
   }, { passive: true });
-  scrollArea.addEventListener('dblclick', close);
+
+  loadTabContent();
 }
 
 function toggleTuningFork() {
@@ -3938,12 +4052,69 @@ function rteUpdateToolbar() {
   if (underlineBtn) underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
 }
 
-function rtePaste(e) {
-  // paste as plain text to avoid bringing in external styles
+// Shared paste handler — preserves bold/italic/underline/highlights/font-size
+// but strips external styles, scripts, images, and unwanted tags
+function rteHandlePaste(e) {
   e.preventDefault();
-  const text = e.clipboardData?.getData('text/plain') || '';
-  document.execCommand('insertText', false, text);
+  const html = e.clipboardData?.getData('text/html');
+  const plain = e.clipboardData?.getData('text/plain') || '';
+
+  if (html) {
+    // parse the HTML and keep only safe inline formatting
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // remove unsafe elements entirely
+    doc.querySelectorAll('script,style,meta,link,iframe,object,embed,img,video,audio,svg,form,input,button').forEach(el => el.remove());
+
+    // walk all elements and strip everything except safe tags + safe attributes
+    const SAFE_TAGS = new Set(['b','strong','i','em','u','span','p','br','div','ul','ol','li','h1','h2','h3','h4','a','mark','s','sub','sup','table','tr','td','th','thead','tbody']);
+    const SAFE_STYLES = ['font-weight','font-style','text-decoration','background-color','color','font-size'];
+
+    function cleanNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) return;
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const tag = node.tagName.toLowerCase();
+        if (!SAFE_TAGS.has(tag)) {
+          // replace with just its children
+          while (node.firstChild) node.parentNode.insertBefore(node.firstChild, node);
+          node.remove();
+          return;
+        }
+        // remove all attributes except style and href
+        Array.from(node.attributes).forEach(attr => {
+          if (attr.name !== 'style' && attr.name !== 'href') node.removeAttribute(attr.name);
+        });
+        // filter style to only safe properties
+        if (node.style && node.getAttribute('style')) {
+          const allowed = {};
+          SAFE_STYLES.forEach(prop => {
+            if (node.style[prop]) allowed[prop] = node.style[prop];
+          });
+          if (Object.keys(allowed).length > 0) {
+            node.setAttribute('style', Object.entries(allowed).map(([k,v]) => `${k}:${v}`).join(';'));
+          } else {
+            node.removeAttribute('style');
+          }
+        }
+      }
+      // recurse children (copy array since we may mutate)
+      Array.from(node.childNodes).forEach(cleanNode);
+    }
+
+    cleanNode(doc.body);
+    const clean = doc.body.innerHTML;
+    document.execCommand('insertHTML', false, clean);
+  } else {
+    // no HTML — insert plain text preserving newlines as <br>
+    const lines = plain.split('\n');
+    document.execCommand('insertHTML', false, lines.map(l => l || '<br>').join('<br>'));
+  }
 }
+
+function rtePaste(e) { rteHandlePaste(e); }
+function rtePaste2(e) { rteHandlePaste(e); }
+function rtePaste3(e) { rteHandlePaste(e); }
 
 // RTE helpers for song modal lyrics editor (fNotes)
 function rteCmd2(cmd) {
@@ -3967,12 +4138,6 @@ function rteClearFormat2() {
   document.getElementById('fNotes')?.focus();
   document.execCommand('removeFormat', false, null);
 }
-function rtePaste2(e) {
-  e.preventDefault();
-  const text = e.clipboardData?.getData('text/plain') || '';
-  document.execCommand('insertText', false, text);
-}
-
 // RTE helpers for song editor My Notes tab (seMyNotes)
 function rteCmd3(cmd) {
   document.getElementById('seMyNotes')?.focus();
@@ -3994,11 +4159,6 @@ function rteFontSize3(size) {
 function rteClearFormat3() {
   document.getElementById('seMyNotes')?.focus();
   document.execCommand('removeFormat', false, null);
-}
-function rtePaste3(e) {
-  e.preventDefault();
-  const text = e.clipboardData?.getData('text/plain') || '';
-  document.execCommand('insertText', false, text);
 }
 
 // ── PDF ATTACHMENTS ──
@@ -6483,6 +6643,39 @@ function applyTheme(mode) {
   document.body.classList.toggle('light', mode === 'light');
   document.body.classList.toggle('hc', mode === 'hc');
   document.body.classList.toggle('dim', mode === 'dim');
+  // custom palette — remove palette classes then re-apply saved one
+  document.body.classList.remove('palette-ocean','palette-ember','palette-forest','palette-neon');
+  if (mode === 'custom') {
+    const pal = localStorage.getItem('mgb_palette') || 'neon';
+    if (pal !== 'neon') document.body.classList.add('palette-' + pal);
+  }
+}
+
+// ── CUSTOM PALETTE ──
+function setPalette(name) {
+  localStorage.setItem('mgb_palette', name);
+  // if not already in custom mode, switch to it
+  if (localStorage.getItem('stageset_theme') !== 'custom') {
+    setTheme('custom');
+  } else {
+    applyTheme('custom');
+    updateSettingsUI();
+  }
+}
+
+// ── FONT SIZE ──
+const FONT_SIZES = ['small','medium','large','xl'];
+function setFontSize(size) {
+  localStorage.setItem('mgb_font_size', size);
+  applyFontSize(size);
+  updateSettingsUI();
+}
+function applyFontSize(size) {
+  document.body.classList.remove('fs-small','fs-large','fs-xl');
+  if (size === 'small')  document.body.classList.add('fs-small');
+  if (size === 'large')  document.body.classList.add('fs-large');
+  if (size === 'xl')     document.body.classList.add('fs-xl');
+  // medium = no class (default)
 }
 const AUTO_DOWNLOAD_KEY = 'mgb_auto_download';
 const AUTO_DOWNLOAD_PROMPTED_KEY = 'mgb_auto_download_prompted';
@@ -6634,13 +6827,39 @@ function updateAutoDownloadUI() {
 }
 
 function updateSettingsUI() {
-  const mode = localStorage.getItem('stageset_theme') || 'light';
+  const mode = localStorage.getItem('stageset_theme') || 'dark';
   document.getElementById('check-dark').classList.toggle('visible', mode === 'dark');
   document.getElementById('check-light').classList.toggle('visible', mode === 'light');
   const hcCheck = document.getElementById('check-hc');
   if (hcCheck) hcCheck.classList.toggle('visible', mode === 'hc');
   const dimCheck = document.getElementById('check-dim');
   if (dimCheck) dimCheck.classList.toggle('visible', mode === 'dim');
+  const customCheck = document.getElementById('check-custom');
+  if (customCheck) customCheck.classList.toggle('visible', mode === 'custom');
+
+  // show/hide palette picker
+  const paletteRow = document.getElementById('palettePickerRow');
+  if (paletteRow) paletteRow.style.display = mode === 'custom' ? 'flex' : 'none';
+
+  // highlight active palette
+  const activePal = localStorage.getItem('mgb_palette') || 'neon';
+  ['neon','ocean','ember','forest'].forEach(p => {
+    const btn = document.getElementById('pal-' + p);
+    if (btn) btn.style.borderColor = activePal === p ? 'var(--accent)' : 'var(--border2)';
+  });
+
+  // font size buttons
+  const activeFs = localStorage.getItem('mgb_font_size') || 'medium';
+  ['small','medium','large','xl'].forEach(s => {
+    const btn = document.getElementById('fs-' + s);
+    if (btn) {
+      btn.style.background = activeFs === s ? 'var(--accent)' : 'var(--surface2)';
+      btn.style.color = activeFs === s ? '#000' : 'var(--text2)';
+      btn.style.borderColor = activeFs === s ? 'var(--accent)' : 'var(--border2)';
+      btn.style.fontWeight = activeFs === s ? '700' : '400';
+    }
+  });
+
   const nameLabel = document.getElementById('settingsNameLabel');
   if (nameLabel) nameLabel.textContent = currentUser ? `Signed in as ${currentUser}` : 'Not signed in';
   const adminRow = document.getElementById('adminSettingsRow');
@@ -6650,7 +6869,6 @@ function updateSettingsUI() {
   if (currentIsAdmin) updateBugBadge();
   updateSidebarName();
   updateAutoDownloadUI();
-  // calculate audio storage used
   dbAll('audio').then(entries => {
     const el = document.getElementById('audioStorageSize');
     if (!el) return;
@@ -9135,7 +9353,8 @@ async function confirmImport() {
 async function init() {
   await openDB();
   await ensureAdminExists();
-  applyTheme(localStorage.getItem('stageset_theme') || 'light');
+  applyTheme(localStorage.getItem('stageset_theme') || 'dark');
+  applyFontSize(localStorage.getItem('mgb_font_size') || 'medium');
 
   // sync users from Firestore so any device can log in
   // wait for Firebase to be ready (up to 5 seconds)
@@ -9238,7 +9457,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.29</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.32</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
