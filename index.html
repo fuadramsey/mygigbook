@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.41</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.42</span>
       </div>
 
     </div>
@@ -4452,11 +4452,20 @@ async function openFullscreenImage(imageId, blobUrl, idx) {
   closeBtn.style.cssText = 'background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
   closeBtn.textContent = '✕';
 
+  // Zoom controls
+  const zoomBar = document.createElement('div');
+  zoomBar.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  zoomBar.innerHTML = `
+    <button id="fsImgZoomOut" style="width:34px;height:34px;background:rgba(255,255,255,0.12);border:none;color:#fff;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+    <span id="fsImgZoomLabel" style="font-size:12px;font-family:'DM Mono',monospace;color:rgba(255,255,255,0.6);min-width:40px;text-align:center;">100%</span>
+    <button id="fsImgZoomIn" style="width:34px;height:34px;background:rgba(255,255,255,0.12);border:none;color:#fff;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>`;
+
   const editBtn = document.createElement('button');
   editBtn.style.cssText = 'background:rgba(232,255,71,0.12);border:1px solid rgba(232,255,71,0.4);color:#e8ff47;padding:8px 20px;border-radius:20px;font-size:14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;';
   editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit';
 
   topBar.appendChild(closeBtn);
+  topBar.appendChild(zoomBar);
   topBar.appendChild(editBtn);
 
   // ── VIEW AREA ──
@@ -4742,6 +4751,33 @@ async function openFullscreenImage(imageId, blobUrl, idx) {
   // Close
   closeBtn.addEventListener('click', () => overlay.remove());
 
+  // Zoom buttons
+  function updateZoomLabel() {
+    const lbl = overlay.querySelector('#fsImgZoomLabel');
+    if (lbl) lbl.textContent = Math.round(scale * 100) + '%';
+  }
+  overlay.querySelector('#fsImgZoomIn').addEventListener('click', () => {
+    const cx = viewArea.clientWidth / 2, cy = viewArea.clientHeight / 2;
+    const newScale = Math.min(scale * 1.25, 8);
+    tx = cx - (cx - tx) * (newScale / scale);
+    ty = cy - (cy - ty) * (newScale / scale);
+    scale = newScale;
+    applyTransform();
+    updateZoomLabel();
+  });
+  overlay.querySelector('#fsImgZoomOut').addEventListener('click', () => {
+    const cx = viewArea.clientWidth / 2, cy = viewArea.clientHeight / 2;
+    const newScale = Math.max(scale * 0.8, minScale);
+    tx = cx - (cx - tx) * (newScale / scale);
+    ty = cy - (cy - ty) * (newScale / scale);
+    scale = newScale;
+    applyTransform();
+    updateZoomLabel();
+  });
+  // update label when image loads
+  const _origFitImage = fitImage;
+  img.addEventListener('load', () => updateZoomLabel(), { once: true });
+
   // Edit toggle
   editBtn.addEventListener('click', () => {
     editMode = !editMode;
@@ -4772,33 +4808,86 @@ function openFullscreenPdf(pdfKey) {
   overlay.id = 'fsPdfOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:#525659;z-index:9000;display:flex;flex-direction:column;';
 
+  // ── TOP BAR ──
   const topBar = document.createElement('div');
-  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,0.75);flex-shrink:0;';
+  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,0.75);flex-shrink:0;gap:10px;';
 
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+  closeBtn.style.cssText = 'background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
   closeBtn.textContent = '✕';
   closeBtn.addEventListener('click', () => overlay.remove());
 
-  const title = document.createElement('span');
-  title.style.cssText = 'color:#fff;font-size:13px;font-family:"DM Mono",monospace;opacity:0.7;';
-  title.textContent = 'PDF';
+  // Zoom controls
+  let pdfScale = 1.0;
+  const zoomBar = document.createElement('div');
+  zoomBar.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  zoomBar.innerHTML = `
+    <button id="fsPdfZoomOut" style="width:34px;height:34px;background:rgba(255,255,255,0.12);border:none;color:#fff;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+    <span id="fsPdfZoomLabel" style="font-size:12px;font-family:'DM Mono',monospace;color:rgba(255,255,255,0.6);min-width:40px;text-align:center;">100%</span>
+    <button id="fsPdfZoomIn" style="width:34px;height:34px;background:rgba(255,255,255,0.12);border:none;color:#fff;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>`;
+
+  // Placeholder for symmetry
+  const spacer = document.createElement('div');
+  spacer.style.width = '40px';
 
   topBar.appendChild(closeBtn);
-  topBar.appendChild(title);
-  topBar.appendChild(document.createElement('div'));
+  topBar.appendChild(zoomBar);
+  topBar.appendChild(spacer);
 
+  // ── SCROLL AREA ──
   const scrollArea = document.createElement('div');
-  scrollArea.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;';
+  scrollArea.style.cssText = 'flex:1;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;padding:12px 0;';
 
   const clone = src.cloneNode(true);
-  clone.style.cssText = 'width:100%;max-width:900px;background:#525659;cursor:default;pointer-events:none;';
+  clone.style.cssText = 'background:#525659;cursor:default;transform-origin:top center;transition:transform 0.15s;';
   clone.removeAttribute('onclick');
+  clone.removeAttribute('id');
   scrollArea.appendChild(clone);
 
   overlay.appendChild(topBar);
   overlay.appendChild(scrollArea);
   document.body.appendChild(overlay);
+
+  // Zoom handlers
+  function applyPdfZoom() {
+    clone.style.transform = `scale(${pdfScale})`;
+    clone.style.marginBottom = pdfScale > 1 ? `${(pdfScale - 1) * clone.scrollHeight}px` : '0';
+    overlay.querySelector('#fsPdfZoomLabel').textContent = Math.round(pdfScale * 100) + '%';
+  }
+
+  overlay.querySelector('#fsPdfZoomIn').addEventListener('click', () => {
+    pdfScale = Math.min(pdfScale + 0.25, 4);
+    applyPdfZoom();
+  });
+  overlay.querySelector('#fsPdfZoomOut').addEventListener('click', () => {
+    pdfScale = Math.max(pdfScale - 0.25, 0.5);
+    applyPdfZoom();
+  });
+
+  // Pinch-to-zoom on PDF
+  let pdfLastDist = 0;
+  scrollArea.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      pdfLastDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, { passive: true });
+  scrollArea.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (pdfLastDist) {
+        pdfScale = Math.max(0.5, Math.min(4, pdfScale * (dist / pdfLastDist)));
+        applyPdfZoom();
+      }
+      pdfLastDist = dist;
+    }
+  }, { passive: true });
+  scrollArea.addEventListener('touchend', () => { pdfLastDist = 0; }, { passive: true });
 }
 
 function setupNotePaste(idx, imgPrefix) {
@@ -9494,7 +9583,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.41</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.42</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
