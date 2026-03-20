@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.35</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.36</span>
       </div>
 
     </div>
@@ -6827,7 +6827,7 @@ function updateAutoDownloadUI() {
 }
 
 function updateSettingsUI() {
-  const mode = localStorage.getItem('stageset_theme') || 'dark';
+  const mode = localStorage.getItem('stageset_theme') || 'light';
   document.getElementById('check-dark').classList.toggle('visible', mode === 'dark');
   document.getElementById('check-light').classList.toggle('visible', mode === 'light');
   const hcCheck = document.getElementById('check-hc');
@@ -9353,7 +9353,7 @@ async function confirmImport() {
 async function init() {
   await openDB();
   await ensureAdminExists();
-  applyTheme(localStorage.getItem('stageset_theme') || 'dark');
+  applyTheme(localStorage.getItem('stageset_theme') || 'light');
   applyFontSize(localStorage.getItem('mgb_font_size') || 'medium');
 
   // sync users from Firestore so any device can log in
@@ -9457,7 +9457,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.35</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.36</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
