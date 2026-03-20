@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.36</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.38</span>
       </div>
 
     </div>
@@ -2164,7 +2164,44 @@ function showPage(id) {
   if (pageStack.length) document.getElementById(pageStack[pageStack.length-1]).classList.add('behind');
   pageStack.push(id);
   document.getElementById(id).classList.add('active');
+  // acquire wake lock when on active-use pages (screen stays on)
+  if (WAKE_PAGES.has(id)) {
+    acquireWakeLock();
+  } else {
+    releaseWakeLock();
+  }
 }
+// ── WAKE LOCK — keeps screen on while viewing songs ──
+let _wakeLock = null;
+
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return; // not supported
+  try {
+    if (_wakeLock) return; // already held
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => { _wakeLock = null; });
+  } catch(e) {
+    // User denied or not available — fail silently
+    _wakeLock = null;
+  }
+}
+
+function releaseWakeLock() {
+  if (_wakeLock) {
+    _wakeLock.release().catch(() => {});
+    _wakeLock = null;
+  }
+}
+
+// Re-acquire wake lock when tab becomes visible again (browser releases it on tab switch)
+const WAKE_PAGES = new Set(['pg-song','pg-song-edit','pg-setlists','pg-setdetail','pg-db']);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const current = pageStack[pageStack.length - 1];
+    if (WAKE_PAGES.has(current)) acquireWakeLock();
+  }
+});
+
 function goBack() {
   if (pageStack.length <= 1) return;
   stopScroll();
@@ -2173,6 +2210,11 @@ function goBack() {
   stopAudio();
   if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
   const leaving = pageStack.pop();
+  // release wake lock when leaving a wake page and not going to another wake page
+  if (WAKE_PAGES.has(leaving)) {
+    const next = pageStack[pageStack.length - 1];
+    if (!WAKE_PAGES.has(next)) releaseWakeLock();
+  }
   // reset edit modes when leaving a page
   if (leaving === 'pg-setlists' && editingSets) exitEditSets();
   if (leaving === 'pg-song' && editingNote) {
@@ -7471,6 +7513,7 @@ async function postLoginInit() {
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active','behind'); p.style.transform=''; });
   document.getElementById('pg-setlists').classList.add('active');
   pageStack.push('pg-setlists');
+  acquireWakeLock(); // keep screen on from the start
   // update UI with logged-in user
   updateSidebarName();
   updateSettingsUI();
@@ -9457,7 +9500,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.36</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.38</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
