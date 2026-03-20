@@ -1073,7 +1073,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
               <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
               <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" >Links</button>
               <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" >Attachments</button>
-              <button class="note-tab" id="se-tab-horns" onclick="switchSETab('charts')" >Charts</button>
+              <button class="note-tab" id="se-tab-charts" onclick="switchSETab('charts')" >Charts</button>
             </div>
             <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
               <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
@@ -1144,7 +1144,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
       <button class="note-tab" id="sep-tab-links" onclick="switchSETab('links')" >Links</button>
       <button class="note-tab" id="sep-tab-attachments" onclick="switchSETab('attachments')" >Attachments</button>
-      <button class="note-tab" id="sep-tab-horns" onclick="switchSETab('charts')" >Charts</button>
+      <button class="note-tab" id="sep-tab-charts" onclick="switchSETab('charts')" >Charts</button>
     </div>
     <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
       <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.39</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.41</span>
       </div>
 
     </div>
@@ -1851,25 +1851,68 @@ async function syncFilesFromStorage() {
     const allSongs = await dbAll('songs');
     const songMap = {};
     allSongs.forEach(s => songMap[s.id] = s);
+
+    // Pre-load user groups once for access checks
+    const userGroups = await dbAll('groups');
+    const userGroupIds = new Set(
+      userGroups
+        .filter(g => g.createdBy === currentUser || (g.members||[]).includes(currentUser))
+        .map(g => g.id)
+    );
+
+    function canAccessSongFast(song) {
+      if (!song) return false;
+      if (currentIsAdmin) return true;
+      if (song.createdBy === currentUser) return true;
+      if (song.groupIds?.length) return song.groupIds.some(gid => userGroupIds.has(gid));
+      return false;
+    }
+
     const tasks = [];
     for (const d of snap.docs) {
       const meta = d.data();
-      const song = songMap[meta.songId];
-      if (!song) continue;
-      if (!await canAccessSong(song)) continue;
       const { type, fileId, name, mimeType, downloadUrl, songId } = meta;
-      if (!downloadUrl || !fileId) continue;
-      // audio is always on-demand — never auto-downloaded during sync
+      if (!downloadUrl || !fileId || !songId) continue;
+
+      // skip audio — always on-demand
       if (type === 'audio') continue;
-      const store = type === 'pdf' ? 'pdfs' : 'images';
-      if (!['pdf','image'].includes(type)) continue;
+
+      // determine which store and check access
+      let store = null;
+      if (type === 'pdf' || type.startsWith('charts_pdf')) store = 'pdfs';
+      else if (type === 'image' || type.startsWith('charts_img')) store = 'images';
+      if (!store) continue;
+
+      // access check — use song directly OR check shared group file
+      const song = songMap[songId];
+      if (!song) continue;
+
+      // for shared charts files, any group member of ANY group that has the song can access
+      const isSharedType = type === 'charts_pdf_shared' || type === 'charts_img_shared';
+      if (isSharedType) {
+        // check if user is in any group that contains this song
+        if (!currentIsAdmin && !canAccessSongFast(song)) continue;
+      } else {
+        // personal files — only the owner or admin
+        const isPersonalMine = type === 'pdf' || type === 'image' ||
+          type === `charts_pdf_${currentUser}` || type === `charts_img_${currentUser}`;
+        if (!currentIsAdmin && !isPersonalMine && !canAccessSongFast(song)) continue;
+        // for personal files from other users, only sync shared and own
+        if (!currentIsAdmin && !isPersonalMine) continue;
+      }
+
+      // skip if already downloaded
       const existing = await dbGet(store, fileId);
       if (existing?.data) continue;
+
       tasks.push((async () => {
         try {
-          const path = `songs/${songId}/${type === 'pdf' ? 'pdfs' : 'images'}/${fileId}`;
+          // derive storage path from type
+          let storageSub = 'pdfs';
+          if (type === 'image' || type.startsWith('charts_img')) storageSub = 'images';
+          const path = meta.path || `songs/${songId}/${storageSub}/${fileId}`;
           const ab = await fetchFromStorage(path, downloadUrl);
-          await dbPut(store, { id: fileId, name, data: ab, mimeType, updatedAt: meta.updatedAt || Date.now() });
+          if (ab) await dbPut(store, { id: fileId, name, data: ab, mimeType, updatedAt: meta.updatedAt || Date.now() });
         } catch(e) { console.warn('File sync error:', fileId, e); }
       })());
     }
@@ -3308,7 +3351,7 @@ async function renderSongPage(idx) {
         : noteTab === 'listen'
         ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + buildListenContent(s)
         : noteTab === 'charts'
-        ? `<div id="hornsContent" style="padding:16px;">Loading…</div>`
+        ? `<div id="chartsContent" style="padding:16px;">Loading…</div>`
         : buildNoteContent(activeNote, idx, true)}
     </div>
     ${(noteTab === 'default' || noteTab === 'mine') && !editingNote
@@ -3334,19 +3377,19 @@ async function renderSongPage(idx) {
   }
   if (noteTab === 'charts') {
     const s2 = currentSetSongs[idx];
-    if (s2 && s2.type !== 'note') renderHornsTab(s2.id, idx);
+    if (s2 && s2.type !== 'note') renderChartsTab(s2.id, idx);
   }
 }
 
-// ── HORNS TAB ──
-async function renderHornsTab(songId, setIdx) {
-  const container = document.getElementById('hornsContent');
+// ── CHARTS TAB ──
+async function renderChartsTab(songId, setIdx) {
+  const container = document.getElementById('chartsContent');
   if (!container) return;
   const user = currentUser || 'me';
-  const sharedPdfKey = `horns_shared_${songId}`;
-  const sharedImgPrefix = `horns_img_shared_${songId}`;
-  const personalPdfKey = `horns_${user}_${songId}`;
-  const personalImgPrefix = `horns_img_${user}_${songId}`;
+  const sharedPdfKey = `charts_shared_${songId}`;
+  const sharedImgPrefix = `charts_img_shared_${songId}`;
+  const personalPdfKey = `charts_${user}_${songId}`;
+  const personalImgPrefix = `charts_img_${user}_${songId}`;
 
   // load files from IndexedDB
   const [sharedPdf, personalPdf, allImgs] = await Promise.all([
@@ -3395,21 +3438,21 @@ async function renderHornsTab(songId, setIdx) {
         Group Chart
       </div>
       <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Shared with all group members. Uploading replaces the previous file.</p>
-      ${sharedPdf ? renderFileRow(sharedPdf, `hornsRemoveSharedPdf('${songId}',${setIdx})`) : ''}
-      ${sharedImgs.map(e => renderImgItem(e, `hornsRemoveImg('${e.id}','${songId}',true,${setIdx})`)).join('')}
+      ${sharedPdf ? renderFileRow(sharedPdf, `chartsRemoveSharedPdf('${songId}',${setIdx})`) : ''}
+      ${sharedImgs.map(e => renderImgItem(e, `chartsRemoveImg('${e.id}','${songId}',true,${setIdx})`)).join('')}
       ${!sharedPdf && !sharedImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No group chart uploaded yet.</p>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px;">
-        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('hornsPdfShared_${songId}').click()">
+        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('chartsPdfShared_${songId}').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <span style="font-size:12px;">Upload PDF</span>
         </div>
-        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('hornsImgShared_${songId}').click()">
+        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('chartsImgShared_${songId}').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg>
           <span style="font-size:12px;">Upload Image</span>
         </div>
       </div>
-      <input type="file" id="hornsPdfShared_${songId}" accept=".pdf,application/pdf" style="display:none" onchange="hornsHandlePdf(event,'${songId}',true,${setIdx})">
-      <input type="file" id="hornsImgShared_${songId}" accept="image/*" style="display:none" onchange="hornsHandleImg(event,'${songId}',true,${setIdx})">
+      <input type="file" id="chartsPdfShared_${songId}" accept=".pdf,application/pdf" style="display:none" onchange="chartsHandlePdf(event,'${songId}',true,${setIdx})">
+      <input type="file" id="chartsImgShared_${songId}" accept="image/*" style="display:none" onchange="chartsHandleImg(event,'${songId}',true,${setIdx})">
     </div>
 
     <!-- PERSONAL SECTION -->
@@ -3419,87 +3462,87 @@ async function renderHornsTab(songId, setIdx) {
         My Part
       </div>
       <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Only visible to you.</p>
-      ${personalPdf ? renderFileRow(personalPdf, `hornsRemovePersonalPdf('${songId}',${setIdx})`) : ''}
-      ${personalImgs.map(e => renderImgItem(e, `hornsRemoveImg('${e.id}','${songId}',false,${setIdx})`)).join('')}
+      ${personalPdf ? renderFileRow(personalPdf, `chartsRemovePersonalPdf('${songId}',${setIdx})`) : ''}
+      ${personalImgs.map(e => renderImgItem(e, `chartsRemoveImg('${e.id}','${songId}',false,${setIdx})`)).join('')}
       ${!personalPdf && !personalImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No personal part uploaded yet.</p>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px;">
-        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('hornsPdfPersonal_${songId}').click()">
+        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('chartsPdfPersonal_${songId}').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <span style="font-size:12px;">Upload PDF</span>
         </div>
-        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('hornsImgPersonal_${songId}').click()">
+        <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('chartsImgPersonal_${songId}').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg>
           <span style="font-size:12px;">Upload Image</span>
         </div>
       </div>
-      <input type="file" id="hornsPdfPersonal_${songId}" accept=".pdf,application/pdf" style="display:none" onchange="hornsHandlePdf(event,'${songId}',false,${setIdx})">
-      <input type="file" id="hornsImgPersonal_${songId}" accept="image/*" style="display:none" onchange="hornsHandleImg(event,'${songId}',false,${setIdx})">
+      <input type="file" id="chartsPdfPersonal_${songId}" accept=".pdf,application/pdf" style="display:none" onchange="chartsHandlePdf(event,'${songId}',false,${setIdx})">
+      <input type="file" id="chartsImgPersonal_${songId}" accept="image/*" style="display:none" onchange="chartsHandleImg(event,'${songId}',false,${setIdx})">
     </div>`;
 
   // load markup overlays
-  const allHornsImgs = [...sharedImgs, ...personalImgs];
-  if (allHornsImgs.length) loadImageMarkupOverlays(allHornsImgs.map(e => [e.id, { blobUrl: imgBlobUrl(e), name: e.name }]));
+  const allChartsImgs = [...sharedImgs, ...personalImgs];
+  if (allChartsImgs.length) loadImageMarkupOverlays(allChartsImgs.map(e => [e.id, { blobUrl: imgBlobUrl(e), name: e.name }]));
 }
 
-async function hornsHandlePdf(e, songId, isShared, setIdx) {
+async function chartsHandlePdf(e, songId, isShared, setIdx) {
   const file = e.target.files[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) { showToast('PDF must be under 10 MB', 'err'); return; }
   const user = currentUser || 'me';
-  const key = isShared ? `horns_shared_${songId}` : `horns_${user}_${songId}`;
+  const key = isShared ? `charts_shared_${songId}` : `charts_${user}_${songId}`;
   const ab = await file.arrayBuffer();
   await dbPut('pdfs', { id: key, name: file.name, data: ab, updatedAt: Date.now() });
   if (fbReady && online) {
-    const path = `songs/${songId}/horns/${key}`;
+    const path = `songs/${songId}/charts/${key}`;
     const url = await fbStorageUpload(path, ab, 'application/pdf');
-    if (url) await fbSaveFileMeta(songId, isShared ? 'horns_pdf_shared' : `horns_pdf_${user}`, key, { name: file.name, mimeType: 'application/pdf', downloadUrl: url, path });
+    if (url) await fbSaveFileMeta(songId, isShared ? 'charts_pdf_shared' : `charts_pdf_${user}`, key, { name: file.name, mimeType: 'application/pdf', downloadUrl: url, path });
   }
   showToast('Chart uploaded', 'ok');
-  renderHornsTab(songId, setIdx);
+  renderChartsTab(songId, setIdx);
 }
 
-async function hornsHandleImg(e, songId, isShared, setIdx) {
+async function chartsHandleImg(e, songId, isShared, setIdx) {
   const file = e.target.files[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) { showToast('Image must be under 10 MB', 'err'); return; }
   const user = currentUser || 'me';
-  const prefix = isShared ? `horns_img_shared_${songId}` : `horns_img_${user}_${songId}`;
+  const prefix = isShared ? `charts_img_shared_${songId}` : `charts_img_${user}_${songId}`;
   const id = `${prefix}_${uid()}`;
   const ab = await file.arrayBuffer();
   await dbPut('images', { id, name: file.name, data: ab, mimeType: file.type, updatedAt: Date.now() });
   if (fbReady && online) {
-    const path = `songs/${songId}/horns/${id}`;
+    const path = `songs/${songId}/charts/${id}`;
     const url = await fbStorageUpload(path, ab, file.type);
-    if (url) await fbSaveFileMeta(songId, isShared ? 'horns_img_shared' : `horns_img_${user}`, id, { name: file.name, mimeType: file.type, downloadUrl: url, path });
+    if (url) await fbSaveFileMeta(songId, isShared ? 'charts_img_shared' : `charts_img_${user}`, id, { name: file.name, mimeType: file.type, downloadUrl: url, path });
   }
   showToast('Image uploaded', 'ok');
-  renderHornsTab(songId, setIdx);
+  renderChartsTab(songId, setIdx);
 }
 
-async function hornsRemoveSharedPdf(songId, setIdx) {
-  const key = `horns_shared_${songId}`;
+async function chartsRemoveSharedPdf(songId, setIdx) {
+  const key = `charts_shared_${songId}`;
   await dbDel('pdfs', key);
-  fbStorageDelete(`songs/${songId}/horns/${key}`);
+  fbStorageDelete(`songs/${songId}/charts/${key}`);
   fbDeleteFileMeta(key);
-  renderHornsTab(songId, setIdx ?? -1);
+  renderChartsTab(songId, setIdx ?? -1);
   showToast('Removed');
 }
 
-async function hornsRemovePersonalPdf(songId, setIdx) {
+async function chartsRemovePersonalPdf(songId, setIdx) {
   const user = currentUser || 'me';
-  const key = `horns_${user}_${songId}`;
+  const key = `charts_${user}_${songId}`;
   await dbDel('pdfs', key);
-  fbStorageDelete(`songs/${songId}/horns/${key}`);
+  fbStorageDelete(`songs/${songId}/charts/${key}`);
   fbDeleteFileMeta(key);
-  renderHornsTab(songId, setIdx ?? -1);
+  renderChartsTab(songId, setIdx ?? -1);
   showToast('Removed');
 }
 
-async function hornsRemoveImg(imageId, songId, isShared, setIdx) {
+async function chartsRemoveImg(imageId, songId, isShared, setIdx) {
   await dbDel('images', imageId);
-  fbStorageDelete(`songs/${songId}/horns/${imageId}`);
+  fbStorageDelete(`songs/${songId}/charts/${imageId}`);
   fbDeleteFileMeta(imageId);
-  renderHornsTab(songId, setIdx ?? -1);
+  renderChartsTab(songId, setIdx ?? -1);
   showToast('Removed');
 }
 
@@ -5888,11 +5931,11 @@ function renderSETab() {
     if (!songGroups.length) {
       body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3);">
         <div style="font-size:32px;margin-bottom:8px;">🎺</div>
-        <p style="font-size:14px;">This song isn't in a group yet.<br>Add it to a group to use the Horns tab.</p>
+        <p style="font-size:14px;">This song isn't in a group yet.<br>Add it to a group to use the Charts tab.</p>
       </div>`;
     } else {
-      body.innerHTML = `<div id="hornsContent" style="padding:0;">Loading…</div>`;
-      renderHornsTab(id, -1);
+      body.innerHTML = `<div id="chartsContent" style="padding:0;">Loading…</div>`;
+      renderChartsTab(id, -1);
     }
   }
 }
@@ -8865,7 +8908,7 @@ let importParsedSongs = [];
 function downloadImportTemplate() {
   const headers = 'title,artist,key,bpm,duration,notes,spotifyUrl,youtubeUrl';
   const example1 = '"Superstition","Stevie Wonder","Eb","100","4:02","Verse: Ebm7. Watch the clavinet intro cue.","",""';
-  const example2 = '"September","Earth Wind & Fire","G","126","3:35","Horns kick in bar 9. Key change to Ab in bridge.","",""';
+  const example2 = '"September","Earth Wind & Fire","G","126","3:35","Charts kick in bar 9. Key change to Ab in bridge.","",""';
   const example3 = '"My Song Title","Artist Name","C","120","3:30","Add your notes here","",""';
   const csv = [headers, example1, example2, example3].join('\n');
   try {
@@ -9451,7 +9494,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.39</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.41</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
