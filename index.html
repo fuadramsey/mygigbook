@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.42</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.43</span>
       </div>
 
     </div>
@@ -2648,35 +2648,71 @@ async function confirmNewSetlist() {
   const set={id:uid(),name,songs:[],groupIds,gigDate,createdBy:currentUser,createdAt:Date.now(),updatedAt:Date.now()};
   await dbPut('setlists',set); await renderSetsList(); await syncOut(); await openSet(set.id);
 }
-async function renameCurrentSet(name) {
-  if (!currentSetId||!name.trim()) return;
-  const set=await dbGet('setlists',currentSetId); set.name=name.trim(); set.updatedAt=Date.now();
-  await dbPut('setlists',set); await renderSetsList(); await syncOut();
+async function renameCurrentSet(name, gigDate) {
+  if (!currentSetId || !name.trim()) return;
+  const set = await dbGet('setlists', currentSetId);
+  set.name = name.trim();
+  set.gigDate = gigDate || null;
+  set.updatedAt = Date.now();
+  await dbPut('setlists', set);
+  await renderSetsList();
+  await syncOut();
   // update display
   const nameDisplay = document.getElementById('setNameDisplay');
   if (nameDisplay) nameDisplay.textContent = name.trim();
+  // update gig date display if visible
+  renderSetDetail();
 }
 
 function startRenameSet() {
   if (!currentSetId) return;
   const nameDisplay = document.getElementById('setNameDisplay');
   const currentName = nameDisplay?.textContent || '';
-  const input = document.createElement('input');
-  input.value = currentName;
-  input.style.cssText = 'background:transparent;border:none;border-bottom:2px solid var(--accent);outline:none;font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text);width:100%;min-width:0;';
-  input.onblur = () => {
-    const newName = input.value.trim();
-    if (newName && newName !== currentName) renameCurrentSet(newName);
-    else if (nameDisplay) nameDisplay.style.display = '';
-    input.replaceWith(nameDisplay || input);
-    if (nameDisplay) nameDisplay.style.display = '';
-  };
-  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') { input.value = currentName; input.blur(); }};
-  if (nameDisplay) {
-    nameDisplay.style.display = 'none';
-    nameDisplay.parentNode.insertBefore(input, nameDisplay);
-  }
-  setTimeout(() => { input.focus(); input.select(); }, 50);
+
+  // Get current gig date
+  dbGet('setlists', currentSetId).then(set => {
+    const currentDate = set?.gigDate || '';
+
+    // Build modal
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:7000;display:flex;align-items:flex-end;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:var(--surface);border-radius:16px 16px 0 0;padding:24px 20px 32px;width:100%;max-width:520px;display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--text);">Edit Set</span>
+          <button id="editSetModalClose" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:4px;">✕</button>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;display:block;margin-bottom:6px;">Set Name</label>
+          <input id="editSetNameInput" class="form-input" value="${esc(currentName)}" placeholder="Set name" style="width:100%;">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;display:block;margin-bottom:6px;">Gig Date</label>
+          <input id="editSetDateInput" class="form-input" type="date" value="${esc(currentDate)}" style="width:100%;">
+          <div style="display:flex;gap:8px;margin-top:6px;">
+            <button id="editSetDateClear" style="font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 0;text-decoration:underline;">Clear date</button>
+          </div>
+        </div>
+        <button id="editSetSaveBtn" class="btn primary" style="width:100%;padding:12px;">Save</button>
+      </div>`;
+
+    document.body.appendChild(modal);
+
+    const nameInput = modal.querySelector('#editSetNameInput');
+    const dateInput = modal.querySelector('#editSetDateInput');
+
+    modal.querySelector('#editSetModalClose').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    modal.querySelector('#editSetDateClear').addEventListener('click', () => { dateInput.value = ''; });
+    modal.querySelector('#editSetSaveBtn').addEventListener('click', () => {
+      const newName = nameInput.value.trim();
+      if (!newName) { nameInput.focus(); return; }
+      renameCurrentSet(newName, dateInput.value || null);
+      modal.remove();
+    });
+
+    setTimeout(() => nameInput.focus(), 50);
+  });
 }
 async function deleteCurrentSet() {
   if (!confirm('Delete this setlist?')) return;
@@ -9583,7 +9619,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.42</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.43</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
