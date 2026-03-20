@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.43</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.44</span>
       </div>
 
     </div>
@@ -4506,7 +4506,7 @@ async function openFullscreenImage(imageId, blobUrl, idx) {
 
   // ── VIEW AREA ──
   const viewArea = document.createElement('div');
-  viewArea.style.cssText = 'flex:1;position:relative;overflow:hidden;';
+  viewArea.style.cssText = 'flex:1;position:relative;overflow:hidden;cursor:grab;';
 
   // Image element (pan/zoom layer)
   const img = document.createElement('img');
@@ -4542,6 +4542,12 @@ async function openFullscreenImage(imageId, blobUrl, idx) {
   overlay.appendChild(viewArea);
   overlay.appendChild(mkBar);
   document.body.appendChild(overlay);
+
+  // Explicitly start in VIEW mode — no drawing, no crosshair
+  canvas.style.pointerEvents = 'none';
+  canvas.style.cursor = 'default';
+  mkBar.style.display = 'none';
+  editMode = false;
 
   // ── PAN/ZOOM STATE ──
   let scale = 1, minScale = 1, tx = 0, ty = 0;
@@ -4822,12 +4828,14 @@ async function openFullscreenImage(imageId, blobUrl, idx) {
       editBtn.style.background = 'rgba(232,255,71,0.3)';
       canvas.style.pointerEvents = 'auto';
       canvas.style.cursor = 'crosshair';
+      viewArea.style.cursor = 'crosshair';
       mkBar.style.display = 'block';
     } else {
       editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit';
       editBtn.style.background = 'rgba(232,255,71,0.12)';
       canvas.style.pointerEvents = 'none';
-      canvas.style.cursor = '';
+      canvas.style.cursor = 'default';
+      viewArea.style.cursor = 'grab';
       mkBar.style.display = 'none';
     }
   });
@@ -9619,7 +9627,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.43</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.44</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
