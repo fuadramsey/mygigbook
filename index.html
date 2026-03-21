@@ -1089,7 +1089,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
           </div>
         </div>
         <!-- detail body -->
-        <div id="seTabBody" style="flex:1;overflow-y:auto;padding:16px;">
+        <div id="seTabBody" style="flex:1;overflow-y:auto;padding:16px;touch-action:pan-y;">
           <div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text3);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="width:48px;height:48px;opacity:0.3;"><circle cx="9" cy="18" r="3"/><circle cx="19" cy="15" r="3"/><path d="M12 18V8l10-3v10"/></svg>
             <p style="font-size:14px;">Select a song to view</p>
@@ -1157,7 +1157,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <button class="scroll-speed-btn" onclick="changeSESpeed(1)">+</button>
     </div>
   </div>
-  <div class="note-area" id="sepTabBody" style="padding:16px;overflow-y:auto;"></div>
+  <div class="note-area" id="sepTabBody" style="padding:16px;overflow-y:auto;touch-action:pan-y;"></div>
   <input type="hidden" id="editSongId">
 </div>
 
@@ -1572,7 +1572,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.59</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.60</span>
       </div>
 
     </div>
@@ -4007,40 +4007,52 @@ function setupNoteAreaPinchZoom(el, idx, onZoom) {
   el._pinchZoomNote = true;
   let lastDist = 0;
   let pinching = false;
-  // default zoom callback is changeNoteZoom; pass a custom onZoom(delta) to override
   const zoomFn = onZoom || ((delta) => changeNoteZoom(delta, idx));
 
+  // Use touchstart on the element but also watch for the 2nd finger via touches array
   el.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
+    if (e.touches.length >= 2) {
       pinching = true;
       lastDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
       e.preventDefault();
+    }
+  }, { passive: false });
+
+  el.addEventListener('touchmove', e => {
+    if (e.touches.length >= 2) {
+      // Start pinching even if touchstart fired with 1 finger first
+      if (!pinching) {
+        pinching = true;
+        lastDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        return;
+      }
+      e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (!lastDist) { lastDist = dist; return; }
+      const ratio = dist / lastDist;
+      if (Math.abs(ratio - 1) > 0.012) {
+        zoomFn(ratio > 1 ? 1 : -1);
+        lastDist = dist;
+      }
     } else {
       pinching = false;
     }
   }, { passive: false });
 
-  el.addEventListener('touchmove', e => {
-    if (!pinching || e.touches.length !== 2) return;
-    e.preventDefault();
-    const dist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-    if (!lastDist) { lastDist = dist; return; }
-    const ratio = dist / lastDist;
-    if (Math.abs(ratio - 1) > 0.015) {
-      zoomFn(ratio > 1 ? 1 : -1);
-      lastDist = dist;
-    }
-  }, { passive: false });
-
   el.addEventListener('touchend', e => {
-    if (e.touches.length < 2) pinching = false;
+    if (e.touches.length < 2) { pinching = false; lastDist = 0; }
   }, { passive: true });
+
+  el.addEventListener('touchcancel', () => { pinching = false; lastDist = 0; }, { passive: true });
 }
 
 function buildNoteContent(text, idx) {
@@ -9839,7 +9851,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.59</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.60</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
