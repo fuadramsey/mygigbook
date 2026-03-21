@@ -1574,7 +1574,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.48</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.49</span>
       </div>
 
     </div>
@@ -1722,10 +1722,13 @@ async function fbPushAll() {
     await syncCollection('songs', songs);
     await syncCollection('setlists', sets);
     await syncCollection('groups', groups);
-    // sync notes (My Notes — per user, text only, small)
-    // only push notes belonging to the current user
+    // sync notes — upsert only (never delete other users' notes from Firestore)
     const myNotes = notes.filter(n => n.id.startsWith((currentUser||'me') + '_'));
-    if (myNotes.length) await syncCollection('notes', myNotes);
+    if (myNotes.length) {
+      const noteBatch = fb.writeBatch(fb.db);
+      myNotes.forEach(n => noteBatch.set(fb.doc(fb.collection(fb.db,'notes'), n.id), n));
+      await noteBatch.commit();
+    }
   } catch(e) { console.warn('Firebase push error:', e); throw e; }
 }
 
@@ -7151,7 +7154,13 @@ function togglePwVis(inputId, btn) {
     ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 }
-function renderAll(){renderSetsList();renderDB();}
+function renderAll(){
+  renderSetsList(); renderDB();
+  // if a song page is open, refresh it so synced notes appear immediately
+  const top = pageStack[pageStack.length-1];
+  if (top === 'pg-song' && currentSongIdx >= 0) renderSongPage(currentSongIdx);
+  if (top === 'pg-db' || top === 'pg-song-edit') renderSETab();
+}
 
 // ── SEED ──
 async function seed(){
@@ -9715,7 +9724,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.48</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.49</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
