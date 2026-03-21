@@ -1572,7 +1572,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.57</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.58</span>
       </div>
 
     </div>
@@ -2032,6 +2032,24 @@ async function fbPullAll() {
     const userPrefix = (currentUser||'me') + '_';
     const userNoteSnap = { docs: noteSnap.docs.filter(d => d.id.startsWith(userPrefix)) };
     await merge(userNoteSnap, 'notes');
+
+    // ── DELETION PROPAGATION ──
+    // Delete local records that no longer exist in Firestore (e.g. setlists/songs deleted on another device)
+    const pruneDeleted = async (snap, store, filterFn) => {
+      const remoteIds = new Set(snap.docs.map(d => d.id));
+      const localItems = await dbAll(store);
+      for (const item of localItems) {
+        // only prune items the filter says we should manage (e.g. own items, not others')
+        if (filterFn && !filterFn(item)) continue;
+        if (!remoteIds.has(item.id)) {
+          await dbDel(store, item.id);
+        }
+      }
+    };
+    // Prune setlists created by current user that are gone from Firestore
+    await pruneDeleted(setSnap, 'setlists', s => !s.createdBy || s.createdBy === currentUser);
+    // Prune songs created by current user that are gone from Firestore
+    await pruneDeleted(songSnap, 'songs', s => !s.createdBy || s.createdBy === currentUser);
   } catch(e) { console.warn('Firebase pull error:', e); throw e; }
 }
 
@@ -9820,7 +9838,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.57</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.58</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
