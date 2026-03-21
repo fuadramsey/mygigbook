@@ -1338,23 +1338,61 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;margin-right:6px;"><path d="M12 5v14M5 12h14"/></svg>
         Create New Group
       </button>
+      <button class="btn ghost" style="width:100%;" onclick="openJoinGroupModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;margin-right:6px;"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Join a Group
+      </button>
       <button id="deleteGroupBtn" class="btn ghost" style="width:100%;color:var(--red);border-color:rgba(255,68,68,0.3);display:none;" onclick="deleteActiveGroup()">Delete This Group</button>
     </div>
   </div>
 </div>
 
-<!-- ADD MEMBER MODAL -->
+<!-- INVITE / JOIN MODAL -->
 <div class="modal-overlay hidden" id="addMemberModal" onclick="if(event.target===this)closeAddMemberModal()">
   <div class="modal-sheet">
     <div class="modal-header">
-      <span class="modal-title">Add Member</span>
+      <span class="modal-title" id="inviteModalTitle">Invite to Group</span>
       <div class="modal-close" onclick="closeAddMemberModal()">✕</div>
     </div>
-    <div class="modal-body" style="padding:0;overflow-y:auto;max-height:60vh;">
-      <div id="addMemberList"></div>
+    <div class="modal-body" style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+      <div id="inviteCodeSection" style="display:none;">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Share this code with your bandmates. They enter it under <strong style="color:var(--text);">Groups → Join a Group</strong>.</p>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div id="inviteCodeDisplay" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:4px;color:var(--accent);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 16px;text-align:center;"></div>
+          <button onclick="copyInviteCode()" class="btn ghost" style="padding:10px 14px;flex-shrink:0;" title="Copy code">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </button>
+        </div>
+        <button onclick="refreshInviteCode()" style="margin-top:10px;background:none;border:none;color:var(--text3);font-size:12px;font-family:inherit;cursor:pointer;padding:0;display:flex;align-items:center;gap:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Generate new code
+        </button>
+      </div>
+      <div id="joinCodeSection" style="display:none;">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Enter the invite code shared by your group owner.</p>
+        <input class="form-input" id="joinCodeInput" placeholder="e.g. JAZZ-4821" style="font-family:'DM Mono',monospace;font-size:18px;letter-spacing:2px;text-transform:uppercase;" onkeydown="if(event.key==='Enter')submitJoinCode()" oninput="this.value=this.value.toUpperCase()">
+        <div id="joinCodeError" style="color:var(--red);font-size:12px;margin-top:6px;display:none;"></div>
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn ghost" onclick="closeAddMemberModal()">Done</button>
+      <button class="btn ghost" onclick="closeAddMemberModal()">Cancel</button>
+      <button id="joinCodeSubmitBtn" class="btn primary" style="display:none;" onclick="submitJoinCode()">Join Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- GROUP JOIN PROMPT MODAL -->
+<div class="modal-overlay hidden" id="groupJoinPromptModal">
+  <div class="modal-sheet" style="max-width:400px;">
+    <div class="modal-header">
+      <span class="modal-title">New Group Invite</span>
+    </div>
+    <div class="modal-body" style="padding:16px;">
+      <p style="font-size:14px;color:var(--text2);line-height:1.6;">You've been added to <strong id="groupJoinPromptName" style="color:var(--text);"></strong>. Would you like to switch to that group now?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" onclick="dismissGroupJoinPrompt()">Not now</button>
+      <button class="btn primary" onclick="acceptGroupJoinPrompt()">Switch to Group</button>
     </div>
   </div>
 </div>
@@ -1572,7 +1610,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.62</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.63</span>
       </div>
 
     </div>
@@ -7970,6 +8008,42 @@ async function postLoginInit() {
     };
     setTimeout(function() { trySync(0); }, 1500);
   }
+  // Check for newly added groups (joined via invite code on another device)
+  setTimeout(() => checkForNewGroupInvites(), 3000);
+}
+
+let _pendingGroupJoinId = null;
+async function checkForNewGroupInvites() {
+  if (!currentUser || currentIsAdmin) return;
+  const seenKey = 'mgb_seen_groups_' + currentUser;
+  const seen = new Set(JSON.parse(localStorage.getItem(seenKey) || '[]'));
+  const allGroups = await dbAll('groups');
+  const privateGroupId = getPrivateGroupId();
+  const myGroups = allGroups.filter(g =>
+    (g.members||[]).includes(currentUser) && !g.isPrivate && g.id !== privateGroupId
+  );
+  const newGroups = myGroups.filter(g => !seen.has(g.id) && g.createdBy !== currentUser);
+  if (!newGroups.length) { myGroups.forEach(g => seen.add(g.id)); localStorage.setItem(seenKey, JSON.stringify([...seen])); return; }
+  myGroups.forEach(g => seen.add(g.id));
+  localStorage.setItem(seenKey, JSON.stringify([...seen]));
+  const g = newGroups[0];
+  _pendingGroupJoinId = g.id;
+  document.getElementById('groupJoinPromptName').textContent = g.name;
+  document.getElementById('groupJoinPromptModal').classList.remove('hidden');
+}
+
+function dismissGroupJoinPrompt() {
+  document.getElementById('groupJoinPromptModal').classList.add('hidden');
+  _pendingGroupJoinId = null;
+}
+
+async function acceptGroupJoinPrompt() {
+  dismissGroupJoinPrompt();
+  if (_pendingGroupJoinId) {
+    await setGroupFilter(_pendingGroupJoinId);
+    _pendingGroupJoinId = null;
+    showToast('Switched to group', 'ok');
+  }
 }
 
 // ── PRIVATE GROUP ──
@@ -8272,29 +8346,123 @@ async function confirmNewGroup() {
   showToast('Group created','ok');
 }
 
-function openAddMemberModal() {
-  const users = getUsers();
-  const el = document.getElementById('addMemberList');
-  dbGet('groups', activeGroupFilter).then(g => {
-    const members = g?.members || [];
-    const available = users.filter(u => !members.includes(u.username));
-    if (!available.length) {
-      el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">All users are already in this group.</div>';
-    } else {
-      el.innerHTML = available.map(u => `
-        <div class="admin-user-row" style="cursor:pointer;" onclick="addMemberToGroup('${esc(u.username)}')">
-          <div class="admin-user-avatar">${u.username[0].toUpperCase()}</div>
-          <div class="admin-user-info">
-            <div class="admin-user-name">${esc(u.username)}</div>
-            <div class="admin-user-role">${u.email ? esc(u.email) : 'no email'}</div>
-          </div>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M12 5v14M5 12h14"/></svg>
-        </div>`).join('');
-    }
-    document.getElementById('addMemberModal').classList.remove('hidden');
-  });
+// ── INVITE CODE ──
+function generateInviteCode() {
+  const words = ['JAZZ','ROCK','SOUL','FUNK','BASS','DRUM','KEYS','HORN','BEAT','RIFF','TUNE','BAND'];
+  const word = words[Math.floor(Math.random() * words.length)];
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `${word}-${num}`;
 }
+
+async function openAddMemberModal() {
+  const g = await dbGet('groups', activeGroupFilter);
+  if (!g) return;
+  const isOwner = g.createdBy === currentUser;
+  document.getElementById('inviteModalTitle').textContent = isOwner ? 'Invite to Group' : 'Join a Group';
+  document.getElementById('inviteCodeSection').style.display = isOwner ? 'block' : 'none';
+  document.getElementById('joinCodeSection').style.display = isOwner ? 'none' : 'block';
+  document.getElementById('joinCodeSubmitBtn').style.display = isOwner ? 'none' : 'flex';
+  document.getElementById('joinCodeError').style.display = 'none';
+  document.getElementById('joinCodeInput').value = '';
+  if (isOwner) {
+    let code = g.inviteCode;
+    if (!code) {
+      code = generateInviteCode();
+      g.inviteCode = code;
+      g.updatedAt = Date.now();
+      await dbPut('groups', g);
+      await syncOut();
+    }
+    document.getElementById('inviteCodeDisplay').textContent = code;
+  }
+  document.getElementById('addMemberModal').classList.remove('hidden');
+}
+
+function openJoinGroupModal() {
+  closeGroupFilter();
+  document.getElementById('inviteModalTitle').textContent = 'Join a Group';
+  document.getElementById('inviteCodeSection').style.display = 'none';
+  document.getElementById('joinCodeSection').style.display = 'block';
+  document.getElementById('joinCodeSubmitBtn').style.display = 'flex';
+  document.getElementById('joinCodeError').style.display = 'none';
+  document.getElementById('joinCodeInput').value = '';
+  document.getElementById('addMemberModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('joinCodeInput').focus(), 80);
+}
+
 function closeAddMemberModal() { document.getElementById('addMemberModal').classList.add('hidden'); }
+
+function copyInviteCode() {
+  const code = document.getElementById('inviteCodeDisplay').textContent;
+  navigator.clipboard?.writeText(code).then(() => showToast('Code copied', 'ok')).catch(() => showToast(code));
+}
+
+async function refreshInviteCode() {
+  const g = await dbGet('groups', activeGroupFilter);
+  if (!g) return;
+  const code = generateInviteCode();
+  g.inviteCode = code;
+  g.updatedAt = Date.now();
+  await dbPut('groups', g);
+  await syncOut();
+  document.getElementById('inviteCodeDisplay').textContent = code;
+  showToast('New code generated', 'ok');
+}
+
+async function submitJoinCode() {
+  const input = document.getElementById('joinCodeInput');
+  const errEl = document.getElementById('joinCodeError');
+  const code = input.value.trim().toUpperCase();
+  if (!code) { errEl.textContent = 'Please enter a code.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  const btn = document.getElementById('joinCodeSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Checking…';
+  try {
+    let found = null;
+    const allGroups = await dbAll('groups');
+    found = allGroups.find(g => g.inviteCode === code) || null;
+    if (!found && fbReady && online) {
+      const fb = window._fb;
+      if (fb) {
+        const snap = await fb.getDocs(fb.collection(fb.db, 'groups'));
+        for (const d of snap.docs) {
+          const data = d.data();
+          if (!data.id) data.id = d.id;
+          if (data.inviteCode === code) { found = data; break; }
+        }
+      }
+    }
+    if (!found) {
+      errEl.textContent = 'Code not found. Double-check with your group owner.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Join Group';
+      return;
+    }
+    if ((found.members||[]).includes(currentUser)) {
+      errEl.textContent = `You're already in "${found.name}".`;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Join Group';
+      return;
+    }
+    found.members = [...new Set([...(found.members||[]), currentUser])];
+    found.updatedAt = Date.now();
+    await dbPut('groups', found);
+    await syncOut();
+    // mark as seen so no join prompt fires
+    const seenKey = 'mgb_seen_groups_' + currentUser;
+    const seen = new Set(JSON.parse(localStorage.getItem(seenKey) || '[]'));
+    seen.add(found.id);
+    localStorage.setItem(seenKey, JSON.stringify([...seen]));
+    closeAddMemberModal();
+    await setGroupFilter(found.id);
+    await openGroupFilter();
+    showToast(`Joined "${found.name}"!`, 'ok');
+  } catch(e) {
+    errEl.textContent = 'Error checking code. Try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Join Group';
+  }
+}
 
 async function addMemberToGroup(username) {
   const g = await dbGet('groups', activeGroupFilter);
@@ -9875,7 +10043,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.62</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.63</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
