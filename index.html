@@ -1078,7 +1078,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
               <button class="note-tab" id="se-tab-charts" onclick="switchSETab('charts')" >Charts</button>
             </div>
             <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
-              <button class="scroll-speed-btn" onclick="changeSEZoom(-1)" title="Zoom out" style="font-size:16px;">−</button><span class="scroll-speed-label se-zoom-label" style="min-width:36px;text-align:center;">100%</span><button class="scroll-speed-btn" onclick="changeSEZoom(1)" title="Zoom in" style="font-size:16px;">+</button><div style="width:10px;flex-shrink:0;"></div><button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
+              <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
               </button>
               <div style="width:12px;"></div>
@@ -1148,7 +1148,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <button class="note-tab" id="sep-tab-charts" onclick="switchSETab('charts')" >Charts</button>
     </div>
     <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
-      <button class="scroll-speed-btn" onclick="changeSEZoom(-1)" title="Zoom out" style="font-size:16px;">−</button><span class="scroll-speed-label se-zoom-label" style="min-width:36px;text-align:center;">100%</span><button class="scroll-speed-btn" onclick="changeSEZoom(1)" title="Zoom in" style="font-size:16px;">+</button><div style="width:10px;flex-shrink:0;"></div><button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
+      <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
       </button>
       <div style="width:12px;"></div>
@@ -1572,7 +1572,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.60</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.61</span>
       </div>
 
     </div>
@@ -9851,7 +9851,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.60</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.61</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
