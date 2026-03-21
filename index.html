@@ -1572,7 +1572,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.56</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.57</span>
       </div>
 
     </div>
@@ -3874,16 +3874,14 @@ function stopSEScroll() {
   updateSEScrollUI();
 }
 function updateSEScrollUI() {
-  const btn = document.getElementById('seScrollPlayBtn');
-  if (!btn) return;
-  btn.innerHTML = seScrollPlaying
+  const svg = seScrollPlaying
     ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`;
+  document.querySelectorAll('#seScrollPlayBtn').forEach(btn => { btn.innerHTML = svg; });
 }
 function changeSESpeed(delta) {
   scrollSpeed = Math.max(1, Math.min(10, scrollSpeed + delta));
-  const lbl = document.getElementById('seScrollSpeedLabel');
-  if (lbl) lbl.textContent = `×${scrollSpeed}`;
+  document.querySelectorAll('#seScrollSpeedLabel').forEach(lbl => { lbl.textContent = `×${scrollSpeed}`; });
 }
 
 function changeSEZoom(delta) {
@@ -5887,15 +5885,15 @@ function renderSETab() {
   const s = window._seCurrentSong || {};
 
   // show scroll toolbar only on text tabs in read-only mode
-  const scrollBar = document.getElementById('seScrollToolbar');
-  const showScroll = !seEditMode && (seTab === 'details' || seTab === 'mynotes');  if (scrollBar) {
+  // Use querySelectorAll because the toolbar ID exists in both the DB panel and pg-song-edit
+  const showScroll = !seEditMode && (seTab === 'details' || seTab === 'mynotes');
+  const dbZoom = parseFloat(localStorage.getItem('mgb_zoom_db_details') || '1');
+  document.querySelectorAll('#seScrollToolbar').forEach(scrollBar => {
     scrollBar.style.display = showScroll ? 'flex' : 'none';
-    const lbl = document.getElementById('seScrollSpeedLabel');
+    const lbl = scrollBar.querySelector('#seScrollSpeedLabel, .se-speed-label');
     if (lbl) lbl.textContent = `×${scrollSpeed}`;
-    // update zoom label
-    const dbZoom = parseFloat(localStorage.getItem('mgb_zoom_db_details') || '1');
     scrollBar.querySelectorAll('.se-zoom-label').forEach(el => el.textContent = Math.round(dbZoom * 100) + '%');
-  }
+  });
 
   if (seTab === 'details') {
     const _audioKey = `audio_${id}`;
@@ -9822,7 +9820,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.56</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.57</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
