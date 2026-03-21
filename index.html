@@ -1572,7 +1572,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.61</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.62</span>
       </div>
 
     </div>
@@ -4002,16 +4002,27 @@ function applyNoteZoom() {
 }
 
 // ── PINCH-TO-ZOOM for text/note areas ──
+// Uses document-level listeners so passive/touch-action on parent elements can't block it
 function setupNoteAreaPinchZoom(el, idx, onZoom) {
   if (!el || el._pinchZoomNote) return;
   el._pinchZoomNote = true;
-  let lastDist = 0;
-  let pinching = false;
   const zoomFn = onZoom || ((delta) => changeNoteZoom(delta, idx));
 
-  // Use touchstart on the element but also watch for the 2nd finger via touches array
-  el.addEventListener('touchstart', e => {
+  let lastDist = 0;
+  let pinching = false;
+  let activeEl = null;
+
+  // Clean up previous listeners if any
+  if (window._pinchDocListeners) {
+    window._pinchDocListeners.forEach(([ev, fn, opts]) => document.removeEventListener(ev, fn, opts));
+  }
+  window._pinchDocListeners = [];
+
+  const onStart = (e) => {
+    // Only activate if the touch started inside our element
+    if (!el.contains(e.target)) return;
     if (e.touches.length >= 2) {
+      activeEl = el;
       pinching = true;
       lastDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
@@ -4019,17 +4030,18 @@ function setupNoteAreaPinchZoom(el, idx, onZoom) {
       );
       e.preventDefault();
     }
-  }, { passive: false });
+  };
 
-  el.addEventListener('touchmove', e => {
+  const onMove = (e) => {
+    if (!activeEl || activeEl !== el) return;
     if (e.touches.length >= 2) {
-      // Start pinching even if touchstart fired with 1 finger first
       if (!pinching) {
         pinching = true;
         lastDist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
         );
+        e.preventDefault();
         return;
       }
       e.preventDefault();
@@ -4046,13 +4058,25 @@ function setupNoteAreaPinchZoom(el, idx, onZoom) {
     } else {
       pinching = false;
     }
-  }, { passive: false });
+  };
 
-  el.addEventListener('touchend', e => {
+  const onEnd = (e) => {
     if (e.touches.length < 2) { pinching = false; lastDist = 0; }
-  }, { passive: true });
+    if (e.touches.length === 0) activeEl = null;
+  };
 
-  el.addEventListener('touchcancel', () => { pinching = false; lastDist = 0; }, { passive: true });
+  // Register at document level with passive:false so preventDefault works
+  document.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onEnd, { passive: true });
+  document.addEventListener('touchcancel', onEnd, { passive: true });
+
+  window._pinchDocListeners = [
+    ['touchstart', onStart, { passive: false }],
+    ['touchmove', onMove, { passive: false }],
+    ['touchend', onEnd, { passive: true }],
+    ['touchcancel', onEnd, { passive: true }],
+  ];
 }
 
 function buildNoteContent(text, idx) {
@@ -9851,7 +9875,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.61</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.62</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
