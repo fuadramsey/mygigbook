@@ -1572,7 +1572,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.54</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.56</span>
       </div>
 
     </div>
@@ -2881,10 +2881,21 @@ function changeDBZoom(delta, key) {
   const cur = parseFloat(localStorage.getItem(key) || '1');
   const newZoom = Math.round(Math.max(0.5, Math.min(3, cur + delta)) * 10) / 10;
   localStorage.setItem(key, newZoom);
+  const fs = `${Math.round(20 * newZoom)}px`;
+  const lh = `${1.9 * newZoom}`;
+  // update zoom labels
   const label = document.getElementById('dbZoomLabel');
   if (label) label.textContent = Math.round(newZoom * 100) + '%';
-  const note = document.getElementById('dbDetailsNote');
-  if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
+  document.querySelectorAll('.se-zoom-label').forEach(el => el.textContent = Math.round(newZoom * 100) + '%');
+  // apply to all text content in both DB panel bodies (Details lyrics + My Notes)
+  ['seTabBody', 'sepTabBody'].forEach(bodyId => {
+    const el = document.getElementById(bodyId);
+    if (!el) return;
+    el.querySelectorAll('#dbDetailsNote, .note-display, .rte-body').forEach(t => {
+      t.style.fontSize = fs;
+      t.style.lineHeight = lh;
+    });
+  });
 }
 
 // ── DOUBLE-TAP FULLSCREEN for note area ──
@@ -3877,9 +3888,6 @@ function changeSESpeed(delta) {
 
 function changeSEZoom(delta) {
   changeDBZoom(delta * 0.1, 'mgb_zoom_db_details');
-  // also update all se-zoom-label spans in the toolbar
-  const dbZoom = parseFloat(localStorage.getItem('mgb_zoom_db_details') || '1');
-  document.querySelectorAll('.se-zoom-label').forEach(el => el.textContent = Math.round(dbZoom * 100) + '%');
 }
 
 function startScroll() {
@@ -6038,6 +6046,12 @@ function renderSETab() {
         ${myNoteHtml
           ? `<div class="note-display" style="white-space:pre-wrap;min-height:80px;">${myNoteHtml}</div>`
           : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
+      // apply saved zoom immediately
+      const _myNoteZoom = parseFloat(localStorage.getItem('mgb_zoom_db_details') || '1');
+      body.querySelectorAll('.note-display').forEach(el => {
+        el.style.fontSize = `${Math.round(20*_myNoteZoom)}px`;
+        el.style.lineHeight = `${1.9*_myNoteZoom}`;
+      });
     } else {
       // EDIT view
       body.innerHTML = `
@@ -6076,22 +6090,8 @@ function renderSETab() {
   } else if (seTab === 'media') {
     body.innerHTML = `
       <div class="settings-section-label" style="margin-bottom:8px;">Links</div>
-      <div class="form-group" style="margin-bottom:14px;">
-        <label class="form-label" style="display:flex;align-items:center;gap:8px;">
-          <div style="width:18px;height:18px;background:#1DB954;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg></div>
-          Spotify URL
-          <button type="button" onclick="openModalPlatformSearch('spotify')" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Search</button>
-        </label>
-        <input class="form-input" id="fSpotify" placeholder="Paste Spotify URL here…" type="url" value="${esc(s.spotifyUrl||'')}" onchange="saveSEMediaLink('spotify',this.value.trim())">
-      </div>
-      <div class="form-group" style="margin-bottom:20px;">
-        <label class="form-label" style="display:flex;align-items:center;gap:8px;">
-          <div style="width:18px;height:18px;background:#FF0000;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>
-          YouTube URL
-          <button type="button" onclick="openModalPlatformSearch('youtube')" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Search</button>
-        </label>
-        <input class="form-input" id="fYoutube" placeholder="Paste YouTube URL here…" type="url" value="${esc(s.youtubeUrl||'')}" onchange="saveSEMediaLink('youtube',this.value.trim())">
-      </div>
+      ${buildSELinkRow('spotify', s.spotifyUrl, id)}
+      ${buildSELinkRow('youtube', s.youtubeUrl, id)}
       <div class="settings-section-label" style="margin-bottom:8px;">Audio</div>
       <div id="fAudioStatus" style="margin-bottom:8px;"></div>
       <button type="button" class="edit-note-btn" onclick="modalAttachAudio()" style="margin-top:0;">
@@ -6435,6 +6435,76 @@ async function loadSongIntoSEPage(id) {
 function closeSongPage() { tryCloseSongPage(); }
 function closeSongModal() { tryCloseSongPage(); }
 
+function buildSELinkRow(platform, url, songId) {
+  const isSpotify = platform === 'spotify';
+  const color = isSpotify ? '#1DB954' : '#FF0000';
+  const label = isSpotify ? 'Spotify' : 'YouTube';
+  const spotifySvg = `<path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/>`;
+  const youtubeSvg = `<path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>`;
+  const iconSvg = isSpotify ? spotifySvg : youtubeSvg;
+  const inputId = isSpotify ? 'fSpotify' : 'fYoutube';
+  const placeholder = isSpotify ? 'Paste Spotify URL here…' : 'Paste YouTube URL here…';
+
+  if (url) {
+    // Saved — show clickable card with open + remove
+    const trackLabel = isSpotify ? 'Open saved track ↗' : 'Open saved video ↗';
+    return `<div style="display:flex;align-items:stretch;gap:0;margin-bottom:10px;">
+      <a href="${esc(url)}" class="listen-platform-card" target="_blank" rel="noopener"
+         style="flex:1;margin-bottom:0;border-radius:var(--radius) 0 0 var(--radius);">
+        <div class="listen-platform-logo" style="background:${color};">
+          <svg viewBox="0 0 24 24" fill="white" style="width:20px;height:20px;">${iconSvg}</svg>
+        </div>
+        <div class="listen-platform-info">
+          <div class="listen-platform-name">${label}</div>
+          <div class="listen-platform-title">${trackLabel}</div>
+        </div>
+      </a>
+      <button onclick="removeSEMediaLink('${platform}','${songId}')"
+        style="padding:0 14px;background:var(--surface2);border:1px solid var(--border);border-left:none;
+               border-radius:0 var(--radius) var(--radius) 0;cursor:pointer;color:var(--red);
+               display:flex;align-items:center;" title="Remove ${label} link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+          <path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>`;
+  } else {
+    // Not saved — show paste input + Search button
+    return `<div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px;">
+        <div style="width:18px;height:18px;background:${color};border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;">${iconSvg}</svg>
+        </div>
+        ${label} URL
+        <button type="button" onclick="openModalPlatformSearch('${platform}')"
+          style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:20px;
+                 padding:2px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;
+                 display:flex;align-items:center;gap:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Search
+        </button>
+      </label>
+      <input class="form-input" id="${inputId}" placeholder="${placeholder}" type="url" value=""
+             onchange="saveSEMediaLink('${platform}',this.value.trim())">
+    </div>`;
+  }
+}
+
+async function removeSEMediaLink(platform, songId) {
+  const song = await dbGet('songs', songId);
+  if (!song) return;
+  if (platform === 'spotify') song.spotifyUrl = null;
+  if (platform === 'youtube') song.youtubeUrl = null;
+  song.updatedAt = Date.now();
+  if (window._seCurrentSong) {
+    if (platform === 'spotify') window._seCurrentSong.spotifyUrl = null;
+    if (platform === 'youtube') window._seCurrentSong.youtubeUrl = null;
+  }
+  await dbPut('songs', song);
+  await syncOut();
+  renderSETab();
+  showToast('Link removed');
+}
+
 async function saveSEMediaLink(platform, url) {
   const id = document.getElementById('editSongId')?.value;
   if (!id) return;
@@ -6449,6 +6519,7 @@ async function saveSEMediaLink(platform, url) {
   }
   await dbPut('songs', song);
   await syncOut();
+  renderSETab();
   showToast('Link saved', 'ok');
 }
 
@@ -9751,7 +9822,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.54</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.56</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
