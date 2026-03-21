@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-title" content="MyGigBook">
 <meta name="description" content="Band setlist manager — lyrics, notes, audio and more">
 <link rel="manifest" href="/mygigbook/manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/mygigbook/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/mygigbook/icon-512.png">
+<link rel="apple-touch-icon" href="/mygigbook/icon-192.png">
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/mygigbook/sw.js').catch(() => {});
@@ -1571,7 +1574,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.46</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.48</span>
       </div>
 
     </div>
@@ -1698,8 +1701,8 @@ async function fbPushAll() {
   const fb = window._fb;
   if (!fb) return;
   try {
-    const [songs, sets, groups] = await Promise.all([
-      dbAll('songs'), dbAll('setlists'), dbAll('groups')
+    const [songs, sets, groups, notes] = await Promise.all([
+      dbAll('songs'), dbAll('setlists'), dbAll('groups'), dbAll('notes')
     ]);
 
     // For each collection, get what's in Firestore and delete anything not in local DB
@@ -1719,6 +1722,10 @@ async function fbPushAll() {
     await syncCollection('songs', songs);
     await syncCollection('setlists', sets);
     await syncCollection('groups', groups);
+    // sync notes (My Notes — per user, text only, small)
+    // only push notes belonging to the current user
+    const myNotes = notes.filter(n => n.id.startsWith((currentUser||'me') + '_'));
+    if (myNotes.length) await syncCollection('notes', myNotes);
   } catch(e) { console.warn('Firebase push error:', e); throw e; }
 }
 
@@ -2000,10 +2007,11 @@ async function fbPullAll() {
   const fb = window._fb;
   if (!fb) return;
   try {
-    const [songSnap, setSnap, groupSnap] = await Promise.all([
+    const [songSnap, setSnap, groupSnap, noteSnap] = await Promise.all([
       fb.getDocs(fb.collection(fb.db,'songs')),
       fb.getDocs(fb.collection(fb.db,'setlists')),
-      fb.getDocs(fb.collection(fb.db,'groups'))
+      fb.getDocs(fb.collection(fb.db,'groups')),
+      fb.getDocs(fb.collection(fb.db,'notes'))
     ]);
     // merge by updatedAt — most recent wins
     const merge = async (snap, store) => {
@@ -2019,6 +2027,10 @@ async function fbPullAll() {
     await merge(songSnap, 'songs');
     await merge(setSnap, 'setlists');
     await merge(groupSnap, 'groups');
+    // pull notes belonging to the current user (keyed username_songId)
+    const userPrefix = (currentUser||'me') + '_';
+    const userNoteSnap = { docs: noteSnap.docs.filter(d => d.id.startsWith(userPrefix)) };
+    await merge(userNoteSnap, 'notes');
   } catch(e) { console.warn('Firebase pull error:', e); throw e; }
 }
 
@@ -3958,11 +3970,13 @@ function applyNoteZoom() {
 }
 
 // ── PINCH-TO-ZOOM for text/note areas ──
-function setupNoteAreaPinchZoom(el, idx) {
+function setupNoteAreaPinchZoom(el, idx, onZoom) {
   if (!el || el._pinchZoomNote) return;
   el._pinchZoomNote = true;
   let lastDist = 0;
   let pinching = false;
+  // default zoom callback is changeNoteZoom; pass a custom onZoom(delta) to override
+  const zoomFn = onZoom || ((delta) => changeNoteZoom(delta, idx));
 
   el.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
@@ -3987,8 +4001,7 @@ function setupNoteAreaPinchZoom(el, idx) {
     if (!lastDist) { lastDist = dist; return; }
     const ratio = dist / lastDist;
     if (Math.abs(ratio - 1) > 0.015) {
-      const delta = ratio > 1 ? 1 : -1;
-      changeNoteZoom(delta, idx);
+      zoomFn(ratio > 1 ? 1 : -1);
       lastDist = dist;
     }
   }, { passive: false });
@@ -4178,7 +4191,12 @@ async function saveCurrentNote(idx) {
     const song=await dbGet('songs',s.id); song.notes=text; song.updatedAt=Date.now();
     await dbPut('songs',song); currentSetSongs[idx]=song; await syncOut();
   } else {
-    await dbPut('notes',{id:`${currentUser||'me'}_${s.id}`,text,updatedAt:Date.now()});
+    const noteObj = {id:`${currentUser||'me'}_${s.id}`,text,updatedAt:Date.now()};
+    await dbPut('notes', noteObj);
+    // push to Firestore immediately so other devices get it
+    if (fbReady && online) {
+      try { const fb=window._fb; if(fb) await fb.setDoc(fb.doc(fb.collection(fb.db,'notes'),noteObj.id),noteObj); } catch(e) { console.warn('Note push error',e); }
+    }
   }
   editingNote=false; await renderSongPage(idx); showToast('Saved','ok');
 }
@@ -6123,11 +6141,18 @@ function renderSETab() {
       renderChartsTab(id, -1);
     }
   }
-  // pinch-to-zoom on DB panel text body
+  // pinch-to-zoom on DB panel text bodies (both desktop split panel and mobile song-edit page)
   requestAnimationFrame(() => {
-    const pzBody = document.getElementById('sepTabBody') || document.getElementById('seTabBody');
-    if (pzBody) delete pzBody._pinchZoomNote;
-    if (pzBody && !seEditMode) setupNoteAreaPinchZoom(pzBody, currentSongIdx >= 0 ? currentSongIdx : 0);
+    const idx = currentSongIdx >= 0 ? currentSongIdx : 0;
+    // sepTabBody (mobile pg-song-edit) uses changeNoteZoom
+    const sepEl = document.getElementById('sepTabBody');
+    if (sepEl && !seEditMode) { delete sepEl._pinchZoomNote; setupNoteAreaPinchZoom(sepEl, idx); }
+    // seTabBody (desktop DB right panel) uses changeDBZoom with its own key/element
+    const seEl = document.getElementById('seTabBody');
+    if (seEl && !seEditMode) {
+      delete seEl._pinchZoomNote;
+      setupNoteAreaPinchZoom(seEl, idx, (delta) => changeDBZoom(delta * 0.1, 'mgb_zoom_db_details'));
+    }
   });
 }
 
@@ -6570,7 +6595,12 @@ async function saveSong() {
   const myNotesHtml = window._seMyNotesHtml || document.getElementById('seMyNotes')?.innerHTML || '';
   if (myNotesHtml.trim() && myNotesHtml.trim() !== '<br>') {
     const noteKey = `${currentUser||'me'}_${id}`;
-    await dbPut('notes', { id: noteKey, text: myNotesHtml, updatedAt: Date.now() });
+    const noteObj = { id: noteKey, text: myNotesHtml, updatedAt: Date.now() };
+    await dbPut('notes', noteObj);
+    // push to Firestore immediately so other devices get it
+    if (fbReady && online) {
+      try { const fb=window._fb; if(fb) await fb.setDoc(fb.doc(fb.collection(fb.db,'notes'),noteKey),noteObj); } catch(e) { console.warn('Note push error',e); }
+    }
   }
   // save pending audio if any
   if (window._modalPendingAudio) {
@@ -9685,7 +9715,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.46</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β1.48</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
