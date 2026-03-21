@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimum-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0a0a0b">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -870,7 +870,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   <div class="page active" id="pg-setlists">
     <div class="topbar">
       <span class="topbar-logo">MyGigBook</span>
-      <button id="groupFilterChip" onclick="openGroupFilter()" style="display:none;align-items:center;gap:5px;padding:4px 10px;background:rgba(232,255,71,0.12);border:1px solid rgba(232,255,71,0.35);border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:0.5px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">
+      <button id="groupFilterChip" onclick="openGroupFilter()" style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:none;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:0.5px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>
         <span id="groupFilterLabel">All</span>
       </button>
@@ -986,7 +986,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   <div class="page" id="pg-db">
     <div class="topbar">
       <span class="topbar-logo">MyGigBook</span>
-      <button id="groupFilterChipDb" onclick="openGroupFilter()" style="display:none;align-items:center;gap:5px;padding:4px 10px;background:rgba(232,255,71,0.12);border:1px solid rgba(232,255,71,0.35);border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:0.5px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">
+      <button id="groupFilterChipDb" onclick="openGroupFilter()" style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:none;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:0.5px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>
         <span id="groupFilterLabelDb">All</span>
       </button>
@@ -2273,9 +2273,9 @@ function goBack() {
   rp.classList.remove('behind');
   rp.classList.add('active');
   // refresh list pages when returning to them
-  if (ret === 'pg-setlists') renderSetsList();
+  if (ret === 'pg-setlists') { renderSetsList(); updateGroupFilterChips(); }
   if (ret === 'pg-db') {
-    renderDB(); dbShowList(); dbUpdatePinBtn();
+    renderDB(); dbShowList(); dbUpdatePinBtn(); updateGroupFilterChips();
     const detailBar = document.getElementById('dbDetailBar');
     if (detailBar) detailBar.style.display = 'flex';
   }
@@ -2314,11 +2314,11 @@ function navTo(tab) {
   const pg = 'pg-'+tab;
   document.getElementById(pg).classList.add('active');
   pageStack.push(pg);
-  if (tab==='db') { renderDB(); dbShowList(); dbUpdatePinBtn();
+  if (tab==='db') { renderDB(); dbShowList(); dbUpdatePinBtn(); updateGroupFilterChips();
     const detailBar = document.getElementById('dbDetailBar');
     if (detailBar) detailBar.style.display = 'flex';
   }
-  if (tab==='setlists') renderSetsList();
+  if (tab==='setlists') { renderSetsList(); updateGroupFilterChips(); }
 }
 
 // ── SETLISTS ──
@@ -3010,10 +3010,17 @@ function openNoteFullscreen(idx) {
   overlay._close = close;
   titleBar.querySelector('#fsDismissBtn').addEventListener('click', close);
 
-  // swipe left/right to navigate songs (exits fullscreen)
-  let swipeSx = 0, swipeSy = 0;
-  scrollArea.addEventListener('touchstart', e => { swipeSx = e.touches[0].clientX; swipeSy = e.touches[0].clientY; }, { passive: true });
+  // swipe left/right to navigate songs (exits fullscreen) — skip if it was a pinch
+  let swipeSx = 0, swipeSy = 0, swipeWasPinch = false;
+  scrollArea.addEventListener('touchstart', e => {
+    swipeWasPinch = e.touches.length > 1;
+    swipeSx = e.touches[0].clientX; swipeSy = e.touches[0].clientY;
+  }, { passive: true });
+  scrollArea.addEventListener('touchmove', e => {
+    if (e.touches.length > 1) swipeWasPinch = true;
+  }, { passive: true });
   scrollArea.addEventListener('touchend', e => {
+    if (swipeWasPinch) { swipeWasPinch = false; return; }
     const dx = e.changedTouches[0].clientX - swipeSx;
     const dy = e.changedTouches[0].clientY - swipeSy;
     if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
@@ -3023,6 +3030,8 @@ function openNoteFullscreen(idx) {
   }, { passive: true });
 
   loadTabContent();
+  // pinch-to-zoom in fullscreen note overlay
+  setupNoteAreaPinchZoom(scrollArea, idx);
 }
 
 function toggleTuningFork() {
@@ -3398,6 +3407,8 @@ async function renderSongPage(idx) {
   setupSwipe(idx);
   // apply zoom to note content area
   applyNoteZoom();
+  // pinch-to-zoom on note text area
+  requestAnimationFrame(() => setupNoteAreaPinchZoom(document.getElementById('noteArea'), idx));
   // trigger PDF.js rendering for any PDF viewers in the note area
   if (noteTab !== 'listen' && noteTab !== 'all' && noteTab !== 'charts') {
     const s2 = currentSetSongs[idx];
@@ -3944,6 +3955,47 @@ function applyNoteZoom() {
   document.querySelectorAll('.note-zoom-label').forEach(el => {
     el.textContent = Math.round(noteZoom * 100) + '%';
   });
+}
+
+// ── PINCH-TO-ZOOM for text/note areas ──
+function setupNoteAreaPinchZoom(el, idx) {
+  if (!el || el._pinchZoomNote) return;
+  el._pinchZoomNote = true;
+  let lastDist = 0;
+  let pinching = false;
+
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      pinching = true;
+      lastDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      e.preventDefault();
+    } else {
+      pinching = false;
+    }
+  }, { passive: false });
+
+  el.addEventListener('touchmove', e => {
+    if (!pinching || e.touches.length !== 2) return;
+    e.preventDefault();
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    if (!lastDist) { lastDist = dist; return; }
+    const ratio = dist / lastDist;
+    if (Math.abs(ratio - 1) > 0.015) {
+      const delta = ratio > 1 ? 1 : -1;
+      changeNoteZoom(delta, idx);
+      lastDist = dist;
+    }
+  }, { passive: false });
+
+  el.addEventListener('touchend', e => {
+    if (e.touches.length < 2) pinching = false;
+  }, { passive: true });
 }
 
 function buildNoteContent(text, idx) {
@@ -6071,6 +6123,12 @@ function renderSETab() {
       renderChartsTab(id, -1);
     }
   }
+  // pinch-to-zoom on DB panel text body
+  requestAnimationFrame(() => {
+    const pzBody = document.getElementById('sepTabBody') || document.getElementById('seTabBody');
+    if (pzBody) delete pzBody._pinchZoomNote;
+    if (pzBody && !seEditMode) setupNoteAreaPinchZoom(pzBody, currentSongIdx >= 0 ? currentSongIdx : 0);
+  });
 }
 
 // DB split panel state
