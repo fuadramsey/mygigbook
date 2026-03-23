@@ -1628,7 +1628,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.69</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.70</span>
       </div>
 
     </div>
@@ -3194,6 +3194,31 @@ function tapTempo() {
 }
 
 // ── TAG MANAGEMENT ──
+const DEFAULT_TAGS = ['Instrumental', 'Vocal', 'Cover'];
+
+async function populateTagSelect() {
+  const sel = document.getElementById('tagSelect');
+  if (!sel) return;
+  // collect all tags from all songs
+  const allSongs = await dbAll('songs');
+  const allTags = [...new Set([
+    ...DEFAULT_TAGS,
+    ...allSongs.flatMap(s => s.tags || [])
+  ])].filter(Boolean).sort();
+  // keep first 3 options (Add tag…, + New tag…, divider), replace rest
+  while (sel.options.length > 3) sel.remove(3);
+  // remove current song's already-applied tags from the list
+  const currentTags = new Set(window._seTagsEdit || window._seCurrentSong?.tags || []);
+  allTags.forEach(t => {
+    if (!currentTags.has(t)) {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    }
+  });
+}
+
 function addTagFromSelect(sel) {
   const val = sel.value;
   if (!val) return;
@@ -3210,13 +3235,8 @@ function addTag(tag) {
   window._seTagsEdit = window._seTagsEdit || [...(window._seCurrentSong?.tags||[])];
   if (window._seTagsEdit.includes(tag)) return;
   window._seTagsEdit.push(tag);
-  // add to dropdown if custom
-  const sel = document.getElementById('tagSelect');
-  if (sel && !Array.from(sel.options).find(o => o.value === tag)) {
-    const opt = document.createElement('option');
-    opt.value = tag; opt.textContent = tag;
-    sel.insertBefore(opt, sel.options[2]);
-  }
+  // repopulate dropdown so the new tag appears for future songs too
+  populateTagSelect();
   // re-render tag chips
   const container = document.getElementById('tagContainer');
   if (container) {
@@ -6164,6 +6184,7 @@ function renderSETab() {
       requestAnimationFrame(() => {
         const keyEl = document.getElementById('fKey');
         if (keyEl && s.key) keyEl.value = s.key;
+        populateTagSelect();
       });
     }
     // async audio inject if not cached
@@ -10119,7 +10140,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.69</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.70</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
