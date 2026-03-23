@@ -427,6 +427,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .pdf-bar { display: flex; align-items: center; gap: 10px; padding: 10px 0 12px; }
 /* ── AUDIO PLAYER ── */
 .audio-player { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.audio-player.collapsed .audio-progress-wrap,
+.audio-player.collapsed .loop-controls { display: none; }
+.audio-player.collapsed { padding: 8px 14px; gap: 0; }
+.audio-player.collapsed .audio-player-top { gap: 10px; }
 .audio-player-top { display: flex; align-items: center; gap: 12px; }
 .audio-play-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s; }
 .audio-play-btn:hover { opacity: 0.85; }
@@ -1458,22 +1462,22 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <div class="settings-section-label">Appearance</div>
 
-      <button class="settings-row" id="opt-dark" onclick="setTheme('dark')">
-        <div class="settings-row-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"/></svg>
-        </div>
-        <span class="settings-row-label">Dark mode</span>
-        <div class="settings-check" id="check-dark">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-9"/></svg>
-        </div>
-      </button>
-
       <button class="settings-row" id="opt-light" onclick="setTheme('light')">
         <div class="settings-row-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </div>
         <span class="settings-row-label">Light mode</span>
         <div class="settings-check" id="check-light">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-9"/></svg>
+        </div>
+      </button>
+
+      <button class="settings-row" id="opt-dark" onclick="setTheme('dark')">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"/></svg>
+        </div>
+        <span class="settings-row-label">Dark mode</span>
+        <div class="settings-check" id="check-dark">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-9"/></svg>
         </div>
       </button>
@@ -1650,7 +1654,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.82</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.84</span>
       </div>
 
     </div>
@@ -3089,7 +3093,7 @@ function openNoteFullscreen(idx) {
       <button id="fsZoomPlus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
     </div>
     <div style="display:flex;align-items:center;gap:4px;" id="fsScrollControls">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3);"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3);" title="Scroll speed"><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/><path d="M12 2a10 10 0 0 1 7.38 16.75"/><path d="M4.62 18.75a10 10 0 0 1 3.13-14.5"/><path d="M15 9l-3 3"/></svg>
       <div style="width:1px;height:20px;background:var(--border2);margin:0 4px;flex-shrink:0;"></div>
       <button id="fsScrollBtn" class="scroll-play-btn" title="Auto-scroll">
         <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>
@@ -3546,7 +3550,7 @@ async function renderSongPage(idx) {
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
           <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;align-items:center;gap:4px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3);"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3);" title="Scroll speed"><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/><path d="M12 2a10 10 0 0 1 7.38 16.75"/><path d="M4.62 18.75a10 10 0 0 1 3.13-14.5"/><path d="M15 9l-3 3"/></svg>
             <div style="width:1px;height:20px;background:var(--border2);margin:0 4px;flex-shrink:0;"></div>
             <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
               ${scrollPlaying
@@ -3846,7 +3850,8 @@ function buildListenContent(s) {
 function buildFullAudioPlayer(audioKey, idx) {
   const entry = window._audioCache?.[audioKey];
   if (!entry) return '';
-  return `<div class="audio-player" id="audioPlayer">
+  const _audioCollapsed = localStorage.getItem('mgb_audio_collapsed') === '1';
+  return `<div class="audio-player${_audioCollapsed ? ' collapsed' : ''}" id="audioPlayer">
     <div class="audio-player-top">
       <button class="audio-play-btn" id="audioPlayBtn" onclick="toggleAudio('${audioKey}',${idx})">
         <svg viewBox="0 0 24 24" id="audioPlayIcon"><path d="M8 5v14l11-7z"/></svg>
@@ -3857,6 +3862,10 @@ function buildFullAudioPlayer(audioKey, idx) {
       </div>
       <button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeAudio('${audioKey}',${idx})" title="Remove audio">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <button id="audioCollapseBtn" onclick="toggleAudioCollapse()" title="Collapse player"
+        style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg id="audioCollapseIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;transition:transform 0.2s;${_audioCollapsed ? 'transform:rotate(-90deg);' : ''}"><path d="M6 9l6 6 6-6"/></svg>
       </button>
     </div>
     <div class="audio-progress-wrap" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
@@ -3887,6 +3896,15 @@ function buildFullAudioPlayer(audioKey, idx) {
       </button>
     </div>
   </div>`;
+}
+
+function toggleAudioCollapse() {
+  const player = document.getElementById('audioPlayer');
+  const icon = document.getElementById('audioCollapseIcon');
+  if (!player) return;
+  const isCollapsed = player.classList.toggle('collapsed');
+  localStorage.setItem('mgb_audio_collapsed', isCollapsed ? '1' : '0');
+  if (icon) icon.style.transform = isCollapsed ? 'rotate(-90deg)' : '';
 }
 
 function buildAudioSection(s) {
@@ -10297,7 +10315,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.82</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.84</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
