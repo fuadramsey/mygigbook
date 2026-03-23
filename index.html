@@ -218,32 +218,34 @@ body.palette-forest {
 /* neon = default dark, already styled */
 
 /* ── FONT SIZE SCALING ── */
-/* Medium = default (1×). Small = 0.85×, Large = 1.15×, XL = 1.3× */
+/* Medium = default (1×). Small = 0.85×, Large = 1.3×, XL = 1.5× */
 body.fs-small  { font-size: 13px !important; }
 body.fs-large  { font-size: 18px !important; }
 body.fs-xl     { font-size: 21px !important; }
-/* scale key UI text elements — !important ensures these beat ALL media overrides */
+/* structural UI elements use !important to beat media overrides */
 body.fs-small .song-row-title  { font-size: 13px !important; }
 body.fs-small .db-song-title   { font-size: 12px !important; }
 body.fs-small .set-item-name   { font-size: 15px !important; }
-body.fs-small .note-display    { font-size: 17px !important; }
 body.fs-small .note-tab        { font-size: 12px !important; }
 body.fs-large .song-row-title  { font-size: 20px !important; }
 body.fs-large .db-song-title   { font-size: 19px !important; }
 body.fs-large .set-item-name   { font-size: 24px !important; }
-body.fs-large .note-display    { font-size: 26px !important; }
 body.fs-large .note-tab        { font-size: 17px !important; }
-body.fs-large .rte-body        { font-size: 20px !important; }
 body.fs-large .form-input      { font-size: 18px !important; }
 body.fs-large .settings-row    { font-size: 17px !important; }
 body.fs-xl    .song-row-title  { font-size: 24px !important; }
 body.fs-xl    .db-song-title   { font-size: 22px !important; }
 body.fs-xl    .set-item-name   { font-size: 28px !important; }
-body.fs-xl    .note-display    { font-size: 30px !important; }
 body.fs-xl    .note-tab        { font-size: 18px !important; }
-body.fs-xl    .rte-body        { font-size: 24px !important; }
 body.fs-xl    .form-input      { font-size: 20px !important; }
 body.fs-xl    .settings-row    { font-size: 19px !important; }
+/* note-display and rte-body have NO !important so inline zoom styles can override them */
+body.fs-small .note-display    { font-size: 17px; }
+body.fs-small .rte-body        { font-size: 14px; }
+body.fs-large .note-display    { font-size: 26px; }
+body.fs-large .rte-body        { font-size: 20px; }
+body.fs-xl    .note-display    { font-size: 30px; }
+body.fs-xl    .rte-body        { font-size: 24px; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 img, video, svg { max-width: 100%; }
 html { height: 100%; height: 100dvh; width: 100%; overflow: hidden; }
@@ -817,16 +819,16 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .modal-sheet { border-radius: var(--radius-lg); max-width: 560px; max-height: calc(100vh - 48px); margin: 24px auto; }
   .song-page-title { font-size: 55px; }
   .note-edit-area { min-height: 220px; }
-  /* Tablet base: medium = what desktop calls Large for readability */
-  body { font-size: 18px; }
-  .note-display { font-size: 26px; }
-  .rte-body { font-size: 20px; }
-  .set-item-name { font-size: 24px; }
-  .song-row-title { font-size: 20px; }
-  .db-song-title { font-size: 19px; }
-  .note-tab { font-size: 17px; }
-  .settings-row { font-size: 17px; }
-  .form-input { font-size: 17px; }
+  /* Tablet base: medium = larger than desktop for readability */
+  body { font-size: 20px; }
+  .note-display { font-size: 28px; }  /* no !important — zoom can override */
+  .rte-body { font-size: 22px; }      /* no !important — zoom can override */
+  .set-item-name { font-size: 26px; }
+  .song-row-title { font-size: 22px; }
+  .db-song-title { font-size: 20px; }
+  .note-tab { font-size: 18px; }
+  .settings-row { font-size: 18px; }
+  .form-input { font-size: 18px; }
 }
 
 /* Desktop (1100px+) */
@@ -1626,7 +1628,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.65</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.66</span>
       </div>
 
     </div>
@@ -2954,11 +2956,11 @@ let tuningPlaying = false;
 function getBaseFontPx() {
   const size = localStorage.getItem('mgb_font_size') || 'medium';
   const isTablet = window.innerWidth >= 700;
-  if (size === 'small')  return 17;
-  if (size === 'large')  return 26;
-  if (size === 'xl')     return 30;
-  // medium: tablet gets what desktop calls large
-  return isTablet ? 26 : 20;
+  if (size === 'small')  return isTablet ? 17 : 17;
+  if (size === 'large')  return isTablet ? 30 : 26;
+  if (size === 'xl')     return isTablet ? 36 : 30;
+  // medium: tablet gets bigger base
+  return isTablet ? 28 : 20;
 }
 
 function changeDBZoom(delta, key) {
@@ -10071,7 +10073,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.65</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.66</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
