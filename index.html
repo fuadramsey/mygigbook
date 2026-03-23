@@ -673,7 +673,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 }
 .scroll-play-btn:hover { transform: scale(1.08); opacity: 0.85; }
 .scroll-play-btn:active { transform: scale(0.92); }
-.scroll-play-btn svg { width: 12px; height: 12px; }
+.scroll-play-btn svg { }
 .scroll-speed-btn {
   width: 22px; height: 22px; border-radius: 6px;
   border: 1px solid var(--border); background: var(--surface2);
@@ -1119,7 +1119,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
             </div>
             <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
               <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>
               </button>
               <div style="width:12px;"></div>
               <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
@@ -1189,7 +1189,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     </div>
     <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
       <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>
       </button>
       <div style="width:12px;"></div>
       <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
@@ -1650,7 +1650,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.78</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.82</span>
       </div>
 
     </div>
@@ -3083,13 +3083,16 @@ function openNoteFullscreen(idx) {
   toolbar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;';
   toolbar.innerHTML = `
     <div style="display:flex;align-items:center;gap:4px;">
-      <button id="fsZoomMinus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">−</button>
+      
+      <button id="fsZoomMinus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/></svg></button>
       <span class="fs-zoom-label note-zoom-label" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:38px;text-align:center;">${Math.round(noteZoom*100)}%</span>
-      <button id="fsZoomPlus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">+</button>
+      <button id="fsZoomPlus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
     </div>
     <div style="display:flex;align-items:center;gap:4px;" id="fsScrollControls">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3);"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
+      <div style="width:1px;height:20px;background:var(--border2);margin:0 4px;flex-shrink:0;"></div>
       <button id="fsScrollBtn" class="scroll-play-btn" title="Auto-scroll">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>
       </button>
       <button id="fsSpeedMinus" class="scroll-speed-btn">−</button>
       <span id="fsSpeedLabel" class="scroll-speed-label">×${scrollSpeed}</span>
@@ -3395,9 +3398,9 @@ async function renderSongPage(idx) {
     document.getElementById('songPageBody').innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
         <div style="display:flex;align-items:center;gap:4px;">
-          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" style="font-size:18px;width:32px;height:32px;">−</button>
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/></svg></button>
           <span class="note-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
-          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" style="font-size:18px;width:32px;height:32px;">+</button>
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
         </div>
       </div>
       <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;">
@@ -3536,18 +3539,21 @@ async function renderSongPage(idx) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <div style="width:1px;height:20px;background:var(--border2);margin:0 2px;"></div>` : ''}
-          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="font-size:18px;width:32px;height:32px;">−</button>
+          
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/></svg></button>
           <span class="note-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
-          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:18px;width:32px;height:32px;">+</button>
+          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;">
+          <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;align-items:center;gap:4px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3);"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
+            <div style="width:1px;height:20px;background:var(--border2);margin:0 4px;flex-shrink:0;"></div>
             <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
               ${scrollPlaying
-                ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`}
+                ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+                : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>`}
             </button>
-            <div style="width:8px;flex-shrink:0;"></div>
+            <div style="width:4px;flex-shrink:0;"></div>
             <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
             <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
             <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
@@ -4021,8 +4027,8 @@ function stopSEScroll() {
 }
 function updateSEScrollUI() {
   const svg = seScrollPlaying
-    ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`;
+    ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>`;
   document.querySelectorAll('#seScrollPlayBtn').forEach(btn => { btn.innerHTML = svg; });
 }
 function changeSESpeed(delta) {
@@ -4072,8 +4078,8 @@ function updateScrollUI() {
   const btn = document.getElementById('scrollPlayBtn');
   if (!btn) return;
   btn.innerHTML = scrollPlaying
-    ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`;
+    ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>`;
 }
 
 function changeSpeed(delta) {
@@ -10291,7 +10297,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.78</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.82</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
