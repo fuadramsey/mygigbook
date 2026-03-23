@@ -1628,7 +1628,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.66</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.67</span>
       </div>
 
     </div>
@@ -4202,8 +4202,9 @@ function buildNoteContent(text, idx) {
           <div class="rte-divider"></div>
           <button class="rte-btn" onclick="rteCmd('insertUnorderedList')" title="Bullet list" style="font-size:16px;">≡</button>
           <button class="rte-btn" onclick="rteClearFormat()" title="Clear formatting" style="font-size:11px;">Aa</button>
+          <div class="rte-divider"></div><select class="rte-select" onchange="rteLineSpacing('noteEditArea',this.value)" title="Line spacing" style="min-width:48px;"><option value="1" selected>≡ 1</option><option value="1.2">≡ 1.2</option><option value="1.5">≡ 1.5</option><option value="1.8">≡ 1.8</option><option value="2">≡ 2</option></select>
         </div>
-        <div class="rte-body" id="noteEditArea" contenteditable="true"
+        <div class="rte-body" id="noteEditArea" style="line-height:1;" contenteditable="true"
           oninput="rteUpdateToolbar()"
           onkeyup="rteUpdateToolbar()"
           onmouseup="rteUpdateToolbar()"
@@ -4368,6 +4369,11 @@ function rteFontSize(size) {
 function rteClearFormat() {
   document.execCommand('removeFormat', false, null);
   document.getElementById('noteEditArea')?.focus();
+}
+
+function rteLineSpacing(editorId, value) {
+  const el = document.getElementById(editorId);
+  if (el) el.style.lineHeight = value;
 }
 
 function rteUpdateToolbar() {
@@ -6120,8 +6126,9 @@ function renderSETab() {
           <div class="rte-divider"></div>
           <button class="rte-btn" onclick="rteCmd2('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
           <button class="rte-btn" onclick="rteClearFormat2()" title="Clear" style="font-size:11px;">Aa</button>
+          <div class="rte-divider"></div><select class="rte-select" onchange="rteLineSpacing('fNotes',this.value)" title="Line spacing" style="min-width:48px;"><option value="1" selected>≡ 1</option><option value="1.2">≡ 1.2</option><option value="1.5">≡ 1.5</option><option value="1.8">≡ 1.8</option><option value="2">≡ 2</option></select>
         </div>
-        <div class="rte-body" id="fNotes" contenteditable="true" style="min-height:200px;" onpaste="rtePaste2(event)">${s.notes||''}</div>`;
+        <div class="rte-body" id="fNotes" contenteditable="true" style="min-height:200px;line-height:1;" onpaste="rtePaste2(event)">${s.notes||''}</div>`;
       requestAnimationFrame(() => {
         const keyEl = document.getElementById('fKey');
         if (keyEl && s.key) keyEl.value = s.key;
@@ -6195,8 +6202,9 @@ function renderSETab() {
           <div class="rte-divider"></div>
           <button class="rte-btn" onclick="rteCmd3('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
           <button class="rte-btn" onclick="rteClearFormat3()" title="Clear" style="font-size:11px;">Aa</button>
+          <div class="rte-divider"></div><select class="rte-select" onchange="rteLineSpacing('seMyNotes',this.value)" title="Line spacing" style="min-width:48px;"><option value="1" selected>≡ 1</option><option value="1.2">≡ 1.2</option><option value="1.5">≡ 1.5</option><option value="1.8">≡ 1.8</option><option value="2">≡ 2</option></select>
         </div>
-        <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
+        <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);line-height:1;" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
     }
     // async audio inject if not cached
     if (id && !window._audioCache?.[`audio_${id}`]) {
@@ -10073,7 +10081,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.66</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.67</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
