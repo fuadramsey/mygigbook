@@ -1630,7 +1630,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.72</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.73</span>
       </div>
 
     </div>
@@ -7331,10 +7331,21 @@ function setAutoDownload(val) {
   localStorage.setItem(AUTO_DOWNLOAD_PROMPTED_KEY, '1');
   updateAutoDownloadUI();
   // When turned ON, immediately download all audio
-  if (val && online && fbReady) {
-    downloadAudioNow();
-  } else if (val && (!online || !fbReady)) {
-    showToast('Audio will download on next sync', 'ok');
+  if (val) {
+    if (!online) {
+      showToast('Offline — audio will download on next sync', 'ok');
+    } else if (!fbReady) {
+      // wait for firebase to be ready
+      showToast('Connecting… audio download will start shortly', 'ok');
+      const waitAndDownload = async (attempts) => {
+        if (fbReady) { downloadAudioNow(); return; }
+        if (attempts > 20) { showToast('Could not connect — try syncing manually', 'err'); return; }
+        setTimeout(() => waitAndDownload(attempts + 1), 500);
+      };
+      waitAndDownload(0);
+    } else {
+      downloadAudioNow();
+    }
   }
 }
 
@@ -7387,10 +7398,12 @@ async function downloadAudioNow() {
     const toDownload = [];
     for (const meta of audioFiles) {
       const { fileId, downloadUrl, songId } = meta;
-      if (!downloadUrl || !fileId) continue;
+      if (!downloadUrl || !fileId || !songId) continue;
       const song = songMap[songId];
       if (!song || !await canAccessSong(song)) continue;
-      const existing = await dbGet('audio', fileId);
+      // audio is stored with key audio_${songId}
+      const audioKey = `audio_${songId}`;
+      const existing = await dbGet('audio', audioKey);
       if (existing?.data) continue;
       toDownload.push(meta);
     }
@@ -7404,15 +7417,18 @@ async function downloadAudioNow() {
     let downloaded = 0, failed = 0;
     for (let i = 0; i < toDownload.length; i++) {
       const { fileId, name, mimeType, downloadUrl, songId } = toDownload[i];
+      const audioKey = `audio_${songId}`;
       const pct = 10 + Math.round(((i) / toDownload.length) * 88);
       setProgress(pct, `Downloading ${i + 1} of ${toDownload.length}…`, name);
       try {
-        const ab = await fetchFromStorage(`songs/${songId}/audio/${fileId}`, downloadUrl);
-        await dbPut('audio', { id: fileId, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
-        if (window._audioCache?.[fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fileId].blobUrl);
+        const path = `songs/${songId}/audio/${fileId}`;
+        const ab = await fetchFromStorage(path, downloadUrl);
+        // store under audio_${songId} — the key loadAudioHybrid and the player expect
+        await dbPut('audio', { id: audioKey, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
+        if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
         const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
         window._audioCache = window._audioCache || {};
-        window._audioCache[fileId] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: false };
+        window._audioCache[audioKey] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: true };
         downloaded++;
       } catch(e) {
         console.warn('[Audio Sync] Download error:', fileId, e);
@@ -10244,7 +10260,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.72</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.73</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
