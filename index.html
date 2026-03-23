@@ -217,35 +217,54 @@ body.palette-forest {
 }
 /* neon = default dark, already styled */
 
-/* ── FONT SIZE SCALING ── */
-/* Medium = default (1×). Small = 0.85×, Large = 1.3×, XL = 1.5× */
-body.fs-small  { font-size: 13px !important; }
-body.fs-large  { font-size: 18px !important; }
-body.fs-xl     { font-size: 21px !important; }
-/* structural UI elements use !important to beat media overrides */
+/* ── FONT SIZE SCALING ──
+   Base sizes by device:
+     Desktop: body 15px, note-display 20px, set-item-name 18px, song-row-title 15px
+     Mobile:  body 17px, note-display 22px, set-item-name 25px, song-row-title 21px
+     Tablet:  body 20px, note-display 28px, set-item-name 26px, song-row-title 22px
+
+   Small:  ~85% of base
+   Medium: base (no class)
+   Large:  ~130% of base
+   XL:     ~160% of base
+
+   All rules use !important to beat media query overrides.
+   Exception: note-display and rte-body skip !important so JS zoom can override via inline style.
+   Those use higher specificity (body.fs-X .note-display) which beats plain @media .note-display.
+*/
+
+/* ── SMALL ── */
+body.fs-small                  { font-size: 13px !important; }
 body.fs-small .song-row-title  { font-size: 13px !important; }
 body.fs-small .db-song-title   { font-size: 12px !important; }
 body.fs-small .set-item-name   { font-size: 15px !important; }
 body.fs-small .note-tab        { font-size: 12px !important; }
-body.fs-large .song-row-title  { font-size: 20px !important; }
-body.fs-large .db-song-title   { font-size: 19px !important; }
-body.fs-large .set-item-name   { font-size: 24px !important; }
+body.fs-small .form-input      { font-size: 13px !important; }
+body.fs-small .settings-row    { font-size: 13px !important; }
+body.fs-small .note-display    { font-size: 16px; }
+body.fs-small .rte-body        { font-size: 13px; }
+
+/* ── LARGE ── desktop: ~130%, mobile: ~130%, tablet: ~130% ── */
+body.fs-large                  { font-size: 18px !important; }
+body.fs-large .song-row-title  { font-size: 22px !important; }
+body.fs-large .db-song-title   { font-size: 20px !important; }
+body.fs-large .set-item-name   { font-size: 28px !important; }
 body.fs-large .note-tab        { font-size: 17px !important; }
 body.fs-large .form-input      { font-size: 18px !important; }
 body.fs-large .settings-row    { font-size: 17px !important; }
-body.fs-xl    .song-row-title  { font-size: 24px !important; }
-body.fs-xl    .db-song-title   { font-size: 22px !important; }
-body.fs-xl    .set-item-name   { font-size: 28px !important; }
-body.fs-xl    .note-tab        { font-size: 18px !important; }
+body.fs-large .note-display    { font-size: 29px; }
+body.fs-large .rte-body        { font-size: 22px; }
+
+/* ── XL ── desktop: ~160%, mobile: ~160%, tablet: ~160% ── */
+body.fs-xl                     { font-size: 21px !important; }
+body.fs-xl    .song-row-title  { font-size: 26px !important; }
+body.fs-xl    .db-song-title   { font-size: 24px !important; }
+body.fs-xl    .set-item-name   { font-size: 32px !important; }
+body.fs-xl    .note-tab        { font-size: 19px !important; }
 body.fs-xl    .form-input      { font-size: 20px !important; }
 body.fs-xl    .settings-row    { font-size: 19px !important; }
-/* note-display and rte-body have NO !important so inline zoom styles can override them */
-body.fs-small .note-display    { font-size: 17px; }
-body.fs-small .rte-body        { font-size: 14px; }
-body.fs-large .note-display    { font-size: 26px; }
-body.fs-large .rte-body        { font-size: 20px; }
-body.fs-xl    .note-display    { font-size: 30px; }
-body.fs-xl    .rte-body        { font-size: 24px; }
+body.fs-xl    .note-display    { font-size: 34px; }
+body.fs-xl    .rte-body        { font-size: 26px; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 img, video, svg { max-width: 100%; }
 html { height: 100%; height: 100dvh; width: 100%; overflow: hidden; }
@@ -1630,7 +1649,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.73</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.74</span>
       </div>
 
     </div>
@@ -2963,13 +2982,19 @@ let tuningPlaying = false;
 // Returns the base note-display font size in px based on current font size setting
 // Tablet (700px+) uses large as its medium, so base sizes are higher there
 function getBaseFontPx() {
+  // Returns base note-display px for zoom calculations.
+  // Must match the CSS values above exactly so zoom starts from the right baseline.
   const size = localStorage.getItem('mgb_font_size') || 'medium';
-  const isTablet = window.innerWidth >= 700;
-  if (size === 'small')  return isTablet ? 17 : 17;
-  if (size === 'large')  return isTablet ? 30 : 26;
-  if (size === 'xl')     return isTablet ? 36 : 30;
-  // medium: tablet gets bigger base
-  return isTablet ? 28 : 20;
+  const w = window.innerWidth;
+  const isTablet = w >= 700;
+  const isMobile = w <= 480;
+  if (size === 'small')  return 16;           // all devices: small is small
+  if (size === 'large')  return 29;           // matches body.fs-large .note-display
+  if (size === 'xl')     return 34;           // matches body.fs-xl .note-display
+  // medium: matches device base note-display
+  if (isTablet) return 28;
+  if (isMobile) return 22;
+  return 20;
 }
 
 function changeDBZoom(delta, key) {
@@ -10260,7 +10285,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.73</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.74</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
