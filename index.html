@@ -360,17 +360,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .set-stat { text-align: center; }
 .set-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--accent); line-height: 1; }
 .set-stat-lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin-top: 1px; }
-.song-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; user-select: none; }
+.song-row { display: flex; align-items: center; gap: 10px; padding: 13px 12px 13px 8px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; user-select: none; }
 .song-row:active { background: var(--surface2); }
 .song-row.dragging { opacity: 0.35; }
 .song-row.drag-over { border-top: 2px solid var(--accent); }
-.song-num { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text3); width: 22px; text-align: right; flex-shrink: 0; }
+.song-num { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--accent); width: 28px; text-align: center; flex-shrink: 0; line-height: 1; opacity: 0.85; }
 .song-row-info { flex: 1; min-width: 0; }
-.song-row-title { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.song-row-sub { font-size: 12px; color: var(--text2); margin-top: 2px; display: flex; gap: 8px; align-items: center; }
+.song-row-title { font-weight: 600; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-row-sub { font-size: 12px; color: var(--text2); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
 .key-pill { font-family: 'DM Mono', monospace; font-size: 11px; background: rgba(220,38,38,0.12); color: var(--accent); padding: 2px 8px; border-radius: 5px; border: 1px solid rgba(220,38,38,0.2); }
-.drag-grip { color: var(--text3); padding: 4px; cursor: grab; }
-.drag-grip svg { width: 16px; height: 16px; }
+.song-row-key-badge { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--accent); background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; padding: 2px 10px; flex-shrink: 0; line-height: 1.2; letter-spacing: 1px; }
+.drag-grip { color: var(--text3); padding: 4px; cursor: grab; opacity: 0.4; }
+.drag-grip svg { width: 14px; height: 14px; }
 
 /* SONG NOTE PAGE */
 .song-page-header { padding: 12px 16px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
@@ -756,7 +757,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   /* Setlist and song rows */
   .set-item-name { font-size: 25px; }
   .set-item-meta { font-size: 14px; }
-  .song-row-title { font-size: 21px; }
+  .song-row-title { font-size: 24px; }
   .song-row-sub { font-size: 13px; }
 
   /* Form inputs */
@@ -1649,7 +1650,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.77</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.78</span>
       </div>
 
     </div>
@@ -2730,10 +2731,10 @@ async function renderSetDetail() {
           <div class="song-row-title">${esc(item.title)}</div>
           <div class="song-row-sub">
             ${item.artist?`<span>${esc(item.artist)}</span>`:''}
-            ${item.key?`<span class="key-pill">${esc(item.key)}</span>`:''}
             ${item.bpm?`<span>${item.bpm} BPM</span>`:''}
           </div>
         </div>
+        ${item.key ? `<span class="song-row-key-badge">${esc(item.key)}</span>` : ''}
         <div style="display:flex;gap:4px">
           <div class="sm-btn add-note-btn" title="Add note after this song" onclick="event.stopPropagation();addNoteAfter(${i})">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -10290,7 +10291,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.77</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.78</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
