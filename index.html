@@ -817,15 +817,16 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .modal-sheet { border-radius: var(--radius-lg); max-width: 560px; max-height: calc(100vh - 48px); margin: 24px auto; }
   .song-page-title { font-size: 55px; }
   .note-edit-area { min-height: 220px; }
-  /* Tablet base: larger default fonts for readability */
-  body { font-size: 16px; }
-  .note-display { font-size: 20px; }
-  .rte-body { font-size: 18px; }
-  .set-item-name { font-size: 22px; }
+  /* Tablet base: medium = what desktop calls Large for readability */
+  body { font-size: 18px; }
+  .note-display { font-size: 26px; }
+  .rte-body { font-size: 20px; }
+  .set-item-name { font-size: 24px; }
   .song-row-title { font-size: 20px; }
-  .db-song-title { font-size: 18px; }
-  .note-tab { font-size: 15px; }
-  .settings-row { font-size: 15px; }
+  .db-song-title { font-size: 19px; }
+  .note-tab { font-size: 17px; }
+  .settings-row { font-size: 17px; }
+  .form-input { font-size: 17px; }
 }
 
 /* Desktop (1100px+) */
@@ -1625,7 +1626,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.64</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.65</span>
       </div>
 
     </div>
@@ -2948,11 +2949,23 @@ let tuningGain = null;
 let tuningPlaying = false;
 
 // ── DB DETAILS ZOOM ──
+// Returns the base note-display font size in px based on current font size setting
+// Tablet (700px+) uses large as its medium, so base sizes are higher there
+function getBaseFontPx() {
+  const size = localStorage.getItem('mgb_font_size') || 'medium';
+  const isTablet = window.innerWidth >= 700;
+  if (size === 'small')  return 17;
+  if (size === 'large')  return 26;
+  if (size === 'xl')     return 30;
+  // medium: tablet gets what desktop calls large
+  return isTablet ? 26 : 20;
+}
+
 function changeDBZoom(delta, key) {
   const cur = parseFloat(localStorage.getItem(key) || '1');
   const newZoom = Math.round(Math.max(0.5, Math.min(3, cur + delta)) * 10) / 10;
   localStorage.setItem(key, newZoom);
-  const fs = `${Math.round(20 * newZoom)}px`;
+  const fs = `${Math.round(getBaseFontPx() * newZoom)}px`;
   const lh = `1.6`; // fixed line-height — don't scale with zoom
   // update zoom labels
   const label = document.getElementById('dbZoomLabel');
@@ -3060,7 +3073,7 @@ function openNoteFullscreen(idx) {
   renderTabBar();
 
   function applyFsZoom() {
-    const basePx = 20;
+    const basePx = getBaseFontPx();
     const fs = `${Math.round(basePx * noteZoom)}px`;
     const lh = `1.6`;
     scrollArea.querySelectorAll('.note-display, .rte-body').forEach(el => { el.style.fontSize = fs; el.style.lineHeight = lh; });
@@ -3332,7 +3345,7 @@ async function renderSongPage(idx) {
       </div>
       <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;color:var(--accent);opacity:0.6;flex-shrink:0;"><path d="M8 6h8M8 10h8M8 14h5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-        <div class="note-display" id="inlineNoteDisplay" style="text-align:center;max-width:560px;min-height:unset;font-size:${Math.round(20*noteZoom)}px;line-height:1.6;">${s.text ? esc(s.text) : '<span style="color:var(--text3);font-style:italic;font-size:15px;">No note text.</span>'}</div>
+        <div class="note-display" id="inlineNoteDisplay" style="text-align:center;max-width:560px;min-height:unset;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${s.text ? esc(s.text) : '<span style="color:var(--text3);font-style:italic;font-size:15px;">No note text.</span>'}</div>
       </div>`;
     setupSwipe(idx);
     return;
@@ -4028,7 +4041,7 @@ function changeNoteZoom(delta, idx) {
 }
 
 function applyNoteZoom() {
-  const basePx = 20;
+  const basePx = getBaseFontPx();
   const fs = `${Math.round(basePx * noteZoom)}px`;
   const lh = `1.6`; // fixed line-height
 
@@ -6042,7 +6055,7 @@ function renderSETab() {
           </div>
           ${(s.tags||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;">${(s.tags).map(t=>`<span style="background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--text2);">${esc(t)}</span>`).join('')}</div>` : ''}
           ${s.artist ? `<div style="font-size:15px;color:var(--text2);">${esc(s.artist)}</div>` : ''}
-          ${s.notes ? `<div style="margin-top:8px;"><div class="form-label" style="margin-bottom:6px;">Lyrics</div><div class="note-display" id="dbDetailsNote" style="white-space:pre-wrap;font-size:${Math.round(20*dbZoom)}px;line-height:${1.9*dbZoom};">${s.notes}</div></div>` : '<div style="color:var(--text3);font-style:italic;font-size:14px;">No lyrics added.</div>'}
+          ${s.notes ? `<div style="margin-top:8px;"><div class="form-label" style="margin-bottom:6px;">Lyrics</div><div class="note-display" id="dbDetailsNote" style="white-space:pre-wrap;font-size:${Math.round(getBaseFontPx()*dbZoom)}px;line-height:1.6;">${s.notes}</div></div>` : '<div style="color:var(--text3);font-style:italic;font-size:14px;">No lyrics added.</div>'}
         </div>`;
     } else {
       // EDIT view
@@ -6156,7 +6169,7 @@ function renderSETab() {
           <button onclick="changeDBZoom(0.1,'${dbZoomKeyMN}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
         </div>
         ${myNoteHtml
-          ? `<div class="note-display" style="white-space:pre-wrap;min-height:80px;font-size:${Math.round(20*dbZoomMN)}px;line-height:1.6;">${myNoteHtml}</div>`
+          ? `<div class="note-display" style="white-space:pre-wrap;min-height:80px;font-size:${Math.round(getBaseFontPx()*dbZoomMN)}px;line-height:1.6;">${myNoteHtml}</div>`
           : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
     } else {
       // EDIT view
@@ -10058,7 +10071,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.64</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.65</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
