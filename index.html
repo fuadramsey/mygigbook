@@ -381,7 +381,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .listen-confirm-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--text); font-family: 'DM Mono', monospace; min-width: 0; }
 .listen-confirm-row input::placeholder { color: var(--text3); }
 .note-content { padding: 16px; }
-.note-display { font-family: 'DM Mono', monospace; font-size: 20px; line-height: 1.9; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
+.note-display { font-family: 'DM Mono', monospace; font-size: 20px; line-height: 1; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
 .note-display.empty { color: var(--text3); font-style: italic; }
 .note-edit-area { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; resize: none; min-height: 200px; }
 .note-edit-area:focus { outline: none; border-color: rgba(220,38,38,0.4); }
@@ -394,7 +394,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .rte-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); font-size: 12px; font-family: 'DM Mono', monospace; padding: 2px 6px; cursor: pointer; height: 28px; }
 .rte-highlight-btn { width: 30px; height: 28px; border: 1px solid transparent; border-radius: 6px; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; flex-shrink: 0; }
 .rte-highlight-btn:hover { background: var(--surface3); }
-.rte-body { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 12px; min-height: 200px; outline: none; word-break: break-word; }
+.rte-body { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 12px; min-height: 200px; outline: none; word-break: break-word; }
 .edit-note-btn { margin-top: 12px; width: 100%; padding: 11px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface2); color: var(--text2); font-family: inherit; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .save-btn { margin-top: 10px; width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: var(--radius); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .save-btn:active { opacity: 0.85; }
@@ -1628,7 +1628,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.67</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.68</span>
       </div>
 
     </div>
@@ -4373,7 +4373,32 @@ function rteClearFormat() {
 
 function rteLineSpacing(editorId, value) {
   const el = document.getElementById(editorId);
-  if (el) el.style.lineHeight = value;
+  if (!el) return;
+  el.focus();
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+    // No selection — apply to whole editor
+    el.style.lineHeight = value;
+    return;
+  }
+  const range = sel.getRangeAt(0);
+  // Wrap selection in a div with line-height
+  const div = document.createElement('div');
+  div.style.lineHeight = value;
+  try {
+    range.surroundContents(div);
+  } catch(e) {
+    // surroundContents fails if selection crosses block boundaries — extract and wrap
+    const fragment = range.extractContents();
+    div.appendChild(fragment);
+    range.insertNode(div);
+  }
+  // Restore selection
+  sel.removeAllRanges();
+  const newRange = document.createRange();
+  newRange.selectNodeContents(div);
+  sel.addRange(newRange);
+  el.focus();
 }
 
 function rteUpdateToolbar() {
@@ -10081,7 +10106,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.67</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.68</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
