@@ -1628,7 +1628,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.68</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.69</span>
       </div>
 
     </div>
@@ -1938,12 +1938,16 @@ async function syncFilesFromStorage() {
       const { type, fileId, name, mimeType, downloadUrl, songId } = meta;
       if (!downloadUrl || !fileId || !songId) continue;
 
-      // skip audio — always on-demand
-      if (type === 'audio') continue;
+      // audio: skip unless auto-download is on
+      if (type === 'audio') {
+        if (!autoDownloadFiles) continue;
+        // fall through to download it below
+      }
 
       // determine which store and check access
       let store = null;
-      if (type === 'pdf' || type.startsWith('charts_pdf')) store = 'pdfs';
+      if (type === 'audio') store = 'audio';
+      else if (type === 'pdf' || type.startsWith('charts_pdf')) store = 'pdfs';
       else if (type === 'image' || type.startsWith('charts_img')) store = 'images';
       if (!store) continue;
 
@@ -1974,9 +1978,13 @@ async function syncFilesFromStorage() {
           // derive storage path from type
           let storageSub = 'pdfs';
           if (type === 'image' || type.startsWith('charts_img')) storageSub = 'images';
+          if (type === 'audio') storageSub = 'audio';
           const path = meta.path || `songs/${songId}/${storageSub}/${fileId}`;
           const ab = await fetchFromStorage(path, downloadUrl);
-          if (ab) await dbPut(store, { id: fileId, name, data: ab, mimeType, updatedAt: meta.updatedAt || Date.now() });
+          if (ab) {
+            const audioKey = type === 'audio' ? `audio_${songId}` : fileId;
+            await dbPut(store, { id: audioKey, name, data: ab, mimeType: mimeType || (type === 'audio' ? 'audio/mpeg' : undefined), updatedAt: meta.updatedAt || Date.now() });
+          }
         } catch(e) { console.warn('File sync error:', fileId, e); }
       })());
     }
@@ -2136,10 +2144,9 @@ async function syncIn() {
 async function manualSync() {
   if (!online) { showToast('No internet connection', 'err'); return; }
   if (syncInProgress) return;
-  // show first-time audio download prompt if needed
+  // mark as prompted so the old modal never shows
   if (!localStorage.getItem(AUTO_DOWNLOAD_PROMPTED_KEY)) {
-    maybePromptAudioDownload(() => manualSync());
-    return;
+    localStorage.setItem(AUTO_DOWNLOAD_PROMPTED_KEY, '1');
   }
   if (!fbReady) {
     showToast('Connecting to cloud…');
@@ -7198,6 +7205,12 @@ function setAutoDownload(val) {
   localStorage.setItem(AUTO_DOWNLOAD_KEY, val ? '1' : '0');
   localStorage.setItem(AUTO_DOWNLOAD_PROMPTED_KEY, '1');
   updateAutoDownloadUI();
+  // When turned ON, immediately download all audio
+  if (val && online && fbReady) {
+    downloadAudioNow();
+  } else if (val && (!online || !fbReady)) {
+    showToast('Audio will download on next sync', 'ok');
+  }
 }
 
 function audioDownloadPromptAnswer(val) {
@@ -10106,7 +10119,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.68</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.69</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
