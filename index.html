@@ -382,6 +382,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .listen-confirm-row input::placeholder { color: var(--text3); }
 .note-content { padding: 16px; }
 .note-display { font-family: 'DM Mono', monospace; font-size: 20px; line-height: 1; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
+.tab-block { display: block; font-family: 'DM Mono', monospace; white-space: pre; overflow-x: auto; background: var(--surface2); border: 1px solid var(--border2); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 14px; margin: 6px 0; line-height: 1.5; font-size: 0.95em; -webkit-overflow-scrolling: touch; }
+.tab-block::before { content: '🎸 TAB'; display: block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); font-family: 'DM Mono', monospace; margin-bottom: 6px; opacity: 0.8; }
 .note-display.empty { color: var(--text3); font-style: italic; }
 .note-edit-area { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; resize: none; min-height: 200px; }
 .note-edit-area:focus { outline: none; border-color: rgba(220,38,38,0.4); }
@@ -1628,7 +1630,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.71</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.72</span>
       </div>
 
     </div>
@@ -4403,24 +4405,81 @@ function rteToggleTabMode(editorId) {
   const el = document.getElementById(editorId);
   const btn = document.getElementById('rteTabBtn_' + editorId);
   if (!el || !btn) return;
-  const isTab = el.dataset.tabMode === '1';
-  if (isTab) {
-    // turn off — restore normal wrapping
-    el.dataset.tabMode = '0';
-    el.style.whiteSpace = '';
-    el.style.overflowX = '';
-    el.style.fontFamily = '';
+  el.focus();
+
+  const sel = window.getSelection();
+  // Check if cursor is inside an existing .tab-block
+  let existingBlock = null;
+  if (sel && sel.rangeCount > 0) {
+    let node = sel.getRangeAt(0).commonAncestorContainer;
+    while (node && node !== el) {
+      if (node.nodeType === 1 && node.classList?.contains('tab-block')) {
+        existingBlock = node; break;
+      }
+      node = node.parentNode;
+    }
+  }
+
+  if (existingBlock) {
+    // Toggle OFF — unwrap the pre block, replace with its text content
+    const text = existingBlock.textContent;
+    const lines = text.split('\n');
+    const frag = document.createDocumentFragment();
+    lines.forEach((line, i) => {
+      frag.appendChild(document.createTextNode(line));
+      if (i < lines.length - 1) frag.appendChild(document.createElement('br'));
+    });
+    existingBlock.replaceWith(frag);
     btn.classList.remove('active');
-    btn.title = 'Tab mode — prevents line wrapping for guitar tabs';
+    btn.title = 'Tab mode — insert a guitar tab block';
   } else {
-    // turn on — no wrapping, horizontal scroll, ensure monospace
-    el.dataset.tabMode = '1';
-    el.style.whiteSpace = 'pre';
-    el.style.overflowX = 'auto';
-    el.style.fontFamily = "'DM Mono', monospace";
+    // Toggle ON — wrap selection (or insert empty block) in <pre class="tab-block">
+    const pre = document.createElement('pre');
+    pre.className = 'tab-block';
+    pre.contentEditable = 'true';
+
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      const range = sel.getRangeAt(0);
+      try {
+        const frag = range.extractContents();
+        // Convert any <br> to newlines in extracted content
+        let text = '';
+        const walker = document.createTreeWalker(frag, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+        let node;
+        while ((node = walker.nextNode())) {
+          if (node.nodeType === 3) text += node.textContent;
+          else if (node.nodeName === 'BR') text += '\n';
+        }
+        pre.textContent = text || '\n';
+        range.insertNode(pre);
+      } catch(e) {
+        pre.textContent = '\n';
+        range.insertNode(pre);
+      }
+    } else {
+      // No selection — insert empty tab block at cursor with placeholder
+      pre.textContent = 'e|-----|\nB|-----|\nG|-----|\nD|-----|\nA|-----|\nE|-----|';
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.insertNode(pre);
+        // Place cursor at start of pre
+        const newRange = document.createRange();
+        newRange.setStart(pre, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+      } else {
+        el.appendChild(pre);
+      }
+    }
+    // Move cursor inside the pre
+    const newRange = document.createRange();
+    newRange.selectNodeContents(pre);
+    newRange.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
     btn.classList.add('active');
-    btn.title = 'Tab mode ON — click to turn off';
-    el.focus();
+    btn.title = 'Remove tab block';
   }
 }
 
@@ -4468,10 +4527,27 @@ function rteHandlePaste(e) {
   e.preventDefault();
   const plain = (e.clipboardData?.getData('text/plain') || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd();
   if (!plain) return;
-  // Split on newlines, insert each line separated by <br>, no trailing <br>
-  const lines = plain.split('\n');
-  const html = lines.map(l => l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')).join('<br>');
-  document.execCommand('insertHTML', false, html);
+
+  // Check if cursor is inside a .tab-block — if so, insert plain text directly
+  const sel = window.getSelection();
+  let inTabBlock = false;
+  if (sel && sel.rangeCount > 0) {
+    let node = sel.getRangeAt(0).commonAncestorContainer;
+    while (node) {
+      if (node.nodeType === 1 && node.classList?.contains('tab-block')) { inTabBlock = true; break; }
+      node = node.parentNode;
+    }
+  }
+
+  if (inTabBlock) {
+    // Inside a tab block — insert raw text preserving all spaces and newlines
+    document.execCommand('insertText', false, plain);
+  } else {
+    // Normal paste — convert newlines to <br>
+    const lines = plain.split('\n');
+    const html = lines.map(l => l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')).join('<br>');
+    document.execCommand('insertHTML', false, html);
+  }
 }
 
 function rtePaste(e) { rteHandlePaste(e); }
@@ -10168,7 +10244,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.71</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.72</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
