@@ -669,14 +669,15 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   flex-shrink: 0;
 }
 .scroll-play-btn {
-  width: 26px; height: 26px; border-radius: 50%;
-  background: #0ea5e9; color: #fff; border: none;
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--surface2); color: var(--text2); border: 1px solid var(--border2);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0;
-  transition: transform 0.15s, opacity 0.15s;
+  transition: transform 0.15s, background 0.15s;
 }
-.scroll-play-btn:hover { transform: scale(1.08); opacity: 0.85; }
-.scroll-play-btn:active { transform: scale(0.92); }
+.scroll-play-btn:hover { background: var(--surface3); }
+.scroll-play-btn:active { transform: scale(0.93); }
+.scroll-play-btn.active { background: rgba(14,165,233,0.15); border-color: rgba(14,165,233,0.4); color: #0ea5e9; }
 .scroll-play-btn svg { }
 .scroll-speed-btn {
   width: 22px; height: 22px; border-radius: 6px;
@@ -1123,7 +1124,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
             </div>
             <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
               <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
-                <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
               <div style="width:12px;"></div>
               <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
@@ -1193,7 +1194,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     </div>
     <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
       <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div style="width:12px;"></div>
       <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
@@ -1654,7 +1655,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.84</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.90</span>
       </div>
 
     </div>
@@ -3093,10 +3094,10 @@ function openNoteFullscreen(idx) {
       <button id="fsZoomPlus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
     </div>
     <div style="display:flex;align-items:center;gap:4px;" id="fsScrollControls">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3);" title="Scroll speed"><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/><path d="M12 2a10 10 0 0 1 7.38 16.75"/><path d="M4.62 18.75a10 10 0 0 1 3.13-14.5"/><path d="M15 9l-3 3"/></svg>
-      <div style="width:1px;height:20px;background:var(--border2);margin:0 4px;flex-shrink:0;"></div>
+      
+      
       <button id="fsScrollBtn" class="scroll-play-btn" title="Auto-scroll">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <button id="fsSpeedMinus" class="scroll-speed-btn">−</button>
       <span id="fsSpeedLabel" class="scroll-speed-label">×${scrollSpeed}</span>
@@ -3550,18 +3551,19 @@ async function renderSongPage(idx) {
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
           <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;align-items:center;gap:4px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3);" title="Scroll speed"><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/><path d="M12 2a10 10 0 0 1 7.38 16.75"/><path d="M4.62 18.75a10 10 0 0 1 3.13-14.5"/><path d="M15 9l-3 3"/></svg>
-            <div style="width:1px;height:20px;background:var(--border2);margin:0 4px;flex-shrink:0;"></div>
+            
+            
             <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
               ${scrollPlaying
-                ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-                : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>`}
+                ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
             </button>
             <div style="width:4px;flex-shrink:0;"></div>
             <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
             <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
             <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
           </div>
+          <div style="width:8px;flex-shrink:0;"></div>
           <button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
             style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
@@ -4045,9 +4047,9 @@ function stopSEScroll() {
 }
 function updateSEScrollUI() {
   const svg = seScrollPlaying
-    ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-    : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>`;
-  document.querySelectorAll('#seScrollPlayBtn').forEach(btn => { btn.innerHTML = svg; });
+    ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  document.querySelectorAll('#seScrollPlayBtn').forEach(btn => { btn.innerHTML = svg; btn.classList.toggle('active', seScrollPlaying); });
 }
 function changeSESpeed(delta) {
   scrollSpeed = Math.max(1, Math.min(10, scrollSpeed + delta));
@@ -4095,9 +4097,10 @@ function stopScroll() {
 function updateScrollUI() {
   const btn = document.getElementById('scrollPlayBtn');
   if (!btn) return;
+  btn.classList.toggle('active', scrollPlaying);
   btn.innerHTML = scrollPlaying
-    ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-    : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;margin-left:1px;"><polygon points="6,4 20,12 6,20"/></svg>`;
+    ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
 function changeSpeed(delta) {
@@ -10315,7 +10318,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.84</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.90</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
