@@ -25,7 +25,8 @@
         toast.style.cssText = 'position:fixed;bottom:calc(var(--nav-h,64px) + 16px);left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;border:1px solid rgba(232,255,71,0.4);border-radius:40px;padding:10px 20px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;z-index:99999;display:flex;align-items:center;gap:10px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
         toast.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#e8ff47" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg> Update available — tap to reload';
         toast.onclick = () => { sw.postMessage({ type: 'SKIP_WAITING' }); };
-        document.body.appendChild(toast);
+        // Don't show update toast during a live set performance
+        if (!window.currentSetId) document.body.appendChild(toast);
       };
       if (reg.waiting) checkWaiting(reg.waiting);
       reg.addEventListener('updatefound', () => {
@@ -36,8 +37,9 @@
           }
         });
       });
-      // When SW activates (after SKIP_WAITING), reload the page
+      // When SW activates (after SKIP_WAITING), reload — but never during a live set
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (window.currentSetId) return; // in a set — skip reload, user will get it next session
         window.location.reload();
       });
     }).catch(() => {});
@@ -1686,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.103</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.105</span>
       </div>
 
     </div>
@@ -6583,7 +6585,7 @@ function renderSETab() {
     const idx = currentSongIdx >= 0 ? currentSongIdx : 0;
     // sepTabBody (mobile pg-song-edit) uses changeNoteZoom
     const sepEl = document.getElementById('sepTabBody');
-    if (sepEl && !seEditMode) { delete sepEl._pinchZoomNote; setupNoteAreaPinchZoom(sepEl, idx); }
+    if (sepEl && !seEditMode) { delete sepEl._pinchZoomNote; setupNoteAreaPinchZoom(sepEl, idx, (delta) => changeDBZoom(delta * 0.1, 'mgb_zoom_db_details')); }
     // seTabBody (desktop DB right panel) uses changeDBZoom with its own key/element
     const seEl = document.getElementById('seTabBody');
     if (seEl && !seEditMode) {
@@ -6804,11 +6806,21 @@ async function openSongModal(id) {
 function setupDBSwipe(currentId) {
   const page = document.getElementById('pg-song-edit');
   if (!page) return;
-  if (page._dbSwipeTs) { page.removeEventListener('touchstart', page._dbSwipeTs); page.removeEventListener('touchend', page._dbSwipeTe); }
-  let sx = 0, sy = 0;
-  page._dbSwipeTs = e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; };
+  if (page._dbSwipeTs) {
+    page.removeEventListener('touchstart', page._dbSwipeTs);
+    page.removeEventListener('touchmove', page._dbSwipeTm);
+    page.removeEventListener('touchend', page._dbSwipeTe);
+  }
+  let sx = 0, sy = 0, wasPinch = false;
+  page._dbSwipeTs = e => {
+    if (e.touches.length > 1) { wasPinch = true; return; }
+    wasPinch = false;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  };
+  page._dbSwipeTm = e => { if (e.touches.length > 1) wasPinch = true; };
   page._dbSwipeTe = async e => {
-    if (seEditMode) return;
+    if (e.touches.length > 0) return; // wait for last finger
+    if (seEditMode || wasPinch) { wasPinch = false; return; }
     const dx = e.changedTouches[0].clientX - sx;
     const dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
@@ -6817,11 +6829,11 @@ function setupDBSwipe(currentId) {
     if (idx < 0) return;
     const nextSong = dx < 0 ? list[idx + 1] : list[idx - 1];
     if (!nextSong) return;
-    // Load content in-place — don't call showPage() to avoid slide animation
     await loadSongIntoSEPage(nextSong.id);
     setupDBSwipe(nextSong.id);
   };
   page.addEventListener('touchstart', page._dbSwipeTs, { passive: true });
+  page.addEventListener('touchmove', page._dbSwipeTm, { passive: true });
   page.addEventListener('touchend', page._dbSwipeTe, { passive: true });
 }
 
@@ -10401,7 +10413,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.103</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.105</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
