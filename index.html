@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.107</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.108</span>
       </div>
 
     </div>
@@ -2029,8 +2029,9 @@ async function syncFilesFromStorage() {
         if (!currentIsAdmin && !isPersonalMine) continue;
       }
 
-      // skip if already downloaded
-      const existing = await dbGet(store, fileId);
+      // skip if already downloaded — audio uses audio_${songId} key, others use fileId
+      const storeKey = type === 'audio' ? `audio_${songId}` : fileId;
+      const existing = await dbGet(store, storeKey);
       if (existing?.data) continue;
 
       tasks.push((async () => {
@@ -2228,6 +2229,9 @@ async function manualSync() {
     await cleanFirestoreDupes();    // clean Firestore dupes
     await fbPushAll();              // push clean local state up
     await syncFilesFromStorage();   // download missing PDFs/images
+    // If auto-download is on, ensure all audio is downloaded after sync
+    // (catches new songs added since last session)
+    if (autoDownloadFiles) downloadAudioNow();
     await renderAll();
     lastSyncTime = Date.now();
     localStorage.setItem('mgb_last_sync', lastSyncTime);
@@ -10459,7 +10463,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.107</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.108</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
