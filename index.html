@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.115</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.116</span>
       </div>
 
     </div>
@@ -5711,6 +5711,9 @@ async function processAudioFile(file, idx) {
 }
 
 async function removeAudio(audioKey, idx) {
+  const entry = window._audioCache?.[audioKey];
+  const name = entry?.name ? `"${entry.name}"` : 'this audio file';
+  if (!confirm(`Remove ${name}?\n\nThis will delete it from this device and the cloud.`)) return;
   stopAudio();
   await dbDel('audio', audioKey);
   if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
@@ -10613,7 +10616,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.115</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.116</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
