@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.105</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.107</span>
       </div>
 
     </div>
@@ -2619,14 +2619,22 @@ async function executeBulkDelete() {
   closeBulkDeleteModal();
   if (type === 'sets') {
     const count = selectedSetIds.size;
+    let blocked = 0;
     for (const id of selectedSetIds) {
+      const set = await dbGet('setlists', id);
+      if (set?.groupIds?.length) {
+        const groups = await Promise.all(set.groupIds.map(gid => dbGet('groups', gid)));
+        const isOwner = groups.filter(Boolean).some(g => g.createdBy === currentUser);
+        if (!isOwner) { blocked++; continue; }
+      }
       await dbDel('setlists', id);
       await fbDeleteDoc('setlists', id);
     }
     selectedSetIds.clear();
     await syncOut();
     exitEditSets();
-    showToast(`${count} setlist${count!==1?'s':''} deleted`);
+    if (blocked > 0) showToast(`${count - blocked} deleted · ${blocked} skipped (not owner)`, 'err');
+    else showToast(`${count} setlist${count!==1?'s':''} deleted`);
   } else if (type === 'songs') {
     const count = selectedSongIds.size;
     let blocked = 0;
@@ -2681,6 +2689,14 @@ let pendingDeleteSetId = null;
 async function deleteSet(id) {
   const set = await dbGet('setlists', id);
   if (!set) return;
+  if (set.groupIds?.length) {
+    const groups = await Promise.all(set.groupIds.map(gid => dbGet('groups', gid)));
+    const isOwnerOfAny = groups.filter(Boolean).some(g => g.createdBy === currentUser);
+    if (!isOwnerOfAny) {
+      showToast('Only the group owner can delete this setlist', 'err');
+      return;
+    }
+  }
   pendingDeleteSetId = id;
   document.getElementById('confirmDeleteName').textContent = set.name;
   document.getElementById('confirmDeleteModal').classList.remove('hidden');
@@ -2869,6 +2885,16 @@ function startRenameSet() {
   });
 }
 async function deleteCurrentSet() {
+  if (!currentSetId) return;
+  const set = await dbGet('setlists', currentSetId);
+  if (set?.groupIds?.length) {
+    const groups = await Promise.all(set.groupIds.map(gid => dbGet('groups', gid)));
+    const isOwnerOfAny = groups.filter(Boolean).some(g => g.createdBy === currentUser);
+    if (!isOwnerOfAny) {
+      showToast('Only the group owner can delete this setlist', 'err');
+      return;
+    }
+  }
   if (!confirm('Delete this setlist?')) return;
   await dbDel('setlists',currentSetId); currentSetId=null;
   await renderSetsList(); await syncOut(); goBack();
@@ -8571,7 +8597,7 @@ async function updateGroupMembersInModal() {
     ? members.map(m => `
       <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
         <div style="width:28px;height:28px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;">${m[0].toUpperCase()}</div>
-        <span style="flex:1;font-size:14px;">${esc(m)}${m===currentUser?' <span style="font-size:10px;color:var(--accent);font-family:\'DM Mono\',monospace;">(you)</span>':''}</span>
+        <span style="flex:1;font-size:14px;">${esc(m)}${m===g.createdBy?' <span style="font-size:10px;color:var(--accent);font-family:\'DM Mono\',monospace;">(owner)</span>':m===currentUser?' <span style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;">(you)</span>':''}</span>
         ${isOwner && m !== currentUser ? `<button onclick="removeMemberFromGroup('${g.id}','${esc(m)}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:2px 6px;line-height:1;">×</button>` : ''}
       </div>`).join('')
     : `<div style="color:var(--text3);font-size:12px;padding:8px 0;">No members yet.</div>`;
@@ -9688,25 +9714,45 @@ async function exportAttachments() {
 }
 
 async function exportCSV() {
+  // load all accessible songs from IndexedDB
+  let songs = await dbAll('songs');
+  // filter to songs this user can access
+  const userGroups = (await dbAll('groups')).filter(g =>
+    g.createdBy === currentUser || (g.members||[]).includes(currentUser)
+  );
+  const userGroupIds = new Set(userGroups.map(g => g.id));
+  songs = songs.filter(s => {
+    if (currentIsAdmin) return true;
+    if (!s.createdBy || s.createdBy === currentUser) return true;
+    if (s.groupIds?.length) return s.groupIds.some(gid => userGroupIds.has(gid));
+    return false;
+  });
+
   if (!songs.length) { showToast('No songs to export', 'err'); return; }
 
   // sort by title
   songs.sort((a,b) => a.title.localeCompare(b.title));
 
-  const header = CSV_COLUMNS.join(',');
-  const rows = songs.map(s =>
-    CSV_COLUMNS.map(col => csvEscape(s[col])).join(',')
-  );
+  // include tags as an extra column
+  const columns = [...CSV_COLUMNS, 'tags'];
+  const header = columns.join(',');
+  const rows = songs.map(s => {
+    const row = CSV_COLUMNS.map(col => csvEscape(s[col]));
+    row.push(csvEscape((s.tags||[]).join(';'))); // tags joined by semicolon
+    return row.join(',');
+  });
   const csv = [header, ...rows].join('\r\n');
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const date = new Date().toISOString().slice(0,10);
   a.href = url;
   a.download = `MyGigBook-songs-${date}.csv`;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
   showToast(`Exported ${songs.length} songs`, 'ok');
 }
 
@@ -10413,7 +10459,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.105</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.107</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
