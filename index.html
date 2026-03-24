@@ -233,38 +233,38 @@ body.palette-forest {
    Those use higher specificity (body.fs-X .note-display) which beats plain @media .note-display.
 */
 
-/* ── SMALL ── */
-body.fs-small                  { font-size: 13px !important; }
-body.fs-small .song-row-title  { font-size: 13px !important; }
-body.fs-small .db-song-title   { font-size: 12px !important; }
-body.fs-small .set-item-name   { font-size: 15px !important; }
-body.fs-small .note-tab        { font-size: 12px !important; }
-body.fs-small .form-input      { font-size: 13px !important; }
-body.fs-small .settings-row    { font-size: 13px !important; }
-body.fs-small .note-display    { font-size: 16px; }
-body.fs-small .rte-body        { font-size: 13px; }
+/* ── SMALL ── ~75% of new tablet medium ── */
+body.fs-small                  { font-size: 14px !important; }
+body.fs-small .song-row-title  { font-size: 15px !important; }
+body.fs-small .db-song-title   { font-size: 14px !important; }
+body.fs-small .set-item-name   { font-size: 18px !important; }
+body.fs-small .note-tab        { font-size: 13px !important; }
+body.fs-small .form-input      { font-size: 14px !important; }
+body.fs-small .settings-row    { font-size: 14px !important; }
+body.fs-small .note-display    { font-size: 18px; }
+body.fs-small .rte-body        { font-size: 15px; }
 
-/* ── LARGE ── desktop: ~130%, mobile: ~130%, tablet: ~130% ── */
-body.fs-large                  { font-size: 18px !important; }
-body.fs-large .song-row-title  { font-size: 22px !important; }
-body.fs-large .db-song-title   { font-size: 20px !important; }
-body.fs-large .set-item-name   { font-size: 28px !important; }
-body.fs-large .note-tab        { font-size: 17px !important; }
-body.fs-large .form-input      { font-size: 18px !important; }
-body.fs-large .settings-row    { font-size: 17px !important; }
-body.fs-large .note-display    { font-size: 29px; }
-body.fs-large .rte-body        { font-size: 22px; }
+/* ── LARGE ── ~125% of new tablet medium ── */
+body.fs-large                  { font-size: 26px !important; }
+body.fs-large .song-row-title  { font-size: 30px !important; }
+body.fs-large .db-song-title   { font-size: 26px !important; }
+body.fs-large .set-item-name   { font-size: 36px !important; }
+body.fs-large .note-tab        { font-size: 22px !important; }
+body.fs-large .form-input      { font-size: 24px !important; }
+body.fs-large .settings-row    { font-size: 22px !important; }
+body.fs-large .note-display    { font-size: 38px; }
+body.fs-large .rte-body        { font-size: 28px; }
 
-/* ── XL ── desktop: ~160%, mobile: ~160%, tablet: ~160% ── */
-body.fs-xl                     { font-size: 21px !important; }
-body.fs-xl    .song-row-title  { font-size: 26px !important; }
-body.fs-xl    .db-song-title   { font-size: 24px !important; }
-body.fs-xl    .set-item-name   { font-size: 32px !important; }
-body.fs-xl    .note-tab        { font-size: 19px !important; }
-body.fs-xl    .form-input      { font-size: 20px !important; }
-body.fs-xl    .settings-row    { font-size: 19px !important; }
-body.fs-xl    .note-display    { font-size: 34px; }
-body.fs-xl    .rte-body        { font-size: 26px; }
+/* ── XL ── ~155% of new tablet medium ── */
+body.fs-xl                     { font-size: 32px !important; }
+body.fs-xl    .song-row-title  { font-size: 38px !important; }
+body.fs-xl    .db-song-title   { font-size: 30px !important; }
+body.fs-xl    .set-item-name   { font-size: 42px !important; }
+body.fs-xl    .note-tab        { font-size: 26px !important; }
+body.fs-xl    .form-input      { font-size: 28px !important; }
+body.fs-xl    .settings-row    { font-size: 26px !important; }
+body.fs-xl    .note-display    { font-size: 46px; }
+body.fs-xl    .rte-body        { font-size: 35px; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 img, video, svg { max-width: 100%; }
 html { height: 100%; height: 100dvh; width: 100%; overflow: hidden; }
@@ -852,16 +852,16 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .modal-sheet { border-radius: var(--radius-lg); max-width: 560px; max-height: calc(100vh - 48px); margin: 24px auto; }
   .song-page-title { font-size: 55px; }
   .note-edit-area { min-height: 220px; }
-  /* Tablet base: medium = larger than desktop for readability */
-  body { font-size: 20px; }
-  .note-display { font-size: 28px; }  /* no !important — zoom can override */
-  .rte-body { font-size: 22px; }      /* no !important — zoom can override */
-  .set-item-name { font-size: 26px; }
-  .song-row-title { font-size: 22px; }
-  .db-song-title { font-size: 20px; }
-  .note-tab { font-size: 18px; }
-  .settings-row { font-size: 18px; }
-  .form-input { font-size: 18px; }
+  /* Tablet base: medium = what was formerly Large — bigger default for readability */
+  body { font-size: 22px; }
+  .note-display { font-size: 32px; }  /* no !important — zoom can override */
+  .rte-body { font-size: 24px; }      /* no !important — zoom can override */
+  .set-item-name { font-size: 30px; }
+  .song-row-title { font-size: 24px; }
+  .db-song-title { font-size: 22px; }
+  .note-tab { font-size: 19px; }
+  .settings-row { font-size: 19px; }
+  .form-input { font-size: 19px; }
 }
 
 /* Desktop (1100px+) */
@@ -1661,7 +1661,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.96</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.98</span>
       </div>
 
     </div>
@@ -2995,18 +2995,20 @@ let tuningPlaying = false;
 // Tablet (700px+) uses large as its medium, so base sizes are higher there
 function getBaseFontPx() {
   // Returns base note-display px for zoom calculations.
-  // Must match the CSS values above exactly so zoom starts from the right baseline.
+  // Must match CSS exactly — fs-* classes override @media so all devices share same
+  // fs-large/xl values. Medium varies by device to match @media base.
   const size = localStorage.getItem('mgb_font_size') || 'medium';
   const w = window.innerWidth;
   const isTablet = w >= 700;
   const isMobile = w <= 480;
-  if (size === 'small')  return 16;           // all devices: small is small
-  if (size === 'large')  return 29;           // matches body.fs-large .note-display
-  if (size === 'xl')     return 34;           // matches body.fs-xl .note-display
-  // medium: matches device base note-display
-  if (isTablet) return 28;
-  if (isMobile) return 22;
-  return 20;
+  // fs-* classes use !important or higher specificity — same value on all devices
+  if (size === 'small')  return 18;   // body.fs-small .note-display: 18px
+  if (size === 'large')  return 38;   // body.fs-large .note-display: 38px
+  if (size === 'xl')     return 46;   // body.fs-xl    .note-display: 46px
+  // medium: @media base, no fs class applied
+  if (isTablet) return 32;  // tablet @media: 32px
+  if (isMobile) return 22;  // mobile @media: 22px
+  return 20;                // desktop base: 20px
 }
 
 function changeDBZoom(delta, key) {
@@ -10356,7 +10358,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.96</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.98</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
