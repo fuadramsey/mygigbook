@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.112</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.113</span>
       </div>
 
     </div>
@@ -2110,6 +2110,27 @@ async function getAudioDownloadUrl(songId) {
 
 // Load audio — only from local IndexedDB/cache. Never auto-fetches from cloud.
 // User must explicitly tap the download button in the player.
+// Prime _audioCache from IndexedDB at startup so synchronous _hasLocalAudio
+// checks work without async IDB reads on every render
+async function primeAudioCache() {
+  try {
+    window._audioCache = window._audioCache || {};
+    const all = await dbAll('audio');
+    for (const entry of all) {
+      if (!entry?.data || !entry.id) continue;
+      // Already in cache? Skip (don't create duplicate blob URLs)
+      if (window._audioCache[entry.id]?.blobUrl) continue;
+      const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
+      window._audioCache[entry.id] = {
+        name: entry.name,
+        blobUrl: URL.createObjectURL(blob),
+        mimeType: entry.mimeType,
+        local: true
+      };
+    }
+  } catch(e) { console.warn('[primeAudioCache]', e); }
+}
+
 async function loadAudioHybrid(songId) {
   const audioKey = `audio_${songId}`;
   // check memory cache first
@@ -6412,12 +6433,6 @@ function renderSETab() {
             </button>
           </div>`
         : '';
-    // If _audioCache missed but IDB may have it (e.g. after app restart), check async and re-render
-    if (id && !_hasLocalAudio) {
-      loadAudioHybrid(id).then(entry => {
-        if (entry) renderSETab(); // found in IDB — re-render to show player
-      });
-    }
     // kick off cloud check if not done yet
     if (id && !_hasLocalAudio && !window._cloudAudioMap?.[id] && online && fbReady) {
       window._cloudAudioMap = window._cloudAudioMap || {};
@@ -6542,12 +6557,6 @@ function renderSETab() {
             </button>
           </div>`
         : '';
-    // If _audioCache missed but IDB may have it (e.g. after app restart), check async and re-render
-    if (id && !_hasLocalAudio) {
-      loadAudioHybrid(id).then(entry => {
-        if (entry) renderSETab();
-      });
-    }
     // kick off cloud check if not done yet
     if (id && !_hasLocalAudio && !window._cloudAudioMap?.[id] && online && fbReady) {
       window._cloudAudioMap = window._cloudAudioMap || {};
@@ -7752,7 +7761,7 @@ async function downloadAudioNow(silent = false) {
         );
       }
       // Refresh the song detail UI so Download buttons become players
-      if (downloaded > 0) renderSETab();
+      if (downloaded > 0) { await primeAudioCache(); renderSETab(); }
     }, 1000);
 
   } catch(e) {
@@ -8468,6 +8477,8 @@ async function postLoginInit() {
   await renderSetsList();
   await renderDB();
   await renderGroups();
+  // Prime audio cache from IDB so Download buttons don't flash for already-downloaded files
+  primeAudioCache();
 
   // On a new device (no localStorage group saved), sync first to get groups from Firestore
   // before ensurePrivateGroup runs — prevents duplicate private group creation
@@ -10595,7 +10606,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.112</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.113</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
