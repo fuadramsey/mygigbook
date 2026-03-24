@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.111</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.112</span>
       </div>
 
     </div>
@@ -1997,6 +1997,22 @@ async function syncFilesFromStorage() {
     const allSongs = await dbAll('songs');
     const songMap = {};
     allSongs.forEach(s => songMap[s.id] = s);
+
+    // Fetch any songs from Firestore that are referenced by files but not in local DB
+    const fileSnap2 = snap; // reuse the already-fetched snap
+    const missingSyncIds = [...new Set(
+      fileSnap2.docs.map(d => d.data().songId).filter(id => id && !songMap[id])
+    )];
+    if (missingSyncIds.length > 0 && fbReady && online) {
+      try {
+        const ss = await fb.getDocs(fb.collection(fb.db, 'songs'));
+        for (const d of ss.docs) {
+          const s = d.data();
+          if (!s.id) s.id = d.id;
+          if (!songMap[s.id]) { songMap[s.id] = s; await dbPut('songs', s); }
+        }
+      } catch(e) {}
+    }
 
     // Pre-load user groups once for access checks
     const userGroups = await dbAll('groups');
@@ -7626,6 +7642,26 @@ async function downloadAudioNow(silent = false) {
     const songMap = {};
     allSongs.forEach(s => songMap[s.id] = s);
 
+    // If any audio files reference songs not in local DB, fetch all songs from
+    // Firestore once and merge — handles new device / partial sync scenarios
+    const missingSongIds = audioFiles
+      .map(m => m.songId)
+      .filter(id => id && !songMap[id]);
+    if (missingSongIds.length > 0 && fbReady && online) {
+      try {
+        setProgress(8, 'Fetching song list from cloud…', '');
+        const songSnap = await fb.getDocs(fb.collection(fb.db, 'songs'));
+        for (const d of songSnap.docs) {
+          const s = d.data();
+          if (!s.id) s.id = d.id;
+          if (!songMap[s.id]) {
+            songMap[s.id] = s;
+            await dbPut('songs', s); // save locally for future
+          }
+        }
+      } catch(e) { console.warn('[Audio] Could not fetch songs from cloud:', e.message); }
+    }
+
     // build user group set for access checks
     const userGroups = await dbAll('groups');
     const userGroupIds = new Set(
@@ -7640,8 +7676,9 @@ async function downloadAudioNow(silent = false) {
       if (!downloadUrl || !fileId || !songId) continue;
       const song = songMap[songId];
       if (!song) continue;
-      // inline access check (faster than async canAccessSong)
+      // inline access check
       const canAccess = currentIsAdmin
+        || !song.createdBy
         || song.createdBy === currentUser
         || (song.groupIds?.some(gid => userGroupIds.has(gid)));
       if (!canAccess) continue;
@@ -10558,7 +10595,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.111</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.112</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
