@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.108</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.110</span>
       </div>
 
     </div>
@@ -1836,6 +1836,8 @@ async function fbPushAll() {
     await syncCollection('songs', songs);
     await syncCollection('setlists', sets);
     await syncCollection('groups', groups);
+    // clear tombstones for sets now confirmed gone from Firestore
+    getDeletedSetIds().forEach(id => clearDeletedSetId(id));
     // sync notes — upsert only (never delete other users' notes from Firestore)
     const myNotes = notes.filter(n => n.id.startsWith((currentUser||'me') + '_'));
     if (myNotes.length) {
@@ -1854,6 +1856,26 @@ async function fbDeleteDoc(collName, id) {
   try {
     await fb.deleteDoc(fb.doc(fb.collection(fb.db, collName), id));
   } catch(e) { console.warn('Firestore delete error:', e); }
+}
+
+// ── DELETED SETS TOMBSTONE ──
+// Track locally deleted set IDs so merge() never re-adds them from Firestore
+function recordDeletedSet(id) {
+  try {
+    const raw = localStorage.getItem('mgb_deleted_sets') || '[]';
+    const ids = JSON.parse(raw);
+    if (!ids.includes(id)) { ids.push(id); localStorage.setItem('mgb_deleted_sets', JSON.stringify(ids)); }
+  } catch(e) {}
+}
+function getDeletedSetIds() {
+  try { return new Set(JSON.parse(localStorage.getItem('mgb_deleted_sets') || '[]')); } catch(e) { return new Set(); }
+}
+function clearDeletedSetId(id) {
+  try {
+    const raw = localStorage.getItem('mgb_deleted_sets') || '[]';
+    const ids = JSON.parse(raw).filter(x => x !== id);
+    localStorage.setItem('mgb_deleted_sets', JSON.stringify(ids));
+  } catch(e) {}
 }
 
 // ── FIREBASE STORAGE SYNC ──
@@ -2151,7 +2173,10 @@ async function fbPullAll() {
       }
     };
     await merge(songSnap, 'songs');
-    await merge(setSnap, 'setlists');
+    // merge setlists but never re-add ones we deliberately deleted
+    const _deletedSetIds = getDeletedSetIds();
+    const _filteredSetDocs = { docs: setSnap.docs.filter(d => !_deletedSetIds.has(d.id)) };
+    await merge(_filteredSetDocs, 'setlists');
     await merge(groupSnap, 'groups');
     // pull notes belonging to the current user (keyed username_songId)
     const userPrefix = (currentUser||'me') + '_';
@@ -2231,7 +2256,7 @@ async function manualSync() {
     await syncFilesFromStorage();   // download missing PDFs/images
     // If auto-download is on, ensure all audio is downloaded after sync
     // (catches new songs added since last session)
-    if (autoDownloadFiles) downloadAudioNow();
+    if (autoDownloadFiles) downloadAudioNow(true); // silent=true, running in background
     await renderAll();
     lastSyncTime = Date.now();
     localStorage.setItem('mgb_last_sync', lastSyncTime);
@@ -2631,6 +2656,7 @@ async function executeBulkDelete() {
         const isOwner = groups.filter(Boolean).some(g => g.createdBy === currentUser);
         if (!isOwner) { blocked++; continue; }
       }
+      recordDeletedSet(id);
       await dbDel('setlists', id);
       await fbDeleteDoc('setlists', id);
     }
@@ -2713,6 +2739,7 @@ async function confirmDeleteSet() {
   if (!pendingDeleteSetId) return;
   const id = pendingDeleteSetId;
   closeConfirmDelete();
+  recordDeletedSet(id);
   await dbDel('setlists', id);
   await fbDeleteDoc('setlists', id);
   if (currentSetId === id) currentSetId = null;
@@ -2900,7 +2927,10 @@ async function deleteCurrentSet() {
     }
   }
   if (!confirm('Delete this setlist?')) return;
-  await dbDel('setlists',currentSetId); currentSetId=null;
+  const _delId = currentSetId;
+  recordDeletedSet(_delId);
+  await dbDel('setlists',_delId); currentSetId=null;
+  await fbDeleteDoc('setlists', _delId);
   await renderSetsList(); await syncOut(); goBack();
 }
 async function removeFromSet(idx) {
@@ -7543,11 +7573,17 @@ function audioDownloadPromptAnswer(val) {
   }
 }
 
-async function downloadAudioNow() {
-  if (!online) { showToast('No internet connection', 'err'); return; }
-  if (!fbReady) { showToast('Not connected to cloud', 'err'); return; }
+let _audioDownloadInProgress = false;
+
+async function downloadAudioNow(silent = false) {
+  // Prevent concurrent downloads
+  if (_audioDownloadInProgress) return;
+  if (!online) { if (!silent) showToast('No internet connection', 'err'); return; }
+  if (!fbReady) { if (!silent) showToast('Not connected to cloud', 'err'); return; }
   const fb = window._fb;
-  if (!fb?.storage) { showToast('Storage not available', 'err'); return; }
+  if (!fb) { if (!silent) showToast('Storage not available', 'err'); return; }
+
+  _audioDownloadInProgress = true;
 
   // show progress modal
   const modal = document.getElementById('audioDownloadProgressModal');
@@ -7569,7 +7605,8 @@ async function downloadAudioNow() {
 
     if (!audioFiles.length) {
       if (modal) modal.classList.add('hidden');
-      showToast('No audio files found in cloud', 'err');
+      if (!silent) showToast('No audio files found in cloud', 'err');
+      _audioDownloadInProgress = false;
       return;
     }
 
@@ -7577,14 +7614,26 @@ async function downloadAudioNow() {
     const songMap = {};
     allSongs.forEach(s => songMap[s.id] = s);
 
+    // build user group set for access checks
+    const userGroups = await dbAll('groups');
+    const userGroupIds = new Set(
+      userGroups.filter(g => g.createdBy === currentUser || (g.members||[]).includes(currentUser))
+                .map(g => g.id)
+    );
+
     // filter to only files this user can access and doesn't already have
     const toDownload = [];
     for (const meta of audioFiles) {
       const { fileId, downloadUrl, songId } = meta;
       if (!downloadUrl || !fileId || !songId) continue;
       const song = songMap[songId];
-      if (!song || !await canAccessSong(song)) continue;
-      // audio is stored with key audio_${songId}
+      if (!song) continue;
+      // inline access check (faster than async canAccessSong)
+      const canAccess = currentIsAdmin
+        || song.createdBy === currentUser
+        || (song.groupIds?.some(gid => userGroupIds.has(gid)));
+      if (!canAccess) continue;
+      // check if already downloaded under audio_${songId}
       const audioKey = `audio_${songId}`;
       const existing = await dbGet('audio', audioKey);
       if (existing?.data) continue;
@@ -7593,7 +7642,8 @@ async function downloadAudioNow() {
 
     if (!toDownload.length) {
       if (modal) modal.classList.add('hidden');
-      showToast('All audio already on this device', 'ok');
+      if (!silent) showToast('All audio already on this device', 'ok');
+      _audioDownloadInProgress = false;
       return;
     }
 
@@ -7601,12 +7651,32 @@ async function downloadAudioNow() {
     for (let i = 0; i < toDownload.length; i++) {
       const { fileId, name, mimeType, downloadUrl, songId } = toDownload[i];
       const audioKey = `audio_${songId}`;
-      const pct = 10 + Math.round(((i) / toDownload.length) * 88);
-      setProgress(pct, `Downloading ${i + 1} of ${toDownload.length}…`, name);
+      const pct = 10 + Math.round((i / toDownload.length) * 88);
+      setProgress(pct, `Downloading ${i + 1} of ${toDownload.length}…`, name || songId);
       try {
-        const path = `songs/${songId}/audio/${fileId}`;
-        const ab = await fetchFromStorage(path, downloadUrl);
-        // store under audio_${songId} — the key loadAudioHybrid and the player expect
+        // try to get fresh URL via Firebase SDK; fall back to stored downloadUrl
+        let url = downloadUrl;
+        try {
+          if (fb.storageRef && fb.storage && fb.getDownloadURL) {
+            const ref = fb.storageRef(fb.storage, `songs/${songId}/audio/${fileId}`);
+            url = await fb.getDownloadURL(ref);
+          }
+        } catch(urlErr) {
+          console.warn('[Audio] getDownloadURL failed, using stored URL:', urlErr.message);
+          url = downloadUrl;
+        }
+        if (!url) throw new Error('No URL available for ' + fileId);
+        // fetch as arraybuffer
+        const ab = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.responseType = 'arraybuffer';
+          xhr.timeout = 120000; // 2 min for large audio files
+          xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.response) : reject(new Error(`HTTP ${xhr.status}`));
+          xhr.onerror = () => reject(new Error('Network error'));
+          xhr.ontimeout = () => reject(new Error('Timeout'));
+          xhr.open('GET', url);
+          xhr.send();
+        });
         await dbPut('audio', { id: audioKey, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
         if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
         const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
@@ -7614,7 +7684,7 @@ async function downloadAudioNow() {
         window._audioCache[audioKey] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: true };
         downloaded++;
       } catch(e) {
-        console.warn('[Audio Sync] Download error:', fileId, e);
+        console.warn('[Audio Sync] Download error:', fileId, e.message);
         failed++;
       }
     }
@@ -7622,13 +7692,20 @@ async function downloadAudioNow() {
     setProgress(100, 'Done!', `${downloaded} downloaded${failed ? `, ${failed} failed` : ''}`);
     setTimeout(() => {
       if (modal) modal.classList.add('hidden');
-      showToast(downloaded > 0 ? `Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}` : `${failed} file${failed > 1 ? 's' : ''} failed`, downloaded > 0 ? 'ok' : 'err');
+      showToast(
+        downloaded > 0
+          ? `Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`
+          : failed > 0 ? `${failed} file${failed > 1 ? 's' : ''} failed to download` : 'No new audio to download',
+        downloaded > 0 ? 'ok' : 'err'
+      );
     }, 1000);
 
   } catch(e) {
     if (modal) modal.classList.add('hidden');
     console.error('[Audio Sync] Error:', e);
-    showToast('Error: ' + (e?.message || e), 'err');
+    if (!silent) showToast('Audio download error: ' + (e?.message || e), 'err');
+  } finally {
+    _audioDownloadInProgress = false;
   }
 }
 
@@ -10463,7 +10540,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.108</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.110</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
