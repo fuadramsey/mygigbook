@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.110</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.111</span>
       </div>
 
     </div>
@@ -6396,6 +6396,12 @@ function renderSETab() {
             </button>
           </div>`
         : '';
+    // If _audioCache missed but IDB may have it (e.g. after app restart), check async and re-render
+    if (id && !_hasLocalAudio) {
+      loadAudioHybrid(id).then(entry => {
+        if (entry) renderSETab(); // found in IDB — re-render to show player
+      });
+    }
     // kick off cloud check if not done yet
     if (id && !_hasLocalAudio && !window._cloudAudioMap?.[id] && online && fbReady) {
       window._cloudAudioMap = window._cloudAudioMap || {};
@@ -6520,6 +6526,12 @@ function renderSETab() {
             </button>
           </div>`
         : '';
+    // If _audioCache missed but IDB may have it (e.g. after app restart), check async and re-render
+    if (id && !_hasLocalAudio) {
+      loadAudioHybrid(id).then(entry => {
+        if (entry) renderSETab();
+      });
+    }
     // kick off cloud check if not done yet
     if (id && !_hasLocalAudio && !window._cloudAudioMap?.[id] && online && fbReady) {
       window._cloudAudioMap = window._cloudAudioMap || {};
@@ -7682,6 +7694,8 @@ async function downloadAudioNow(silent = false) {
         const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
         window._audioCache = window._audioCache || {};
         window._audioCache[audioKey] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: true };
+        // Remove from cloud map so UI knows it's now local
+        if (window._cloudAudioMap?.[songId]) delete window._cloudAudioMap[songId];
         downloaded++;
       } catch(e) {
         console.warn('[Audio Sync] Download error:', fileId, e.message);
@@ -7692,12 +7706,16 @@ async function downloadAudioNow(silent = false) {
     setProgress(100, 'Done!', `${downloaded} downloaded${failed ? `, ${failed} failed` : ''}`);
     setTimeout(() => {
       if (modal) modal.classList.add('hidden');
-      showToast(
-        downloaded > 0
-          ? `Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`
-          : failed > 0 ? `${failed} file${failed > 1 ? 's' : ''} failed to download` : 'No new audio to download',
-        downloaded > 0 ? 'ok' : 'err'
-      );
+      if (downloaded > 0 || !silent) {
+        showToast(
+          downloaded > 0
+            ? `Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`
+            : failed > 0 ? `${failed} file${failed > 1 ? 's' : ''} failed to download` : 'No new audio to download',
+          downloaded > 0 ? 'ok' : 'err'
+        );
+      }
+      // Refresh the song detail UI so Download buttons become players
+      if (downloaded > 0) renderSETab();
     }, 1000);
 
   } catch(e) {
@@ -10540,7 +10558,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.110</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.111</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
