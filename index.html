@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.113</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.114</span>
       </div>
 
     </div>
@@ -7761,7 +7761,7 @@ async function downloadAudioNow(silent = false) {
         );
       }
       // Refresh the song detail UI so Download buttons become players
-      if (downloaded > 0) { await primeAudioCache(); renderSETab(); }
+      if (downloaded > 0) { primeAudioCache().then(() => renderSETab()); }
     }, 1000);
 
   } catch(e) {
@@ -8025,13 +8025,12 @@ async function syncUsersFromFirestore() {
     let changed = false;
     snap.docs.forEach(d => {
       const remote = d.data();
+      if (!remote.username) return;
       const local = localMap[remote.username];
-      // merge: remote wins unless local has a more recent password change
       if (!local) {
         localMap[remote.username] = remote;
         changed = true;
       } else {
-        // if remote is newer, update local (but keep local tempPassword if set)
         if ((remote.updatedAt||0) > (local.updatedAt||0)) {
           localMap[remote.username] = { ...remote, tempPassword: local.tempPassword || remote.tempPassword };
           changed = true;
@@ -8039,9 +8038,17 @@ async function syncUsersFromFirestore() {
       }
     });
     if (changed) {
-      saveUsers(Object.values(localMap));
+      // Use direct localStorage write to avoid triggering pushUsersToFirestore
+      // (which would cause a write-back loop)
+      try {
+        localStorage.setItem('stageset_users_v1', JSON.stringify(Object.values(localMap)));
+      } catch(e) {}
     }
-  } catch(e) { console.warn('User sync pull error:', e); }
+  } catch(e) {
+    // Log clearly — this usually means Firestore rules are blocking the users collection
+    console.error('syncUsersFromFirestore failed:', e?.code, e?.message);
+    // Don't block login — user can still log in with locally stored credentials
+  }
 }
 
 async function ensureAdminExists() {
@@ -10516,7 +10523,7 @@ async function init() {
         if (fbReady || waited >= 5000) { clearInterval(check); resolve(); }
       }, 200);
     });
-    await syncUsersFromFirestore();
+    try { await syncUsersFromFirestore(); } catch(e) { console.warn('User sync skipped:', e); }
   }
 
   const sessionState = checkSession();
@@ -10606,7 +10613,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.113</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.114</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
