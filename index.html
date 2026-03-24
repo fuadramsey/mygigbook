@@ -246,7 +246,7 @@ body.palette-forest {
 
 /* ── FONT SIZE SCALING ──
    Base sizes by device:
-     Desktop: body 15px, note-display 20px, set-item-name 18px, song-row-title 15px
+     Desktop: body 14px, note-display 18px, set-item-name 18px, song-row-title 15px
      Mobile:  body 17px, note-display 22px, set-item-name 25px, song-row-title 21px
      Tablet:  body 20px, note-display 28px, set-item-name 26px, song-row-title 22px
 
@@ -260,16 +260,16 @@ body.palette-forest {
    Those use higher specificity (body.fs-X .note-display) which beats plain @media .note-display.
 */
 
-/* ── SMALL ── ~75% of new tablet medium ── */
-body.fs-small                  { font-size: 14px !important; }
-body.fs-small .song-row-title  { font-size: 15px !important; }
-body.fs-small .db-song-title   { font-size: 14px !important; }
-body.fs-small .set-item-name   { font-size: 18px !important; }
-body.fs-small .note-tab        { font-size: 13px !important; }
-body.fs-small .form-input      { font-size: 14px !important; }
-body.fs-small .settings-row    { font-size: 14px !important; }
-body.fs-small .note-display    { font-size: 18px; }
-body.fs-small .rte-body        { font-size: 15px; }
+/* ── SMALL ── desktop: ~75% of new medium | tablet: ~75% of tablet medium ── */
+body.fs-small                  { font-size: 11px !important; }
+body.fs-small .song-row-title  { font-size: 12px !important; }
+body.fs-small .db-song-title   { font-size: 11px !important; }
+body.fs-small .set-item-name   { font-size: 14px !important; }
+body.fs-small .note-tab        { font-size: 11px !important; }
+body.fs-small .form-input      { font-size: 11px !important; }
+body.fs-small .settings-row    { font-size: 11px !important; }
+body.fs-small .note-display    { font-size: 14px; }
+body.fs-small .rte-body        { font-size: 12px; }
 
 /* ── LARGE ── ~125% of new tablet medium ── */
 body.fs-large                  { font-size: 26px !important; }
@@ -295,7 +295,7 @@ body.fs-xl    .rte-body        { font-size: 35px; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 img, video, svg { max-width: 100%; }
 html { height: 100%; height: 100dvh; width: 100%; overflow: hidden; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; height: 100%; height: 100dvh; width: 100%; max-width: 100vw; overflow: hidden; position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; height: 100%; height: 100dvh; width: 100%; max-width: 100vw; overflow: hidden; position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
 
 #app { position: relative; width: 100%; max-width: 100vw; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
 .page {
@@ -393,7 +393,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .song-row.drag-over { border-top: 2px solid var(--accent); }
 .song-num { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--accent); width: 28px; text-align: center; flex-shrink: 0; line-height: 1; opacity: 0.85; }
 .song-row-info { flex: 1; min-width: 0; }
-.song-row-title { font-weight: 600; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-row-title { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-row-sub { font-size: 12px; color: var(--text2); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
 .key-pill { font-family: 'DM Mono', monospace; font-size: 11px; background: rgba(220,38,38,0.12); color: var(--accent); padding: 2px 8px; border-radius: 5px; border: 1px solid rgba(220,38,38,0.2); }
 .song-row-key-badge { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--accent); background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; padding: 2px 10px; flex-shrink: 0; line-height: 1.2; letter-spacing: 1px; }
@@ -428,7 +428,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .listen-confirm-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--text); font-family: 'DM Mono', monospace; min-width: 0; }
 .listen-confirm-row input::placeholder { color: var(--text3); }
 .note-content { padding: 16px; }
-.note-display { font-family: 'DM Mono', monospace; font-size: 20px; line-height: 1; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
+.note-display { font-family: 'DM Mono', monospace; font-size: 18px; line-height: 1; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
 .tab-block { display: block; font-family: 'DM Mono', monospace; white-space: pre; overflow-x: auto; background: var(--surface2); border: 1px solid var(--border2); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 14px; margin: 6px 0; line-height: 1.5; font-size: 0.95em; -webkit-overflow-scrolling: touch; }
 .tab-block::before { content: '🎸 TAB'; display: block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); font-family: 'DM Mono', monospace; margin-bottom: 6px; opacity: 0.8; }
 .note-display.empty { color: var(--text3); font-style: italic; }
@@ -1688,7 +1688,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.114</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.115</span>
       </div>
 
     </div>
@@ -3126,13 +3126,13 @@ function getBaseFontPx() {
   const isTablet = w >= 700;
   const isMobile = w <= 480;
   // fs-* classes use !important or higher specificity — same value on all devices
-  if (size === 'small')  return 18;   // body.fs-small .note-display: 18px
+  if (size === 'small')  return 14;   // body.fs-small .note-display: 14px
   if (size === 'large')  return 38;   // body.fs-large .note-display: 38px
   if (size === 'xl')     return 46;   // body.fs-xl    .note-display: 46px
   // medium: @media base, no fs class applied
   if (isTablet) return 32;  // tablet @media: 32px
   if (isMobile) return 22;  // mobile @media: 22px
-  return 20;                // desktop base: 20px
+  return 18;                // desktop base: 18px
 }
 
 function changeDBZoom(delta, key) {
@@ -10613,7 +10613,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.114</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.115</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
