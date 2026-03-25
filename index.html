@@ -1690,7 +1690,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.118</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.119</span>
       </div>
 
     </div>
@@ -3194,10 +3194,19 @@ function openNoteFullscreen(idx) {
   overlay.id = 'noteFullscreenOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:8000;display:flex;flex-direction:column;touch-action:pan-y;';
 
-  // ── TITLE BAR ──
+  // ── TITLE BAR — matches song page header style ──
   const titleBar = document.createElement('div');
-  titleBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 14px;background:var(--surface2);border-bottom:1px solid var(--border2);flex-shrink:0;min-height:44px;gap:8px;';
-  titleBar.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${esc(s.title||'')}</div><button id="fsDismissBtn" style="background:none;border:none;color:var(--text3);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>`;
+  titleBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;';
+  const _bpmChipHtml = s.bpm ? `<span class="chip bpm-chip" style="font-size:11px;pointer-events:none;opacity:0.8;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+    ${s.bpm} BPM</span>` : '';
+  const _keyHtml = s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,56px);color:var(--accent);line-height:1;letter-spacing:2px;flex-shrink:0;">${esc(s.key)}</div>` : '';
+  titleBar.innerHTML = `
+    <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,6vw,50px);letter-spacing:1px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;">${esc(s.title||'')}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">${_bpmChipHtml}${_keyHtml}</div>
+    </div>
+    <button id="fsDismissBtn" style="background:none;border:none;color:var(--text3);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>`;
 
   // ── TAB BAR ──
   const tabBar = document.createElement('div');
@@ -3293,9 +3302,35 @@ function openNoteFullscreen(idx) {
   toolbar.querySelector('#fsSpeedMinus').addEventListener('click', () => { scrollSpeed = Math.max(1, scrollSpeed - 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
   toolbar.querySelector('#fsSpeedPlus').addEventListener('click', () => { scrollSpeed = Math.min(10, scrollSpeed + 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
 
-  const close = () => { if (fsScrollTimer) clearInterval(fsScrollTimer); overlay.remove(); };
+  const close = () => { if (fsScrollTimer) clearInterval(fsScrollTimer); if (_fsHideTimer) clearTimeout(_fsHideTimer); overlay.remove(); };
   overlay._close = close;
   titleBar.querySelector('#fsDismissBtn').addEventListener('click', close);
+
+  // ── AUTOHIDE toolbar/tabs after 5s, restore on tap ──
+  const chrome = [titleBar, tabBar, toolbar]; // elements to show/hide
+  let _fsHideTimer = null;
+  let _fsHidden = false;
+
+  function fsShowChrome() {
+    if (_fsHidden) {
+      chrome.forEach(el => { el.style.transition = 'opacity 0.3s'; el.style.opacity = '1'; el.style.pointerEvents = ''; });
+      _fsHidden = false;
+    }
+    clearTimeout(_fsHideTimer);
+    _fsHideTimer = setTimeout(fsHideChrome, 5000);
+  }
+
+  function fsHideChrome() {
+    chrome.forEach(el => { el.style.transition = 'opacity 0.5s'; el.style.opacity = '0'; el.style.pointerEvents = 'none'; });
+    _fsHidden = true;
+  }
+
+  // Tap on scroll area shows chrome
+  scrollArea.addEventListener('touchend', () => { fsShowChrome(); }, { passive: true });
+  scrollArea.addEventListener('click', () => { fsShowChrome(); });
+
+  // Start autohide timer
+  fsShowChrome();
 
   // swipe left/right to navigate songs (exits fullscreen) — skip if it was a pinch
   let swipeSx = 0, swipeSy = 0, swipeWasPinch = false;
@@ -3657,18 +3692,15 @@ async function renderSongPage(idx) {
   document.getElementById('songPageBody').innerHTML = `
     <div class="song-page-fixed">
       <div class="song-page-header">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <div style="flex:1;min-width:0;">
-            <div class="song-page-title" style="font-size:clamp(33px,7.5vw,60px);text-align:left;margin-bottom:0;">${esc(s.title)}</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
-              ${s.duration?`<span class="chip">${esc(s.duration)}</span>`:''}
-              ${s.bpm?`<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                ${s.bpm} BPM<span class="bpm-hint">▶</span>
-              </span>`:''}
-            </div>
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap;">
+          <div class="song-page-title" style="font-size:clamp(33px,7.5vw,60px);text-align:left;margin-bottom:0;flex:1;min-width:0;">${esc(s.title)}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            ${s.bpm?`<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              ${s.bpm} BPM<span class="bpm-hint">▶</span>
+            </span>`:''}
+            ${s.key?`<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,56px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>`:''}
           </div>
-          ${s.key?`<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,56px);color:var(--accent);line-height:1;letter-spacing:2px;flex-shrink:0;">${esc(s.key)}</div>`:''}
         </div>
       </div>
       <div class="note-tab-bar ${localStorage.getItem('mgb_tabs_hidden')==='1'?'tabs-hidden':''}" id="noteTabBar" style="display:flex;align-items:center;">
@@ -10635,7 +10667,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.118</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.119</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
