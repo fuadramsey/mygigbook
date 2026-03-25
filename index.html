@@ -1686,7 +1686,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.135</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.136</span>
       </div>
 
     </div>
@@ -7666,24 +7666,40 @@ async function saveSong() {
 
   const onDbPage = pageStack[pageStack.length - 1] === 'pg-db';
   if (onDbPage) {
-    // stay on DB page — re-render list then scroll saved song into view
-    await renderDB();
     await syncOut();
-    // update the title display
+    // Update the detail panel title
     const dbTitle = document.getElementById('dbDetailTitle');
     if (dbTitle && window._seCurrentSong?.title) dbTitle.textContent = window._seCurrentSong.title;
     renderSETab();
-    // Scroll the saved song into view in the list
-    requestAnimationFrame(() => {
-      const savedRow = document.querySelector(`[data-song-id="${id}"]`);
-      if (savedRow) {
-        savedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        // Brief highlight so user can spot it
-        savedRow.style.transition = 'background 0.3s';
-        savedRow.style.background = 'rgba(232,255,71,0.12)';
-        setTimeout(() => { savedRow.style.background = ''; }, 1200);
+    // Update the list row in-place — no re-sort, no position change
+    const row = document.querySelector(`[data-song-id="${id}"]`);
+    if (row) {
+      const titleEl = row.querySelector('.db-song-title');
+      if (titleEl) titleEl.textContent = title;
+      const metaEl = row.querySelector('.db-song-meta');
+      if (metaEl) {
+        const s = window._seCurrentSong || {};
+        metaEl.innerHTML = `
+          ${s.artist ? `<span>${esc(s.artist)}</span>` : ''}
+          ${s.key ? `<span class="key-pill">${esc(s.key)}</span>` : ''}
+          ${s.bpm ? `<span>${s.bpm} BPM</span>` : ''}
+          ${s.duration ? `<span>⏱ ${esc(s.duration)}</span>` : ''}
+          ${(s.tags||[]).map(t=>`<span style="background:var(--surface3);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--text3);">${esc(t)}</span>`).join('')}
+          ${s.createdBy && s.createdBy !== currentUser ? `<span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}
+        `;
       }
-    });
+      // Brief highlight
+      row.style.transition = 'background 0.3s';
+      row.style.background = 'rgba(232,255,71,0.12)';
+      setTimeout(() => { row.style.background = ''; }, 1200);
+    } else {
+      // Row not found (new song or filtered out) — full re-render
+      await renderDB();
+      requestAnimationFrame(() => {
+        const newRow = document.querySelector(`[data-song-id="${id}"]`);
+        if (newRow) newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
   } else {
     goBack(); await renderDB(); await syncOut();
   }
@@ -10979,7 +10995,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.135</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.136</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
