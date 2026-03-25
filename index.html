@@ -1690,7 +1690,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.117</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.118</span>
       </div>
 
     </div>
@@ -3490,7 +3490,7 @@ function toggleTabBar() {
   if (!bar) return;
   const hidden = bar.classList.toggle('tabs-hidden');
   localStorage.setItem('mgb_tabs_hidden', hidden ? '1' : '0');
-  if (chevron) chevron.style.transform = hidden ? 'rotate(-90deg)' : '';
+  if (chevron) chevron.style.transform = hidden ? '' : 'rotate(180deg)';
 }
 
 function updateTopNav(idx) {
@@ -3682,7 +3682,7 @@ async function renderSongPage(idx) {
         <button onclick="toggleTabBar()" title="Toggle tabs"
           style="background:none;border:none;cursor:pointer;color:var(--text3);padding:6px 8px;display:flex;align-items:center;flex-shrink:0;">
           <svg id="tabBarChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            style="width:16px;height:16px;transition:transform 0.2s;${localStorage.getItem('mgb_tabs_hidden')==='1'?'transform:rotate(-90deg);':''}">
+            style="width:16px;height:16px;transition:transform 0.2s;${localStorage.getItem('mgb_tabs_hidden')==='1'?'':'transform:rotate(180deg);'}">
             <path d="M6 9l6 6 6-6"/>
           </svg>
         </button>
@@ -10635,7 +10635,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.117</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.118</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
