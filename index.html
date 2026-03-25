@@ -396,7 +396,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .song-row-title { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-row-sub { font-size: 12px; color: var(--text2); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
 .key-pill { font-family: 'DM Mono', monospace; font-size: 11px; background: rgba(220,38,38,0.12); color: var(--accent); padding: 2px 8px; border-radius: 5px; border: 1px solid rgba(220,38,38,0.2); }
-.song-row-key-badge { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--accent); background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; padding: 2px 10px; flex-shrink: 0; line-height: 1.2; letter-spacing: 1px; }
+.song-row-key-badge { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--accent); background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; padding: 2px 12px; flex-shrink: 0; line-height: 1.2; letter-spacing: 1.5px; }
 .drag-grip { color: var(--text3); padding: 4px; cursor: grab; opacity: 0.4; }
 .drag-grip svg { width: 14px; height: 14px; }
 
@@ -603,6 +603,8 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 .toast.err { border-color: rgba(255,68,68,0.4); }
 
 .note-tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; overscroll-behavior-x: contain; touch-action: pan-x; border-bottom: 2px solid var(--border2); background: var(--surface); }
+.note-tab-bar.tabs-hidden .note-tabs { display: none; }
+.note-tab-bar.tabs-hidden { border-bottom: 1px solid var(--border); }
 .note-tab-bar::-webkit-scrollbar { display: none; }
 
 ::-webkit-scrollbar { width: 3px; }
@@ -1688,7 +1690,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.116</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.117</span>
       </div>
 
     </div>
@@ -3482,6 +3484,15 @@ async function openSongPage(idx) {
   if (document.activeElement) document.activeElement.blur();
 }
 
+function toggleTabBar() {
+  const bar = document.getElementById('noteTabBar');
+  const chevron = document.getElementById('tabBarChevron');
+  if (!bar) return;
+  const hidden = bar.classList.toggle('tabs-hidden');
+  localStorage.setItem('mgb_tabs_hidden', hidden ? '1' : '0');
+  if (chevron) chevron.style.transform = hidden ? 'rotate(-90deg)' : '';
+}
+
 function updateTopNav(idx) {
   const prev = idx > 0;
   const next = idx < currentSetSongs.length - 1;
@@ -3646,20 +3657,21 @@ async function renderSongPage(idx) {
   document.getElementById('songPageBody').innerHTML = `
     <div class="song-page-fixed">
       <div class="song-page-header">
-        <div style="text-align:center;min-width:0;">
-          <div class="song-page-title" style="font-size:clamp(33px,7.5vw,60px);">${esc(s.title)}</div>
-          ${s.artist?`<div class="song-page-artist" style="margin-bottom:6px;">${esc(s.artist)}</div>`:''}
-          <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
-            ${s.key?`<span class="chip accent">${esc(s.key)}</span>`:''}
-            ${s.duration?`<span class="chip">${esc(s.duration)}</span>`:''}
-            ${s.bpm?`<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-              ${s.bpm} BPM<span class="bpm-hint">▶</span>
-            </span>`:''}
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <div style="flex:1;min-width:0;">
+            <div class="song-page-title" style="font-size:clamp(33px,7.5vw,60px);text-align:left;margin-bottom:0;">${esc(s.title)}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+              ${s.duration?`<span class="chip">${esc(s.duration)}</span>`:''}
+              ${s.bpm?`<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                ${s.bpm} BPM<span class="bpm-hint">▶</span>
+              </span>`:''}
+            </div>
           </div>
+          ${s.key?`<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,56px);color:var(--accent);line-height:1;letter-spacing:2px;flex-shrink:0;">${esc(s.key)}</div>`:''}
         </div>
       </div>
-      <div class="note-tab-bar" style="display:flex;align-items:center;">
+      <div class="note-tab-bar ${localStorage.getItem('mgb_tabs_hidden')==='1'?'tabs-hidden':''}" id="noteTabBar" style="display:flex;align-items:center;">
         <div class="note-tabs" style="border-bottom:none;flex:1;padding-bottom:0;">
           <button class="note-tab ${noteTab==='default'?'active':''}" onclick="switchNoteTab('default',${idx})">Lyrics</button>
           <button class="note-tab ${noteTab==='mine'?'active':''}" onclick="switchNoteTab('mine',${idx})">My Notes</button>
@@ -3667,6 +3679,13 @@ async function renderSongPage(idx) {
           ${(s.groupIds||[]).length ? `<button class="note-tab ${noteTab==='charts'?'active':''}" onclick="switchNoteTab('charts',${idx})">Charts</button>` : ''}
           <button class="note-tab ${noteTab==='listen'?'active':''}" onclick="switchNoteTab('listen',${idx})">Links</button>
         </div>
+        <button onclick="toggleTabBar()" title="Toggle tabs"
+          style="background:none;border:none;cursor:pointer;color:var(--text3);padding:6px 8px;display:flex;align-items:center;flex-shrink:0;">
+          <svg id="tabBarChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            style="width:16px;height:16px;transition:transform 0.2s;${localStorage.getItem('mgb_tabs_hidden')==='1'?'transform:rotate(-90deg);':''}">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
       </div>
       ${noteTab !== 'listen' && noteTab !== 'charts' ? `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 8px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:4px;">
@@ -10616,7 +10635,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.116</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.117</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
