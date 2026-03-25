@@ -1699,7 +1699,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.125</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.126</span>
       </div>
 
     </div>
@@ -3386,6 +3386,16 @@ function openNoteFullscreen(idx) {
   function fsNavigateTo(newIdx, direction) {
     if (newIdx < 0 || newIdx >= currentSetSongs.length) return;
     const W = overlay.offsetWidth;
+
+    // Ghost strip — briefly visible on the leading edge during slide
+    const ghostSong = currentSetSongs[newIdx];
+    const ghost = makeSwipeGhost(ghostSong?.title||'', direction);
+    if (direction === 'left') { ghost.style.right = '0'; ghost.style.left = 'auto'; }
+    else { ghost.style.left = '0'; }
+    ghost.style.opacity = '1';
+    // Remove ghost when slide finishes
+    setTimeout(() => ghost.remove(), 280);
+
     const outgoing = scrollArea.cloneNode(true);
     outgoing.style.cssText = `position:absolute;inset:0;overflow:hidden;will-change:transform;background:var(--bg);z-index:1;`;
     scrollArea.parentNode.insertBefore(outgoing, scrollArea);
@@ -3440,6 +3450,22 @@ function openNoteFullscreen(idx) {
       if (absDy > Math.abs(fsDx)) return; // vertical — ignore
       fsDragging = true;
       scrollArea.style.transition = 'none';
+      // Create ghost strip for this drag
+      const canNext2 = idx < currentSetSongs.length - 1;
+      const canPrev2 = idx > 0;
+      if (fsDx < 0 && canNext2) {
+        if (!overlay._fsGhost) {
+          overlay._fsGhost = makeSwipeGhost(currentSetSongs[idx+1]?.title||'', 'left');
+          overlay._fsGhost.style.right = '0'; overlay._fsGhost.style.left = 'auto';
+          overlay._fsGhost.style.opacity = '0';
+        }
+      } else if (fsDx > 0 && canPrev2) {
+        if (!overlay._fsGhost) {
+          overlay._fsGhost = makeSwipeGhost(currentSetSongs[idx-1]?.title||'', 'right');
+          overlay._fsGhost.style.left = '0';
+          overlay._fsGhost.style.opacity = '0';
+        }
+      }
     }
     if (fsDragging) {
       const canNext = idx < currentSetSongs.length - 1;
@@ -3448,6 +3474,11 @@ function openNoteFullscreen(idx) {
       if (fsDx < 0 && !canNext) clamped = fsDx * 0.2;
       if (fsDx > 0 && !canPrev) clamped = fsDx * 0.2;
       scrollArea.style.transform = `translateX(${clamped * 0.92}px)`;
+      // Fade ghost in with progress
+      if (overlay._fsGhost) {
+        const fsW = overlay.offsetWidth;
+        overlay._fsGhost.style.opacity = String(Math.min(1, Math.abs(fsDx) / (fsW * 0.35)));
+      }
     }
   }, { passive: true });
 
@@ -3460,13 +3491,15 @@ function openNoteFullscreen(idx) {
     const committed = Math.abs(fsDx) > W * 0.35;
     const goLeft  = fsDx < 0 && idx < currentSetSongs.length - 1 && committed;
     const goRight = fsDx > 0 && idx > 0 && committed;
+    const removeGhost = () => { if (overlay._fsGhost) { overlay._fsGhost.remove(); overlay._fsGhost = null; } };
     if (goLeft || goRight) {
+      removeGhost();
       fsNavigateTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
     } else {
       // Snap back
       scrollArea.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
       scrollArea.style.transform = 'translateX(0)';
-      setTimeout(() => { scrollArea.style.transition = ''; scrollArea.style.transform = ''; }, 230);
+      setTimeout(() => { scrollArea.style.transition = ''; scrollArea.style.transform = ''; removeGhost(); }, 230);
     }
   }, { passive: true });
 
@@ -6213,6 +6246,21 @@ function swipeTo(idx, direction, skipAnimation) {
   if (document.activeElement) document.activeElement.blur();
 }
 
+// Build a ghost strip element for swipe preview
+function makeSwipeGhost(title, direction) {
+  // direction 'left' = next song, strip on left edge of incoming (right side of screen)
+  // direction 'right' = prev song, strip on right edge of incoming (left side of screen)
+  const el = document.createElement('div');
+  const borderSide = direction === 'left' ? 'border-left' : 'border-right';
+  const shadow = direction === 'left' ? '-4px 0 20px rgba(0,0,0,0.35)' : '4px 0 20px rgba(0,0,0,0.35)';
+  const rotate = direction === 'left' ? 'rotate(180deg)' : 'none';
+  el.style.cssText = `position:fixed;top:0;width:52px;height:100%;background:var(--surface2);${borderSide}:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:9999;box-shadow:${shadow};pointer-events:none;transition:opacity 0.1s;`;
+  // Position off-screen initially — caller moves it
+  el.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;transform:${rotate};letter-spacing:2px;padding:16px 0;white-space:nowrap;font-weight:700;max-height:85vh;overflow:hidden;text-overflow:ellipsis;">${esc(title||'')}</div>`;
+  document.body.appendChild(el);
+  return el;
+}
+
 function setupSwipe(idx) {
   const body = document.getElementById('songPageBody');
   const W = window.innerWidth;
@@ -6260,21 +6308,18 @@ function setupSwipe(idx) {
       const canNext = idx < currentSetSongs.length - 1;
 
       if (dx < 0 && canNext) {
-        // Dragging left (→ next song) — ghost strip on LEFT edge of incoming page
-        // The incoming page sits to the right (at W), so its left edge = W from body origin
-        nextEl = document.createElement('div');
-        nextEl.style.cssText = `position:absolute;top:0;left:${W}px;width:56px;height:100%;background:var(--surface2);border-left:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:2;box-shadow:-4px 0 16px rgba(0,0,0,0.25);`;
+        // Dragging left → next song — strip peeks in from right edge of screen
         const nSong = currentSetSongs[idx + 1];
-        nextEl.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(16px,4vw,22px);color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);letter-spacing:2px;padding:16px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:80%;font-weight:700;">${esc(nSong?.title||'')}</div>`;
-        body.appendChild(nextEl);
+        nextEl = makeSwipeGhost(nSong?.title||'', 'left');
+        nextEl.style.right = '0';
+        nextEl.style.left = 'auto';
+        nextEl.style.opacity = '0'; // starts invisible, fades in with drag
       } else if (dx > 0 && canPrev) {
-        // Dragging right (→ prev song) — ghost strip on RIGHT edge of incoming page
-        // The incoming page sits to the left (at -W), so its right edge = -W + W - 56 = -56 from body
-        prevEl = document.createElement('div');
-        prevEl.style.cssText = `position:absolute;top:0;left:-56px;width:56px;height:100%;background:var(--surface2);border-right:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:2;box-shadow:4px 0 16px rgba(0,0,0,0.25);`;
+        // Dragging right → prev song — strip peeks in from left edge of screen
         const pSong = currentSetSongs[idx - 1];
-        prevEl.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(16px,4vw,22px);color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;letter-spacing:2px;padding:16px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:80%;font-weight:700;">${esc(pSong?.title||'')}</div>`;
-        body.appendChild(prevEl);
+        prevEl = makeSwipeGhost(pSong?.title||'', 'right');
+        prevEl.style.left = '0';
+        prevEl.style.opacity = '0';
       }
     }
 
@@ -6289,6 +6334,10 @@ function setupSwipe(idx) {
     clamped = clamped * 0.92;
 
     body.style.transform = `translateX(${clamped}px)`;
+    // Fade ghost in as drag progresses (0 at start, 1 at 35% commit threshold)
+    const progress = Math.min(1, Math.abs(dx) / (W * 0.35));
+    if (nextEl) nextEl.style.opacity = String(progress);
+    if (prevEl) prevEl.style.opacity = String(progress);
   };
 
   const te = e => {
@@ -10910,7 +10959,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.125</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.126</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
