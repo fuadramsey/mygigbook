@@ -1699,7 +1699,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.123</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.125</span>
       </div>
 
     </div>
@@ -3379,26 +3379,95 @@ function openNoteFullscreen(idx) {
   chromeWrap.style.maxHeight = chromeWrap.scrollHeight + 'px';
   fsShowChrome();
 
-  // swipe left/right to navigate songs (exits fullscreen) — skip if pinch or vertical scroll
-  let swipeSx = 0, swipeSy = 0, swipeWasPinch = false;
+  // swipe left/right — stay in fullscreen, slide to adjacent song
+  let swipeSx = 0, swipeSy = 0, swipeWasPinch = false, fsDragging = false, fsDx = 0;
+
+  // Navigate to a new song within fullscreen with a slide animation
+  function fsNavigateTo(newIdx, direction) {
+    if (newIdx < 0 || newIdx >= currentSetSongs.length) return;
+    const W = overlay.offsetWidth;
+    const outgoing = scrollArea.cloneNode(true);
+    outgoing.style.cssText = `position:absolute;inset:0;overflow:hidden;will-change:transform;background:var(--bg);z-index:1;`;
+    scrollArea.parentNode.insertBefore(outgoing, scrollArea);
+
+    // Animate outgoing out
+    outgoing.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+    outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
+
+    // Slide scroll area in from opposite side
+    scrollArea.style.transition = 'none';
+    scrollArea.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
+
+    // Update main page song index
+    idx = newIdx;
+    stopScroll(); stopAudio();
+    if (bpmTimer) { clearInterval(bpmTimer); bpmTimer = null; }
+    editingNote = false;
+    renderSongPage(newIdx).then(() => {
+      // Update fullscreen title bar
+      const newS = currentSetSongs[newIdx];
+      if (newS) {
+        const titleEl = titleBar.querySelector('div[style*="Bebas Neue"]');
+        if (titleEl) titleEl.textContent = newS.title || '';
+      }
+      // Update tab content
+      activeTab = noteTab;
+      loadTabContent();
+      // Slide in
+      requestAnimationFrame(() => {
+        scrollArea.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+        scrollArea.style.transform = 'translateX(0)';
+      });
+      // Clean up outgoing
+      setTimeout(() => { outgoing.remove(); scrollArea.style.transition = ''; }, 280);
+      fsShowChrome();
+    });
+  }
+
   scrollArea.addEventListener('touchstart', e => {
-    if (e.touches.length > 1) { swipeWasPinch = true; return; }
-    swipeWasPinch = false;
+    if (e.touches.length > 1) { swipeWasPinch = true; fsDragging = false; return; }
+    swipeWasPinch = false; fsDragging = false; fsDx = 0;
     swipeSx = e.touches[0].clientX; swipeSy = e.touches[0].clientY;
   }, { passive: true });
+
   scrollArea.addEventListener('touchmove', e => {
-    if (e.touches.length > 1) swipeWasPinch = true;
+    if (e.touches.length > 1) { swipeWasPinch = true; return; }
+    if (swipeWasPinch) return;
+    const cx = e.touches[0].clientX;
+    fsDx = cx - swipeSx;
+    const absDy = Math.abs(e.touches[0].clientY - swipeSy);
+    if (!fsDragging && Math.abs(fsDx) > 8) {
+      if (absDy > Math.abs(fsDx)) return; // vertical — ignore
+      fsDragging = true;
+      scrollArea.style.transition = 'none';
+    }
+    if (fsDragging) {
+      const canNext = idx < currentSetSongs.length - 1;
+      const canPrev = idx > 0;
+      let clamped = fsDx;
+      if (fsDx < 0 && !canNext) clamped = fsDx * 0.2;
+      if (fsDx > 0 && !canPrev) clamped = fsDx * 0.2;
+      scrollArea.style.transform = `translateX(${clamped * 0.92}px)`;
+    }
   }, { passive: true });
+
   scrollArea.addEventListener('touchend', e => {
-    if (e.touches.length > 0) return; // wait for last finger
+    if (e.touches.length > 0) return;
     if (swipeWasPinch) { swipeWasPinch = false; return; }
-    const dx = e.changedTouches[0].clientX - swipeSx;
-    const dy = e.changedTouches[0].clientY - swipeSy;
-    // Require clearly horizontal: dx > 80px AND dx at least 3x dy
-    if (Math.abs(dx) < 80 || Math.abs(dy) * 3 > Math.abs(dx)) return;
-    close();
-    if (dx < 0 && idx < currentSetSongs.length - 1) swipeTo(idx + 1, 'left');
-    else if (dx > 0 && idx > 0) swipeTo(idx - 1, 'right');
+    if (!fsDragging) { fsDragging = false; return; }
+    fsDragging = false;
+    const W = overlay.offsetWidth;
+    const committed = Math.abs(fsDx) > W * 0.35;
+    const goLeft  = fsDx < 0 && idx < currentSetSongs.length - 1 && committed;
+    const goRight = fsDx > 0 && idx > 0 && committed;
+    if (goLeft || goRight) {
+      fsNavigateTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
+    } else {
+      // Snap back
+      scrollArea.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
+      scrollArea.style.transform = 'translateX(0)';
+      setTimeout(() => { scrollArea.style.transition = ''; scrollArea.style.transform = ''; }, 230);
+    }
   }, { passive: true });
 
   loadTabContent();
@@ -6191,18 +6260,20 @@ function setupSwipe(idx) {
       const canNext = idx < currentSetSongs.length - 1;
 
       if (dx < 0 && canNext) {
-        // Dragging left — show next song ghost on the right
+        // Dragging left (→ next song) — ghost strip on LEFT edge of incoming page
+        // The incoming page sits to the right (at W), so its left edge = W from body origin
         nextEl = document.createElement('div');
-        nextEl.style.cssText = `position:absolute;top:0;left:${W}px;width:${W}px;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;`;
+        nextEl.style.cssText = `position:absolute;top:0;left:${W}px;width:56px;height:100%;background:var(--surface2);border-left:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:2;box-shadow:-4px 0 16px rgba(0,0,0,0.25);`;
         const nSong = currentSetSongs[idx + 1];
-        nextEl.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,8vw,60px);color:var(--text2);opacity:0.4;text-align:center;padding:20px;">${esc(nSong?.title||'')}</div>`;
+        nextEl.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(16px,4vw,22px);color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);letter-spacing:2px;padding:16px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:80%;font-weight:700;">${esc(nSong?.title||'')}</div>`;
         body.appendChild(nextEl);
       } else if (dx > 0 && canPrev) {
-        // Dragging right — show prev song ghost on the left
+        // Dragging right (→ prev song) — ghost strip on RIGHT edge of incoming page
+        // The incoming page sits to the left (at -W), so its right edge = -W + W - 56 = -56 from body
         prevEl = document.createElement('div');
-        prevEl.style.cssText = `position:absolute;top:0;left:-${W}px;width:${W}px;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;`;
+        prevEl.style.cssText = `position:absolute;top:0;left:-56px;width:56px;height:100%;background:var(--surface2);border-right:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:2;box-shadow:4px 0 16px rgba(0,0,0,0.25);`;
         const pSong = currentSetSongs[idx - 1];
-        prevEl.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,8vw,60px);color:var(--text2);opacity:0.4;text-align:center;padding:20px;">${esc(pSong?.title||'')}</div>`;
+        prevEl.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(16px,4vw,22px);color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;letter-spacing:2px;padding:16px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:80%;font-weight:700;">${esc(pSong?.title||'')}</div>`;
         body.appendChild(prevEl);
       }
     }
@@ -10839,7 +10910,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.123</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.125</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
