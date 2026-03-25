@@ -1690,7 +1690,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.129</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.131</span>
       </div>
 
     </div>
@@ -3505,13 +3505,13 @@ function openNoteFullscreen(idx) {
 
   loadTabContent();
   // pinch-to-zoom in fullscreen — custom handler that updates the fs content
-  setupNoteAreaPinchZoom(scrollArea, idx, (delta) => {
-    noteZoom = Math.round(Math.max(0.5, Math.min(3.0, noteZoom + delta * 0.1)) * 10) / 10;
-    if (currentSetSongs[idx]?.id) saveSongZoom(currentSetSongs[idx].id);
-    // Reload content from main noteArea then apply fullscreen font size
-    const noteAreaEl = document.getElementById('noteArea');
-    if (noteAreaEl) scrollArea.innerHTML = noteAreaEl.innerHTML;
+  setupNoteAreaPinchZoom(scrollArea, idx, (committedZoom) => {
+    // noteZoom already set by setupNoteAreaPinchZoom before calling here
+    const s = currentSetSongs[idx];
+    if (s?.id) saveSongZoom(s.id);
+    // Apply to main note area too (keeps both in sync)
     applyNoteZoom();
+    // Apply to fullscreen content — update font sizes directly, no innerHTML swap
     applyFsZoom();
   });
 }
@@ -4516,77 +4516,84 @@ function applyNoteZoom() {
 }
 
 // ── PINCH-TO-ZOOM for text/note areas ──
-// Uses document-level listeners so passive/touch-action on parent elements can't block it
 function setupNoteAreaPinchZoom(el, idx, onZoom) {
-  if (!el || el._pinchZoomNote) return;
-  el._pinchZoomNote = true;
-  const zoomFn = onZoom || ((delta) => changeNoteZoom(delta, idx));
-
-  let lastDist = 0;
-  let pinching = false;
-  let finger1 = null; // track first finger position
-
-  // Remove previous listeners if any
+  if (!el) return;
+  // Remove any previous listeners before re-registering
   if (el._pinchListeners) {
     el._pinchListeners.forEach(([ev, fn, opts]) => el.removeEventListener(ev, fn, opts));
+    el._pinchListeners = null;
   }
+  el._pinchZoomNote = true;
+
+  // onZoom(newZoom) — called with the committed zoom value on touchend
+  // If not provided, uses changeNoteZoom-style step logic
+  const commitFn = onZoom;
+
+  let startDist = 0;
+  let startZoom = 1;
+  let pinching = false;
+  let currentDist = 0;
 
   const onStart = (e) => {
-    if (e.touches.length === 1) {
-      // Track first finger — may become a pinch
-      finger1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
     if (e.touches.length >= 2) {
-      // Second finger down — start pinch
       pinching = true;
-      finger1 = null;
-      // Switch to touch-action:none so browser stops interfering
       el.style.touchAction = 'none';
-      lastDist = Math.hypot(
+      startDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
+      currentDist = startDist;
+      startZoom = noteZoom;
       e.preventDefault();
     }
   };
 
   const onMove = (e) => {
-    if (e.touches.length >= 2) {
-      if (!pinching) {
-        pinching = true;
-        el.style.touchAction = 'none';
-        lastDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        e.preventDefault();
-        return;
-      }
-      e.preventDefault();
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      if (!lastDist) { lastDist = dist; return; }
-      const ratio = dist / lastDist;
-      if (Math.abs(ratio - 1) > 0.01) {
-        zoomFn(ratio > 1 ? 1 : -1);
-        lastDist = dist;
-      }
-    }
+    if (!pinching || e.touches.length < 2) return;
+    e.preventDefault();
+    currentDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    if (!startDist) return;
+    // Compute live zoom from start — smooth and continuous
+    const raw = startZoom * (currentDist / startDist);
+    const liveZoom = Math.round(Math.max(0.5, Math.min(3.0, raw)) * 10) / 10;
+    // Apply font size live WITHOUT replacing innerHTML — just update styles
+    const basePx = getBaseFontPx();
+    const fs = Math.round(basePx * liveZoom) + 'px';
+    el.querySelectorAll('.note-display, .rte-body').forEach(node => {
+      node.style.fontSize = fs;
+      node.style.lineHeight = '1.6';
+    });
+    // Update zoom label live
+    document.querySelectorAll('.note-zoom-label, .fs-zoom-label').forEach(lbl => {
+      lbl.textContent = Math.round(liveZoom * 100) + '%';
+    });
   };
 
   const onEnd = (e) => {
+    if (!pinching) return;
     if (e.touches.length < 2) {
       pinching = false;
-      lastDist = 0;
-      finger1 = null;
-      // Restore scroll ability
       el.style.touchAction = 'pan-y';
+      if (!startDist) return;
+      // Commit the final zoom value
+      const raw = startZoom * (currentDist / startDist);
+      const committed = Math.round(Math.max(0.5, Math.min(3.0, raw)) * 10) / 10;
+      noteZoom = committed;
+      startDist = 0; currentDist = 0;
+      if (commitFn) {
+        commitFn(committed);
+      } else {
+        // Default: save and apply to main note area
+        const s = currentSetSongs[idx];
+        if (s?.id) saveSongZoom(s.id);
+        applyNoteZoom();
+      }
     }
   };
 
-  // Attach directly to the element
   el.addEventListener('touchstart', onStart, { passive: false });
   el.addEventListener('touchmove', onMove, { passive: false });
   el.addEventListener('touchend', onEnd, { passive: true });
@@ -7975,18 +7982,9 @@ async function downloadAudioNow(silent = false) {
   if (!fb) { if (!silent) showToast('Storage not available', 'err'); return; }
 
   _audioDownloadInProgress = true;
+  audioSyncStart(); // keep sync indicator spinning until downloads finish
 
-  // show progress modal
-  const modal = document.getElementById('audioDownloadProgressModal');
-  const label = document.getElementById('audioProgressLabel');
-  const bar = document.getElementById('audioProgressBar');
-  const count = document.getElementById('audioProgressCount');
-  if (modal) modal.classList.remove('hidden');
-  const setProgress = (pct, msg, detail) => {
-    if (bar) bar.style.width = pct + '%';
-    if (label) label.textContent = msg;
-    if (count) count.textContent = detail || '';
-  };
+  const setProgress = (pct, msg, detail) => {}; // no-op
 
   try {
     setProgress(5, 'Checking cloud for audio…', '');
@@ -7995,10 +7993,7 @@ async function downloadAudioNow(silent = false) {
     const audioFiles = allFiles.filter(m => m.type === 'audio');
 
     if (!audioFiles.length) {
-      if (modal) modal.classList.add('hidden');
-      if (!silent) showToast('No audio files found in cloud', 'err');
-      _audioDownloadInProgress = false;
-      return;
+      _audioDownloadInProgress = false; audioSyncEnd(); return;
     }
 
     const allSongs = await dbAll('songs');
@@ -8053,11 +8048,14 @@ async function downloadAudioNow(silent = false) {
     }
 
     if (!toDownload.length) {
-      if (modal) modal.classList.add('hidden');
-      if (!silent) showToast('All audio already on this device', 'ok');
+      // Nothing to download — silent exit, sync indicator stops
       _audioDownloadInProgress = false;
+      audioSyncEnd();
       return;
     }
+
+    // Files to download — show brief dismissible toast, sync indicator stays spinning
+    showToast(`Downloading ${toDownload.length} audio file${toDownload.length > 1 ? 's' : ''}…`);
 
     let downloaded = 0, failed = 0;
     for (let i = 0; i < toDownload.length; i++) {
@@ -8103,25 +8101,18 @@ async function downloadAudioNow(silent = false) {
       }
     }
 
-    setProgress(100, 'Done!', `${downloaded} downloaded${failed ? `, ${failed} failed` : ''}`);
-    setTimeout(() => {
-      if (modal) modal.classList.add('hidden');
-      if (downloaded > 0 || !silent) {
-        showToast(
-          downloaded > 0
-            ? `Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`
-            : failed > 0 ? `${failed} file${failed > 1 ? 's' : ''} failed to download` : 'No new audio to download',
-          downloaded > 0 ? 'ok' : 'err'
-        );
-      }
-      // Refresh the song detail UI so Download buttons become players
-      if (downloaded > 0) { primeAudioCache().then(() => renderSETab()); }
-    }, 1000);
+    if (downloaded > 0) {
+      showToast(`Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`, 'ok');
+      primeAudioCache().then(() => renderSETab());
+    } else if (failed > 0) {
+      showToast(`${failed} audio file${failed > 1 ? 's' : ''} failed to download`, 'err');
+    }
+    audioSyncEnd();
 
   } catch(e) {
-    if (modal) modal.classList.add('hidden');
     console.error('[Audio Sync] Error:', e);
-    if (!silent) showToast('Audio download error: ' + (e?.message || e), 'err');
+    showToast('Audio download error: ' + (e?.message || e), 'err');
+    audioSyncEnd();
   } finally {
     _audioDownloadInProgress = false;
   }
@@ -10968,7 +10959,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.129</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.131</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
