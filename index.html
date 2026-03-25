@@ -976,9 +976,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     </div>
     <div class="page-body">
       <!-- Group members strip - shown when a group filter is active -->
-      <div id="groupMembersStrip" style="display:none;padding:4px 10px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;">
-        <div id="groupMembersInner" style="display:flex;gap:12px;align-items:center;min-width:max-content;"></div>
-      </div>
+
       <div class="empty-view" id="setsEmpty" style="display:none">
         <div class="big">♩</div>
         <h3>No setlists yet</h3>
@@ -1114,9 +1112,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
             Pin
           </button>
         </div>
-        <div id="groupMembersStripDb" style="display:none;padding:4px 10px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;">
-          <div id="groupMembersInnerDb" style="display:flex;gap:6px;align-items:center;min-width:max-content;"></div>
-        </div>
+
         <div id="dbList" style="overflow-y:auto;flex:1;min-height:0;"></div>
       </div>
 
@@ -1690,7 +1686,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.133</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.135</span>
       </div>
 
     </div>
@@ -6629,7 +6625,7 @@ async function renderDB() {
            </div>`
         : `<div class="db-song-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="18" r="3"/><path d="M11 18V7l9-2v11"/></svg></div>`
       }
-      <div class="db-song-info" onclick="${editingSongs ? `toggleSelectSong('${s.id}')` : `openSongModal('${s.id}')`}" style="cursor:pointer;">
+      <div class="db-song-info" data-song-id="${s.id}" onclick="${editingSongs ? `toggleSelectSong('${s.id}')` : `openSongModal('${s.id}')`}" style="cursor:pointer;">
         <div class="db-song-title">${esc(s.title)}</div>
         <div class="db-song-meta">
           ${s.artist ? `<span>${esc(s.artist)}</span>` : ''}
@@ -7670,13 +7666,24 @@ async function saveSong() {
 
   const onDbPage = pageStack[pageStack.length - 1] === 'pg-db';
   if (onDbPage) {
-    // stay on DB page — just re-render list and show the saved song
+    // stay on DB page — re-render list then scroll saved song into view
     await renderDB();
     await syncOut();
     // update the title display
     const dbTitle = document.getElementById('dbDetailTitle');
     if (dbTitle && window._seCurrentSong?.title) dbTitle.textContent = window._seCurrentSong.title;
     renderSETab();
+    // Scroll the saved song into view in the list
+    requestAnimationFrame(() => {
+      const savedRow = document.querySelector(`[data-song-id="${id}"]`);
+      if (savedRow) {
+        savedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Brief highlight so user can spot it
+        savedRow.style.transition = 'background 0.3s';
+        savedRow.style.background = 'rgba(232,255,71,0.12)';
+        setTimeout(() => { savedRow.style.background = ''; }, 1200);
+      }
+    });
   } else {
     goBack(); await renderDB(); await syncOut();
   }
@@ -9226,38 +9233,9 @@ async function updateGroupFilterChips() {
     }
   }
   // render or hide members strip on both pages
-  renderGroupMembersStrip(group);
 }
 
-function renderGroupMembersStrip(group) {
-  const strips = [
-    { stripId: 'groupMembersStrip', innerId: 'groupMembersInner' },
-    { stripId: 'groupMembersStripDb', innerId: 'groupMembersInnerDb' }
-  ];
-  for (const { stripId, innerId } of strips) {
-    const strip = document.getElementById(stripId);
-    const inner = document.getElementById(innerId);
-    if (!strip || !inner) continue;
-    if (!group || !group.members?.length) {
-      strip.style.display = 'none';
-      inner.innerHTML = '';
-      continue;
-    }
-    strip.style.display = 'flex';
-    strip.style.alignItems = 'center';
-    inner.innerHTML = `
-      <span style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0;margin-right:6px;">Members</span>
-      ${group.members.map(m => {
-        const isMe = m === currentUser;
-        const isOwner = m === group.createdBy;
-        return `<div style="display:flex;align-items:center;gap:4px;padding:2px 8px 2px 4px;border-radius:20px;background:${isMe?'rgba(232,255,71,0.1)':'var(--surface2)'};border:1px solid ${isMe?'rgba(232,255,71,0.3)':'var(--border)'};flex-shrink:0;">
-          <div style="width:18px;height:18px;border-radius:50%;background:${isMe?'var(--accent)':'var(--surface3)'};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:10px;color:${isMe?'#000':'var(--text2)'};">${m[0].toUpperCase()}</div>
-          <span style="font-size:10px;color:${isMe?'var(--accent)':'var(--text2)'};font-family:'DM Mono',monospace;white-space:nowrap;">${esc(isMe?'you':m)}${isOwner?' ★':''}</span>
-        </div>`;
-      }).join('')}
-    `;
-  }
-}
+
 
 // ── GROUPS ──
 let currentGroupId = null;
@@ -11001,7 +10979,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.133</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.135</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
