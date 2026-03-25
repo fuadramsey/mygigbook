@@ -1690,7 +1690,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.120</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.121</span>
       </div>
 
     </div>
@@ -3255,7 +3255,7 @@ function openNoteFullscreen(idx) {
   // ── CONTENT ──
   const scrollArea = document.createElement('div');
   scrollArea.id = 'fsNoteArea';
-  scrollArea.style.cssText = 'flex:1;overflow-y:auto;padding:20px 24px;-webkit-overflow-scrolling:touch;';
+  scrollArea.style.cssText = 'flex:1;overflow-y:auto;padding:20px 24px;-webkit-overflow-scrolling:touch;touch-action:pan-y;';
 
   chromeWrap.appendChild(tabBar);
   chromeWrap.appendChild(toolbar);
@@ -3273,7 +3273,15 @@ function openNoteFullscreen(idx) {
     const basePx = getBaseFontPx();
     const fs = `${Math.round(basePx * noteZoom)}px`;
     const lh = `1.6`;
-    scrollArea.querySelectorAll('.note-display, .rte-body').forEach(el => { el.style.fontSize = fs; el.style.lineHeight = lh; });
+    // Target all text containers — note-display, rte-body, and any element with font-size inline style
+    const targets = scrollArea.querySelectorAll('.note-display, .rte-body');
+    if (targets.length > 0) {
+      targets.forEach(el => { el.style.fontSize = fs; el.style.lineHeight = lh; });
+    } else {
+      // Fallback: set font size on scrollArea itself (covers plain text content)
+      scrollArea.style.fontSize = fs;
+      scrollArea.style.lineHeight = lh;
+    }
     toolbar.querySelectorAll('.fs-zoom-label').forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
   }
 
@@ -3296,11 +3304,20 @@ function openNoteFullscreen(idx) {
 
   toolbar.querySelector('#fsZoomMinus').addEventListener('click', () => {
     noteZoom = Math.round(Math.max(0.5, noteZoom - 0.1) * 10) / 10;
-    if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
+    if (s?.id) saveSongZoom(s.id);
+    // Reload content from noteArea (which applyNoteZoom already updated) then apply fs zoom
+    const noteAreaEl = document.getElementById('noteArea');
+    if (noteAreaEl) scrollArea.innerHTML = noteAreaEl.innerHTML;
+    applyNoteZoom(); applyFsZoom();
+    fsShowChrome(); // reset autohide timer on interaction
   });
   toolbar.querySelector('#fsZoomPlus').addEventListener('click', () => {
     noteZoom = Math.round(Math.min(3.0, noteZoom + 0.1) * 10) / 10;
-    if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
+    if (s?.id) saveSongZoom(s.id);
+    const noteAreaEl = document.getElementById('noteArea');
+    if (noteAreaEl) scrollArea.innerHTML = noteAreaEl.innerHTML;
+    applyNoteZoom(); applyFsZoom();
+    fsShowChrome();
   });
 
   let fsScrollTimer = null;
@@ -3353,20 +3370,23 @@ function openNoteFullscreen(idx) {
   chromeWrap.style.maxHeight = chromeWrap.scrollHeight + 'px';
   fsShowChrome();
 
-  // swipe left/right to navigate songs (exits fullscreen) — skip if it was a pinch
+  // swipe left/right to navigate songs (exits fullscreen) — skip if pinch or vertical scroll
   let swipeSx = 0, swipeSy = 0, swipeWasPinch = false;
   scrollArea.addEventListener('touchstart', e => {
-    swipeWasPinch = e.touches.length > 1;
+    if (e.touches.length > 1) { swipeWasPinch = true; return; }
+    swipeWasPinch = false;
     swipeSx = e.touches[0].clientX; swipeSy = e.touches[0].clientY;
   }, { passive: true });
   scrollArea.addEventListener('touchmove', e => {
     if (e.touches.length > 1) swipeWasPinch = true;
   }, { passive: true });
   scrollArea.addEventListener('touchend', e => {
+    if (e.touches.length > 0) return; // wait for last finger
     if (swipeWasPinch) { swipeWasPinch = false; return; }
     const dx = e.changedTouches[0].clientX - swipeSx;
     const dy = e.changedTouches[0].clientY - swipeSy;
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+    // Require clearly horizontal: dx > 80px AND dx at least 3x dy
+    if (Math.abs(dx) < 80 || Math.abs(dy) * 3 > Math.abs(dx)) return;
     close();
     if (dx < 0 && idx < currentSetSongs.length - 1) swipeTo(idx + 1);
     else if (dx > 0 && idx > 0) swipeTo(idx - 1);
@@ -10688,7 +10708,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.120</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.121</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
