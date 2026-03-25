@@ -1138,17 +1138,20 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <!-- RIGHT PANEL: song detail -->
       <div id="dbRightPanel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
         <!-- detail topbar: song title + pin + edit buttons -->
-        <div id="dbDetailBar" style="display:none;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-          <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-          <button id="dbDetailEditBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;" onclick="enterSEEditMode()">Edit</button>
-          <button id="dbDetailSaveBtn" class="btn primary" style="padding:4px 12px;font-size:12px;display:none;" onclick="saveSong()">Save</button>
-          <button id="dbDetailCancelBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;color:var(--text2);" onclick="cancelSEEdit()">Cancel</button>
+        <div id="dbDetailBar" style="display:none;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+          <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div id="dbDetailTitle" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,3vw,40px);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;line-height:1;"></div>
+            <div id="dbDetailMeta" style="display:flex;align-items:center;gap:8px;flex-shrink:0;"></div>
+          </div>
+          <button id="dbDetailEditBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;flex-shrink:0;" onclick="enterSEEditMode()">Edit</button>
+          <button id="dbDetailSaveBtn" class="btn primary" style="padding:4px 12px;font-size:12px;display:none;flex-shrink:0;" onclick="saveSong()">Save</button>
+          <button id="dbDetailCancelBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;color:var(--text2);flex-shrink:0;" onclick="cancelSEEdit()">Cancel</button>
         </div>
         <!-- tab bar -->
         <div id="dbDetailTabBar" style="display:none;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
           <div style="display:flex;align-items:center;">
             <div style="flex:1;display:flex;">
-              <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" >Details</button>
+              <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" >Lyrics</button>
               <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
               <button class="note-tab" id="se-tab-media" onclick="switchSETab('media')" >Media</button>
               <button class="note-tab" id="se-tab-charts" onclick="switchSETab('charts')" >Charts</button>
@@ -1580,6 +1583,19 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         </div>
       </div>
 
+      <div class="settings-section-label" style="margin-top:8px">Default Song Tab</div>
+      <div class="settings-row" style="cursor:default;gap:8px;">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+        </div>
+        <div style="display:flex;gap:6px;flex:1;flex-wrap:wrap;">
+          <button id="deftab-lyrics"   onclick="setDefaultTab('default')" style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-family:inherit;">Lyrics</button>
+          <button id="deftab-mynotes"  onclick="setDefaultTab('mine')"    style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-family:inherit;">My Notes</button>
+          <button id="deftab-allnotes" onclick="setDefaultTab('all')"     style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-family:inherit;">All Notes</button>
+          <button id="deftab-charts"   onclick="setDefaultTab('charts')"  style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-family:inherit;">Charts</button>
+        </div>
+      </div>
+
       <div class="settings-section-label" style="margin-top:8px">Audio on This Device</div>
 
       <!-- Download all audio toggle -->
@@ -1686,7 +1702,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.140</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.142</span>
       </div>
 
     </div>
@@ -2413,7 +2429,8 @@ let selectedSongIds = new Set();
 let editingSongs = false;
 let currentSetId = null;
 let currentSetSongs = [];
-let noteTab = 'default';
+const _defTab = localStorage.getItem('mgb_default_tab') || 'mine';
+let noteTab = _defTab === 'default' ? 'default' : _defTab === 'all' ? 'all' : _defTab === 'charts' ? 'charts' : 'mine';
 let editingNote = false;
 let dragIdx = null;
 const pageStack = [];
@@ -6675,7 +6692,7 @@ async function renderDB() {
   }
 }
 
-let seTab = 'details';
+let seTab = localStorage.getItem('mgb_default_tab') === 'default' ? 'details' : 'mynotes';
 let seEditMode = false;
 
 function enterSEEditMode() {
@@ -6761,11 +6778,7 @@ function switchSETab(tab) {
     if (btn1) btn1.classList.toggle('active', t === tab);
     if (btn2) btn2.classList.toggle('active', t === tab);
   });
-  // save last content tab (details/mynotes) per song
-  const id = document.getElementById('editSongId')?.value;
-  if (id && (tab === 'details' || tab === 'mynotes')) {
-    localStorage.setItem('mgb_tab_' + id, tab);
-  }
+  // (per-song tab memory removed — uses global default)
   renderSETab();
 }
 
@@ -7211,9 +7224,12 @@ function dbScheduleHide() {
 async function openSongModal(id) {
   const onDbPage = pageStack[pageStack.length - 1] === 'pg-db';
 
-  // restore last tab for this song (only details/mynotes), default to details
-  const savedTab = id ? localStorage.getItem('mgb_tab_' + id) : null;
-  seTab = (savedTab === 'mynotes') ? 'mynotes' : 'details';
+  // use user's default tab preference
+  const defaultTab = localStorage.getItem('mgb_default_tab') || 'mine';
+  if (defaultTab === 'default') seTab = 'details';
+  else if (defaultTab === 'all') seTab = 'all';
+  else if (defaultTab === 'charts') seTab = 'charts';
+  else seTab = 'mynotes';
   seEditMode = false;
   window._seCurrentSong = null;
   window._modalPendingAudio = null;
@@ -7275,6 +7291,11 @@ async function openSongModal(id) {
     if (titleEl) titleEl.textContent = s?.title || 'Edit Song';
     const dbTitle = document.getElementById('dbDetailTitle');
     if (dbTitle) dbTitle.textContent = s?.title || '';
+  const dbMeta = document.getElementById('dbDetailMeta');
+  if (dbMeta) dbMeta.innerHTML = [
+    s.bpm ? `<span class="chip bpm-chip" style="font-size:11px;pointer-events:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
+    s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>` : ''
+  ].join('');
     renderSETab();
     if (onDbPage && !isMobile()) dbScheduleHide();
   } else {
@@ -7671,6 +7692,12 @@ async function saveSong() {
     // Update the detail panel title
     const dbTitle = document.getElementById('dbDetailTitle');
     if (dbTitle && window._seCurrentSong?.title) dbTitle.textContent = window._seCurrentSong.title;
+    { const s = window._seCurrentSong || {};
+    const dbMeta = document.getElementById('dbDetailMeta');
+    if (dbMeta) dbMeta.innerHTML = [
+    s.bpm ? `<span class="chip bpm-chip" style="font-size:11px;pointer-events:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
+    s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>` : ''
+  ].join(''); }
     renderSETab();
     // Update the list row in-place — no re-sort, no position change
     const row = document.querySelector(`[data-song-id="${id}"]`);
@@ -8226,6 +8253,11 @@ function updateAutoDownloadUI() {
   if (thumb) { thumb.style.left = autoDownloadFiles ? '21px' : '3px'; thumb.style.background = autoDownloadFiles ? '#000' : '#fff'; }
 }
 
+function setDefaultTab(tab) {
+  localStorage.setItem('mgb_default_tab', tab);
+  updateSettingsUI();
+}
+
 function updateSettingsUI() {
   const mode = localStorage.getItem('stageset_theme') || 'light';
   document.getElementById('check-dark').classList.toggle('visible', mode === 'dark');
@@ -8269,6 +8301,16 @@ function updateSettingsUI() {
   if (currentIsAdmin) updateBugBadge();
   updateSidebarName();
   updateAutoDownloadUI();
+  const curDef = localStorage.getItem('mgb_default_tab') || 'mine';
+  [['deftab-lyrics','default'],['deftab-mynotes','mine'],['deftab-allnotes','all'],['deftab-charts','charts']].forEach(([btnId, val]) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    const active = curDef === val;
+    btn.style.background   = active ? 'var(--accent)' : 'var(--surface2)';
+    btn.style.color        = active ? '#000' : 'var(--text2)';
+    btn.style.borderColor  = active ? 'var(--accent)' : 'var(--border2)';
+    btn.style.fontWeight   = active ? '700' : '400';
+  });
   dbAll('audio').then(entries => {
     const el = document.getElementById('audioStorageSize');
     if (!el) return;
@@ -10996,7 +11038,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.140</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.142</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
