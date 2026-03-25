@@ -1699,7 +1699,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.122</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.123</span>
       </div>
 
     </div>
@@ -6100,7 +6100,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-function swipeTo(idx, direction) {
+function swipeTo(idx, direction, skipAnimation) {
   if (idx < 0 || idx >= currentSetSongs.length) return;
   stopScroll();
   stopTuningFork();
@@ -6113,7 +6113,7 @@ function swipeTo(idx, direction) {
   if (!direction) direction = idx > currentSongIdx ? 'left' : 'right';
 
   const body = document.getElementById('songPageBody');
-  if (!body) { renderSongPage(idx); return; }
+  if (!body || skipAnimation) { renderSongPage(idx); return; }
 
   // Snapshot current content as outgoing slide
   const outgoing = document.createElement('div');
@@ -6138,7 +6138,6 @@ function swipeTo(idx, direction) {
       outgoing.remove();
     };
     outgoing.addEventListener('animationend', cleanup, { once: true });
-    // Fallback cleanup in case animationend doesn't fire
     setTimeout(cleanup, 350);
   });
 
@@ -6147,35 +6146,124 @@ function swipeTo(idx, direction) {
 
 function setupSwipe(idx) {
   const body = document.getElementById('songPageBody');
-  let sx=0, sy=0, ignore=false, wasPinch=false;
+  const W = window.innerWidth;
+
+  let sx=0, sy=0, dx=0;
+  let dragging=false, ignore=false, wasPinch=false;
+  let prevEl=null, nextEl=null; // ghost elements for adjacent songs
+
+  function cancelDrag() {
+    dragging = false;
+    if (prevEl) { prevEl.remove(); prevEl = null; }
+    if (nextEl) { nextEl.remove(); nextEl = null; }
+    body.style.transform = '';
+    body.style.transition = '';
+  }
+
   const ts = e => {
-    if (e.touches.length > 1) { wasPinch = true; return; }
-    wasPinch = false;
+    if (e.touches.length > 1) { wasPinch = true; cancelDrag(); return; }
+    wasPinch = false; dragging = false;
     const target = e.target;
     ignore = !!(target.closest('.note-tab-bar') || target.closest('.note-tabs') || target.closest('.note-tab'));
-    sx=e.touches[0].clientX; sy=e.touches[0].clientY;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0;
   };
+
   const tm = e => {
-    if (e.touches.length > 1) wasPinch = true;
+    if (e.touches.length > 1) { wasPinch = true; cancelDrag(); return; }
+    if (ignore || wasPinch) return;
+    const cx = e.touches[0].clientX;
+    const cy = e.touches[0].clientY;
+    dx = cx - sx;
+    const absDy = Math.abs(cy - sy);
+
+    // Lock to horizontal once direction is clear
+    if (!dragging) {
+      if (Math.abs(dx) < 8) return; // wait for clear intent
+      if (absDy > Math.abs(dx)) { ignore = true; return; } // vertical scroll — ignore
+      // Horizontal drag confirmed
+      dragging = true;
+      body.style.transition = 'none';
+      body.style.position = 'relative';
+      body.style.overflow = 'visible'; // allow content to slide outside bounds temporarily
+
+      // Create ghost for adjacent song
+      const canPrev = idx > 0;
+      const canNext = idx < currentSetSongs.length - 1;
+
+      if (dx < 0 && canNext) {
+        // Dragging left — show next song ghost on the right
+        nextEl = document.createElement('div');
+        nextEl.style.cssText = `position:absolute;top:0;left:${W}px;width:${W}px;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;`;
+        const nSong = currentSetSongs[idx + 1];
+        nextEl.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,8vw,60px);color:var(--text2);opacity:0.4;text-align:center;padding:20px;">${esc(nSong?.title||'')}</div>`;
+        body.appendChild(nextEl);
+      } else if (dx > 0 && canPrev) {
+        // Dragging right — show prev song ghost on the left
+        prevEl = document.createElement('div');
+        prevEl.style.cssText = `position:absolute;top:0;left:-${W}px;width:${W}px;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;`;
+        const pSong = currentSetSongs[idx - 1];
+        prevEl.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,8vw,60px);color:var(--text2);opacity:0.4;text-align:center;padding:20px;">${esc(pSong?.title||'')}</div>`;
+        body.appendChild(prevEl);
+      }
+    }
+
+    if (!dragging) return;
+    // Resist at edges (no adjacent song)
+    const canNext = idx < currentSetSongs.length - 1;
+    const canPrev = idx > 0;
+    let clamped = dx;
+    if (dx < 0 && !canNext) clamped = dx * 0.2;
+    if (dx > 0 && !canPrev) clamped = dx * 0.2;
+    // Apply slight resistance when dragging
+    clamped = clamped * 0.92;
+
+    body.style.transform = `translateX(${clamped}px)`;
   };
+
   const te = e => {
-    // Only act when the last finger lifts (touches.length === 0)
     if (e.touches.length > 0) return;
-    if (ignore || wasPinch) { wasPinch = false; return; }
-    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
-    if (Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx)) return;
-    if (dx<0&&idx<currentSetSongs.length-1) swipeTo(idx+1,'left');
-    else if (dx>0&&idx>0) swipeTo(idx-1,'right');
+    if (!dragging) { wasPinch = false; return; }
+
+    const committed = Math.abs(dx) > W * 0.35; // 35% of screen = commit
+    const goLeft = dx < 0 && idx < currentSetSongs.length - 1 && committed;
+    const goRight = dx > 0 && idx > 0 && committed;
+
+    body.style.overflow = '';
+    body.style.position = '';
+
+    if (goLeft || goRight) {
+      // Snap all the way off screen then navigate
+      const targetX = goLeft ? -W : W;
+      body.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
+      body.style.transform = `translateX(${targetX}px)`;
+      // Clean up ghosts and navigate after snap
+      setTimeout(() => {
+        body.style.transform = '';
+        body.style.transition = '';
+        if (prevEl) { prevEl.remove(); prevEl = null; }
+        if (nextEl) { nextEl.remove(); nextEl = null; }
+        if (goLeft) swipeTo(idx + 1, 'left', true); // true = skip animation (already animated)
+        else swipeTo(idx - 1, 'right', true);
+      }, 180);
+    } else {
+      // Snap back
+      body.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
+      body.style.transform = 'translateX(0)';
+      setTimeout(cancelDrag, 220);
+    }
+    dragging = false;
+    wasPinch = false;
   };
+
   if (body._ts) {
     body.removeEventListener('touchstart',body._ts);
     body.removeEventListener('touchmove',body._tm);
     body.removeEventListener('touchend',body._te);
   }
   body._ts=ts; body._tm=tm; body._te=te;
-  body.addEventListener('touchstart',ts,{passive:true});
-  body.addEventListener('touchmove',tm,{passive:true});
-  body.addEventListener('touchend',te,{passive:true});
+  body.addEventListener('touchstart', ts, { passive: true });
+  body.addEventListener('touchmove',  tm, { passive: true });
+  body.addEventListener('touchend',   te, { passive: true });
 }
 
 // ── PICKER ──
@@ -10751,7 +10839,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.122</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.123</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
