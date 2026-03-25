@@ -1686,7 +1686,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.136</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.138</span>
       </div>
 
     </div>
@@ -3709,6 +3709,8 @@ function toggleTabPin() {
   if (btn) {
     btn.style.color = pinned ? 'var(--accent)' : 'var(--text3)';
     btn.title = pinned ? 'Unpin tabs' : 'Pin tabs';
+    const svg = btn.querySelector('svg');
+    if (svg) svg.setAttribute('fill', pinned ? 'currentColor' : 'none');
   }
   if (pinned) {
     clearTimeout(_tabAutoHideTimer);
@@ -3781,7 +3783,7 @@ async function renderSongPage(idx) {
         <div class="note-display" id="inlineNoteDisplay" style="text-align:center;max-width:560px;min-height:unset;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${s.text ? esc(s.text) : '<span style="color:var(--text3);font-style:italic;font-size:15px;">No note text.</span>'}</div>
       </div>`;
     setupSwipe(idx);
-  startTabAutoHide();
+    requestAnimationFrame(() => startTabAutoHide());
     return;
   }
 
@@ -3905,7 +3907,7 @@ async function renderSongPage(idx) {
         <button id="tabPinBtn" onclick="toggleTabPin()" title="${localStorage.getItem('mgb_tabs_pinned')==='1'?'Unpin tabs':'Pin tabs'}"
           style="background:none;border:none;cursor:pointer;color:${localStorage.getItem('mgb_tabs_pinned')==='1'?'var(--accent)':'var(--text3)'};padding:6px 8px;display:flex;align-items:center;flex-shrink:0;">
           <svg viewBox="0 0 24 24" fill="${localStorage.getItem('mgb_tabs_pinned')==='1'?'currentColor':'none'}" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;">
-            <path d="M12 2l3 7h6l-5 4 2 7-6-4-6 4 2-7-5-4h6z"/>
+            <line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/>
           </svg>
         </button>
       </div>
@@ -3963,7 +3965,7 @@ async function renderSongPage(idx) {
   setupSwipe(idx);
   // apply zoom to note content area
   applyNoteZoom();
-  requestAnimationFrame(() => positionAudioPlayer());
+  requestAnimationFrame(() => { positionAudioPlayer(); startTabAutoHide(); });
   // pinch-to-zoom on note text area
   requestAnimationFrame(() => setupNoteAreaPinchZoom(document.getElementById('noteArea'), idx));
   // trigger PDF.js rendering for any PDF viewers in the note area
@@ -10995,7 +10997,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.136</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.138</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
