@@ -893,9 +893,19 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   .form-input { font-size: 19px; }
 }
 
-/* Desktop (1100px+) */
+/* Desktop (1100px+) — tighter font scale, medium closer to small */
 @media (min-width: 1100px) {
   .song-page-title { font-size: 65px; }
+  /* Override tablet 22px base — desktop medium is 16px for tighter scale */
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) { font-size: 16px !important; }
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) .note-display { font-size: 20px; }
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) .rte-body { font-size: 17px; }
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) .set-item-name { font-size: 20px; }
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) .song-row-title { font-size: 16px; }
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) .db-song-title { font-size: 15px; }
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) .note-tab { font-size: 14px; }
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) .settings-row { font-size: 15px; }
+  body:not(.fs-small):not(.fs-large):not(.fs-xl) .form-input { font-size: 15px; }
 }
 </style>
 </head>
@@ -1702,7 +1712,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.143</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.145</span>
       </div>
 
     </div>
@@ -3106,7 +3116,7 @@ async function touchDragEnd(e, startIdx) {
 // ── SONG NOTE PAGE ──
 let currentSongIdx = 0;
 let scrollTimer = null;
-let scrollSpeed = 2;
+let scrollSpeed = 1;
 let scrollPlaying = false;
 let bpmTimer = null;
 const songScrollSpeeds = {}; // remembers speed per song id
@@ -3156,7 +3166,7 @@ function getBaseFontPx() {
   // medium: @media base, no fs class applied
   if (isTablet) return 32;  // tablet @media: 32px
   if (isMobile) return 22;  // mobile @media: 22px
-  return 18;                // desktop base: 18px
+  return 20;                // desktop base: 20px (matches 1100px+ override)
 }
 
 function changeDBZoom(delta, key) {
@@ -3345,7 +3355,7 @@ function openNoteFullscreen(idx) {
   let fsScrollTimer = null;
   toolbar.querySelector('#fsScrollBtn').addEventListener('click', () => {
     if (fsScrollTimer) { clearInterval(fsScrollTimer); fsScrollTimer = null; toolbar.querySelector('#fsScrollBtn').style.background = '#0ea5e9'; }
-    else { toolbar.querySelector('#fsScrollBtn').style.background = '#0284c7'; fsScrollTimer = setInterval(() => { scrollArea.scrollTop += (scrollSpeed === 1 ? 0.5 : scrollSpeed); }, 50); }
+    else { toolbar.querySelector('#fsScrollBtn').style.background = '#0284c7'; fsScrollTimer = setInterval(() => { scrollArea.scrollTop += (scrollSpeed === 1 ? 0.15 : scrollSpeed); }, 50); }
   });
   toolbar.querySelector('#fsSpeedMinus').addEventListener('click', () => { scrollSpeed = Math.max(1, scrollSpeed - 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
   toolbar.querySelector('#fsSpeedPlus').addEventListener('click', () => { scrollSpeed = Math.min(10, scrollSpeed + 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
@@ -4430,7 +4440,7 @@ function startSEScroll() {
   function step(ts) {
     if (!seScrollPlaying) return;
     if (last !== null) {
-      const pxPerSec = scrollSpeed === 1 ? 2.5 : scrollSpeed * 5;
+      const pxPerSec = scrollSpeed === 1 ? 1.5 : scrollSpeed * 5;
       accumulated += (pxPerSec * (ts - last)) / 1000;
       if (accumulated >= 1) {
         const area = document.getElementById('seTabBody') || document.getElementById('sepTabBody');
@@ -4477,7 +4487,7 @@ function startScroll() {
   function step(ts) {
     if (!scrollPlaying) return;
     if (last !== null) {
-      const pxPerSec = scrollSpeed === 1 ? 2.5 : scrollSpeed * 5;
+      const pxPerSec = scrollSpeed === 1 ? 1.5 : scrollSpeed * 5;
       accumulated += (pxPerSec * (ts - last)) / 1000;
       if (accumulated >= 1) {
         const area = document.getElementById('noteArea');
@@ -11055,7 +11065,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.143</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.145</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
