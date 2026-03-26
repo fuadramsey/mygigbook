@@ -1712,7 +1712,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.151</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.152</span>
       </div>
 
     </div>
@@ -3916,7 +3916,8 @@ async function renderSongPage(idx) {
         <div class="note-display" id="inlineNoteDisplay" style="text-align:center;max-width:560px;min-height:unset;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${s.text ? esc(s.text) : '<span style="color:var(--text3);font-style:italic;font-size:15px;">No note text.</span>'}</div>
       </div>`;
     setupSwipe(idx);
-    requestAnimationFrame(() => startTabAutoHide());
+    // Tab bar starts hidden via class in HTML template; show if pinned
+    if (isTabsPinned()) showTabBar(false);
     return;
   }
 
@@ -4029,7 +4030,7 @@ async function renderSongPage(idx) {
           </div>
         </div>
       </div>
-      <div class="note-tab-bar" id="noteTabBar" style="display:flex;align-items:center;max-height:60px;">
+      <div class="note-tab-bar ${localStorage.getItem('mgb_tabs_pinned')==='1'?'':'tabs-hidden'}" id="noteTabBar" style="display:flex;align-items:center;max-height:60px;">
         <div class="note-tabs" style="border-bottom:none;flex:1;padding-bottom:0;">
           <button class="note-tab ${noteTab==='default'?'active':''}" onclick="switchNoteTab('default',${idx});showTabBar(true);">Lyrics</button>
           <button class="note-tab ${noteTab==='mine'?'active':''}" onclick="switchNoteTab('mine',${idx});showTabBar(true);">My Notes</button>
@@ -4098,7 +4099,9 @@ async function renderSongPage(idx) {
   setupSwipe(idx);
   // apply zoom to note content area
   applyNoteZoom();
-  requestAnimationFrame(() => { positionAudioPlayer(); startTabAutoHide(); });
+  requestAnimationFrame(() => { positionAudioPlayer(); });
+  // Tab bar starts hidden via class in HTML template; show if pinned
+  if (isTabsPinned()) showTabBar(false);
   // pinch-to-zoom on note text area
   requestAnimationFrame(() => setupNoteAreaPinchZoom(document.getElementById('noteArea'), idx));
   // trigger PDF.js rendering for any PDF viewers in the note area
@@ -11183,7 +11186,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.151</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.152</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
