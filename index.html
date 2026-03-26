@@ -1712,7 +1712,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.152</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.153</span>
       </div>
 
     </div>
@@ -6544,25 +6544,29 @@ function setupSwipe(idx) {
     const goLeft = dx < 0 && idx < currentSetSongs.length - 1 && committed;
     const goRight = dx > 0 && idx > 0 && committed;
 
-    body.style.overflow = '';
-    body.style.position = '';
-
     if (goLeft || goRight) {
+      // Keep overflow hidden during snap so tab bar can't flash
+      body.style.overflow = 'hidden';
+      body.style.position = 'relative';
       // Snap all the way off screen then navigate
       const targetX = goLeft ? -W : W;
       body.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
       body.style.transform = `translateX(${targetX}px)`;
-      // Clean up ghosts and navigate after snap
+      // Clean up and navigate after snap
       setTimeout(() => {
         body.style.transform = '';
         body.style.transition = '';
+        body.style.overflow = '';
+        body.style.position = '';
         if (prevEl) { prevEl.remove(); prevEl = null; }
         if (nextEl) { nextEl.remove(); nextEl = null; }
-        if (goLeft) swipeTo(idx + 1, 'left', true); // true = skip animation (already animated)
+        if (goLeft) swipeTo(idx + 1, 'left', true);
         else swipeTo(idx - 1, 'right', true);
       }, 180);
     } else {
       // Snap back
+      body.style.overflow = '';
+      body.style.position = '';
       body.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
       body.style.transform = 'translateX(0)';
       setTimeout(cancelDrag, 220);
@@ -11186,7 +11190,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.152</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.153</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
