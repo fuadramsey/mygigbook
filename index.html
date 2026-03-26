@@ -1712,7 +1712,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.147</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.148</span>
       </div>
 
     </div>
@@ -3320,6 +3320,14 @@ function openNoteFullscreen(idx) {
   function loadTabContent() {
     const showScroll = activeTab !== 'listen' && activeTab !== 'charts';
     toolbar.querySelector('#fsScrollControls').style.display = showScroll ? 'flex' : 'none';
+    // For setlist note items, #noteArea doesn't exist — use #inlineNoteDisplay
+    if (s && s.type === 'note') {
+      const inlineEl = document.getElementById('inlineNoteDisplay');
+      scrollArea.innerHTML = inlineEl
+        ? `<div class="note-display" style="text-align:center;max-width:560px;margin:0 auto;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${inlineEl.innerHTML}</div>`
+        : '<div style="color:var(--text3);font-style:italic;padding:20px;text-align:center;">No note text.</div>';
+      return;
+    }
     if (activeTab === noteTab) {
       const noteArea = document.getElementById('noteArea');
       scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
@@ -6414,6 +6422,7 @@ function setupSwipe(idx) {
   const ts = e => {
     if (e.touches.length > 1) { wasPinch = true; cancelDrag(); return; }
     wasPinch = false; dragging = false;
+    body._swipeJustHappened = false;
     const target = e.target;
     ignore = !!(target.closest('.note-tab-bar') || target.closest('.note-tabs') || target.closest('.note-tab'));
     sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0;
@@ -6505,8 +6514,11 @@ function setupSwipe(idx) {
       body.style.transform = 'translateX(0)';
       setTimeout(cancelDrag, 220);
     }
+    if (dragging) body._swipeJustHappened = true;
     dragging = false;
     wasPinch = false;
+    // Clear the flag after click event fires (click fires ~10ms after touchend)
+    setTimeout(() => { body._swipeJustHappened = false; }, 100);
   };
 
   if (body._ts) {
@@ -6518,17 +6530,22 @@ function setupSwipe(idx) {
   body.addEventListener('touchstart', ts, { passive: true });
   body.addEventListener('touchmove',  tm, { passive: true });
   body.addEventListener('touchend',   te, { passive: true });
-  // Desktop: click anywhere in the song body reveals tabs
+  // Desktop: click anywhere in the song body reveals tabs (not during/after swipe)
   if (!body._clickReveal) {
     body._clickReveal = true;
-    body.addEventListener('click', () => { showTabBar(true); });
+    body.addEventListener('click', () => {
+      if (body._swipeJustHappened) return;
+      showTabBar(true);
+    });
   }
 
   // Touch on note content area reveals tabs
   const noteArea = document.getElementById('noteArea');
   if (noteArea && !noteArea._tabReveal) {
     noteArea._tabReveal = true;
-    noteArea.addEventListener('touchstart', () => { showTabBar(true); }, { passive: true });
+    noteArea.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0 && !body._swipeJustHappened) showTabBar(true);
+    }, { passive: true });
     noteArea.addEventListener('click', () => { showTabBar(true); });
   }
 }
@@ -11114,7 +11131,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.147</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.148</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
