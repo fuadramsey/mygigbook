@@ -1712,7 +1712,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.145</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.146</span>
       </div>
 
     </div>
@@ -3352,15 +3352,65 @@ function openNoteFullscreen(idx) {
     fsShowChrome();
   });
 
-  let fsScrollTimer = null;
-  toolbar.querySelector('#fsScrollBtn').addEventListener('click', () => {
-    if (fsScrollTimer) { clearInterval(fsScrollTimer); fsScrollTimer = null; toolbar.querySelector('#fsScrollBtn').style.background = '#0ea5e9'; }
-    else { toolbar.querySelector('#fsScrollBtn').style.background = '#0284c7'; fsScrollTimer = setInterval(() => { scrollArea.scrollTop += (scrollSpeed === 1 ? 0.15 : scrollSpeed); }, 50); }
-  });
-  toolbar.querySelector('#fsSpeedMinus').addEventListener('click', () => { scrollSpeed = Math.max(1, scrollSpeed - 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
-  toolbar.querySelector('#fsSpeedPlus').addEventListener('click', () => { scrollSpeed = Math.min(10, scrollSpeed + 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
+  // Fullscreen scroll — uses rAF + accumulation, same as main scroll, handles fractional px
+  let fsScrollPlaying = false;
+  let fsScrollRaf = null;
 
-  const close = () => { if (fsScrollTimer) clearInterval(fsScrollTimer); if (_fsHideTimer) clearTimeout(_fsHideTimer); overlay.remove(); };
+  function fsPxPerSec() {
+    return scrollSpeed === 1 ? 1.5 : scrollSpeed * 5;
+  }
+
+  function startFsScroll() {
+    if (fsScrollPlaying) return;
+    fsScrollPlaying = true;
+    updateFsScrollBtn();
+    let last = null;
+    let accumulated = 0;
+    function step(ts) {
+      if (!fsScrollPlaying) return;
+      if (last !== null) {
+        accumulated += (fsPxPerSec() * (ts - last)) / 1000;
+        if (accumulated >= 1) {
+          const move = Math.floor(accumulated);
+          accumulated -= move;
+          scrollArea.scrollTop += move;
+          if (scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 2) {
+            stopFsScroll(); return;
+          }
+        }
+      }
+      last = ts;
+      fsScrollRaf = requestAnimationFrame(step);
+    }
+    fsScrollRaf = requestAnimationFrame(step);
+  }
+
+  function stopFsScroll() {
+    fsScrollPlaying = false;
+    if (fsScrollRaf) { cancelAnimationFrame(fsScrollRaf); fsScrollRaf = null; }
+    updateFsScrollBtn();
+  }
+
+  function updateFsScrollBtn() {
+    const btn = toolbar.querySelector('#fsScrollBtn');
+    if (!btn) return;
+    btn.style.background = fsScrollPlaying ? '#0284c7' : '';
+    btn.classList.toggle('active', fsScrollPlaying);
+  }
+
+  toolbar.querySelector('#fsScrollBtn').addEventListener('click', () => {
+    fsScrollPlaying ? stopFsScroll() : startFsScroll();
+  });
+  toolbar.querySelector('#fsSpeedMinus').addEventListener('click', () => {
+    scrollSpeed = Math.max(1, scrollSpeed - 1);
+    toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`;
+  });
+  toolbar.querySelector('#fsSpeedPlus').addEventListener('click', () => {
+    scrollSpeed = Math.min(10, scrollSpeed + 1);
+    toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`;
+  });
+
+  const close = () => { stopFsScroll(); if (_fsHideTimer) clearTimeout(_fsHideTimer); overlay.remove(); };
   overlay._close = close;
   titleBar.querySelector('#fsDismissBtn').addEventListener('click', close);
 
@@ -11065,7 +11115,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.145</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.146</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
