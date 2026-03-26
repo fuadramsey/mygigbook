@@ -252,15 +252,15 @@ body.palette-forest {
 */
 
 /* ── SMALL ── desktop: ~75% of new medium | tablet: ~75% of tablet medium ── */
-body.fs-small                  { font-size: 11px !important; }
-body.fs-small .song-row-title  { font-size: 12px !important; }
-body.fs-small .db-song-title   { font-size: 11px !important; }
-body.fs-small .set-item-name   { font-size: 14px !important; }
-body.fs-small .note-tab        { font-size: 11px !important; }
-body.fs-small .form-input      { font-size: 11px !important; }
-body.fs-small .settings-row    { font-size: 11px !important; }
-body.fs-small .note-display    { font-size: 14px; }
-body.fs-small .rte-body        { font-size: 12px; }
+body.fs-small                  { font-size: 12px !important; }
+body.fs-small .song-row-title  { font-size: 13px !important; }
+body.fs-small .db-song-title   { font-size: 12px !important; }
+body.fs-small .set-item-name   { font-size: 15px !important; }
+body.fs-small .note-tab        { font-size: 12px !important; }
+body.fs-small .form-input      { font-size: 12px !important; }
+body.fs-small .settings-row    { font-size: 12px !important; }
+body.fs-small .note-display    { font-size: 15px; }
+body.fs-small .rte-body        { font-size: 13px; }
 
 /* ── LARGE ── ~125% of new tablet medium ── */
 body.fs-large                  { font-size: 26px !important; }
@@ -1702,7 +1702,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.142</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.143</span>
       </div>
 
     </div>
@@ -3150,7 +3150,7 @@ function getBaseFontPx() {
   const isTablet = w >= 700;
   const isMobile = w <= 480;
   // fs-* classes use !important or higher specificity — same value on all devices
-  if (size === 'small')  return 14;   // body.fs-small .note-display: 14px
+  if (size === 'small')  return 15;   // body.fs-small .note-display: 15px
   if (size === 'large')  return 38;   // body.fs-large .note-display: 38px
   if (size === 'xl')     return 46;   // body.fs-xl    .note-display: 46px
   // medium: @media base, no fs class applied
@@ -6268,6 +6268,7 @@ document.addEventListener('keydown', (e) => {
 
 function swipeTo(idx, direction, skipAnimation) {
   if (idx < 0 || idx >= currentSetSongs.length) return;
+  clearAllGhosts(); // remove any lingering ghost previews
   stopScroll();
   stopTuningFork();
   stopAudio();
@@ -6310,6 +6311,9 @@ function swipeTo(idx, direction, skipAnimation) {
   if (document.activeElement) document.activeElement.blur();
 }
 
+// Track all active ghost elements so they can be force-cleaned
+window._activeGhosts = window._activeGhosts || new Set();
+
 // Build a ghost strip element for swipe preview
 function makeSwipeGhost(title, direction) {
   // direction 'left' = next song, strip on left edge of incoming (right side of screen)
@@ -6322,7 +6326,13 @@ function makeSwipeGhost(title, direction) {
   // Position off-screen initially — caller moves it
   el.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;transform:${rotate};letter-spacing:2px;padding:16px 0;white-space:nowrap;font-weight:700;max-height:85vh;overflow:hidden;text-overflow:ellipsis;">${esc(title||'')}</div>`;
   document.body.appendChild(el);
+  window._activeGhosts.add(el);
   return el;
+}
+
+function clearAllGhosts() {
+  (window._activeGhosts || new Set()).forEach(g => { try { g.remove(); } catch(e) {} });
+  window._activeGhosts = new Set();
 }
 
 function setupSwipe(idx) {
@@ -6337,6 +6347,7 @@ function setupSwipe(idx) {
     dragging = false;
     if (prevEl) { prevEl.remove(); prevEl = null; }
     if (nextEl) { nextEl.remove(); nextEl = null; }
+    clearAllGhosts();
     body.style.transform = '';
     body.style.transition = '';
   }
@@ -6448,12 +6459,18 @@ function setupSwipe(idx) {
   body.addEventListener('touchstart', ts, { passive: true });
   body.addEventListener('touchmove',  tm, { passive: true });
   body.addEventListener('touchend',   te, { passive: true });
+  // Desktop: click anywhere in the song body reveals tabs
+  if (!body._clickReveal) {
+    body._clickReveal = true;
+    body.addEventListener('click', () => { showTabBar(true); });
+  }
 
   // Touch on note content area reveals tabs
   const noteArea = document.getElementById('noteArea');
   if (noteArea && !noteArea._tabReveal) {
     noteArea._tabReveal = true;
     noteArea.addEventListener('touchstart', () => { showTabBar(true); }, { passive: true });
+    noteArea.addEventListener('click', () => { showTabBar(true); });
   }
 }
 
@@ -11038,7 +11055,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.142</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.143</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
