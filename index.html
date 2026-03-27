@@ -1025,17 +1025,20 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
   <!-- PAGE: SONG NOTE VIEW -->
   <div class="page" id="pg-song">
-    <div class="topbar" style="gap:6px;padding:0 8px;">
-      <!-- Back -->
-      <button class="back-btn" onclick="goBack()" style="flex-shrink:0;">
+    <div class="topbar" style="gap:0;padding:0;justify-content:center;position:relative;">
+      <!-- Back — always at left edge -->
+      <button class="back-btn" onclick="goBack()" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
+
+      <!-- Centered nav group — max-width keeps it compact on wide screens -->
+      <div id="songTopNav" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0 52px;width:100%;max-width:780px;">
 
       <!-- Prev nav button — chevron left, song name centered -->
       <button id="songNavPrev" onclick="swipeTo(currentSongIdx-1,'right')" title="Previous song"
         style="display:flex;align-items:center;justify-content:space-between;gap:4px;
                background:var(--surface2);border:1px solid var(--border);border-radius:8px;
-               padding:5px 8px;flex:1;min-width:0;max-width:140px;cursor:pointer;color:var(--text);
+               padding:5px 8px;flex:1;min-width:0;cursor:pointer;color:var(--text);
                transition:background 0.15s;height:44px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;"><path d="M15 18l-6-6 6-6"/></svg>
         <span id="songNavPrevLabel" style="font-size:11px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1;"></span>
@@ -1043,7 +1046,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       </button>
 
       <!-- Center: set name (clickable dropdown) + counter -->
-      <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden;min-width:0;max-width:120px;">
+      <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden;min-width:0;max-width:130px;">
         <button id="songPageSetName" onclick="openSetlistDropdown()" style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1.5px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.1;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:6px;display:flex;align-items:center;gap:4px;">
           <span id="songPageSetNameText"></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;flex-shrink:0;color:var(--accent);"><path d="M6 9l6 6 6-6"/></svg>
@@ -1055,15 +1058,17 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <button id="songNavNext" onclick="swipeTo(currentSongIdx+1,'left')" title="Next song"
         style="display:flex;align-items:center;justify-content:space-between;gap:4px;
                background:var(--surface2);border:1px solid var(--border);border-radius:8px;
-               padding:5px 8px;flex:1;min-width:0;max-width:140px;cursor:pointer;color:var(--text);
+               padding:5px 8px;flex:1;min-width:0;cursor:pointer;color:var(--text);
                transition:background 0.15s;height:44px;">
         <span style="width:16px;flex-shrink:0;"></span>
         <span id="songNavNextLabel" style="font-size:11px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1;"></span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
       </button>
 
-      <!-- Tuning fork only — audio player is in the note area -->
-      <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;flex-shrink:0;">
+      </div><!-- end songTopNav -->
+
+      <!-- Tuning fork — always anchored to the right edge -->
+      <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);">
         <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
           <path d="M12 13 Q8 13 8 8 L8 3"/>
           <path d="M12 13 Q16 13 16 8 L16 3"/>
@@ -1163,21 +1168,30 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
           <button id="dbDetailCancelBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;color:var(--text2);flex-shrink:0;" onclick="cancelSEEdit()">Cancel</button>
         </div>
         <!-- tab bar -->
-        <div id="dbDetailTabBar" style="display:none;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-          <div style="display:flex;align-items:center;">
+        <div id="dbDetailTabBar" style="display:none;background:var(--surface);flex-shrink:0;">
+          <!-- Tab row -->
+          <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);">
             <div style="flex:1;display:flex;">
               <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" >Lyrics</button>
               <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
               <button class="note-tab" id="se-tab-media" onclick="switchSETab('media')" >Media</button>
               <button class="note-tab" id="se-tab-charts" onclick="switchSETab('charts')" >Charts</button>
             </div>
-            <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
+          </div>
+          <!-- Toolbar row — below tabs, matches song-in-set layout -->
+          <div id="seScrollToolbar" style="display:none;align-items:center;justify-content:space-between;padding:3px 8px;border-bottom:1px solid var(--border);gap:4px;">
+            <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
+              <button class="scroll-speed-btn se-zoom-btn" onclick="changeSEZoom(-1)" title="Zoom out" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/></svg></button>
+              <span class="se-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">100%</span>
+              <button class="scroll-speed-btn se-zoom-btn" onclick="changeSEZoom(1)" title="Zoom in" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
               <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
-              <div style="width:12px;"></div>
+              <div style="width:4px;"></div>
               <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
-              <span class="scroll-speed-label" id="seScrollSpeedLabel">×3</span>
+              <span class="scroll-speed-label" id="seScrollSpeedLabel">×${scrollSpeed}</span>
               <button class="scroll-speed-btn" onclick="changeSESpeed(1)">+</button>
             </div>
           </div>
@@ -1717,7 +1731,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.165</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.173</span>
       </div>
 
     </div>
@@ -3285,7 +3299,7 @@ function openNoteFullscreen(idx) {
   // ── TITLE BAR — always visible, matches song page header ──
   const titleBar = document.createElement('div');
   titleBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;z-index:1;';
-  const _bpmChipHtml = s.bpm ? `<span class="chip bpm-chip" style="font-size:11px;pointer-events:none;opacity:0.8;">
+  const _bpmChipHtml = s.bpm ? `<span class="chip bpm-chip" id="fsBpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
     ${s.bpm} BPM</span>` : '';
   const _keyHtml = s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,56px);color:var(--accent);line-height:1;letter-spacing:2px;flex-shrink:0;">${esc(s.key)}</div>` : '';
@@ -3518,9 +3532,7 @@ function openNoteFullscreen(idx) {
   let swipeSx = 0, swipeSy = 0, swipeWasPinch = false, fsDragging = false, fsDx = 0;
 
   // Navigate to a new song within fullscreen with a slide animation
-  window._fsNavigateTo = null;
   function fsNavigateTo(newIdx, direction) {
-    window._fsNavigateTo = fsNavigateTo;
     if (newIdx < 0 || newIdx >= currentSetSongs.length) return;
     const W = overlay.offsetWidth;
 
@@ -3556,6 +3568,20 @@ function openNoteFullscreen(idx) {
       if (newS) {
         const titleEl = titleBar.querySelector('div[style*="Bebas Neue"]');
         if (titleEl) titleEl.textContent = newS.type === 'note' ? '— note —' : (newS.title || '');
+        // Rebuild BPM chip for new song
+        const oldChip = document.getElementById('fsBpmChip');
+        if (oldChip) oldChip.remove();
+        if (newS.bpm) {
+          const newChip = document.createElement('span');
+          newChip.className = 'chip bpm-chip';
+          newChip.id = 'fsBpmChip';
+          newChip.title = 'Tap to flash tempo';
+          newChip.style.cssText = 'font-size:11px;cursor:pointer;';
+          newChip.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${newS.bpm} BPM`;
+          newChip.onclick = () => startBpmFlash(newS.bpm);
+          const metaDiv = titleBar.querySelector('div[style*="flex-shrink:0"]');
+          if (metaDiv) metaDiv.prepend(newChip);
+        }
       }
       // Update tab content — pass fresh song ref
       activeTab = noteTab;
@@ -3572,6 +3598,8 @@ function openNoteFullscreen(idx) {
       fsShowChrome();
     });
   }
+  // Expose for keyboard navigation — must be set after function is defined
+  window._fsNavigateTo = fsNavigateTo;
 
   scrollArea.addEventListener('touchstart', e => {
     if (e.touches.length > 1) { swipeWasPinch = true; fsDragging = false; return; }
@@ -4621,9 +4649,17 @@ async function removeMediaLink(platform, idx) {
 
 
 function startBpmFlash(bpm) {
-  if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; return; }
+  bpm = parseInt(bpm);
+  if (!bpm || bpm <= 0 || bpm > 400) return;
+  // Toggle off if already running
+  if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null;
+    const c = document.getElementById('fsBpmChip') || document.getElementById('bpmChip');
+    if (c) c.classList.remove('flash');
+    return;
+  }
   const interval = 60000 / bpm;
-  const chip = document.getElementById('bpmChip');
+  // Find chip — DB panel, fullscreen overlay, or main song page
+  const chip = document.getElementById('bpmChip') || document.getElementById('fsBpmChip');
   if (!chip) return;
   let on = false;
   function flash() {
@@ -4635,7 +4671,7 @@ function startBpmFlash(bpm) {
   // auto-stop after 16 beats
   setTimeout(() => {
     if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
-    const c = document.getElementById('bpmChip');
+    const c = document.getElementById('bpmChip') || document.getElementById('fsBpmChip');
     if (c) c.classList.remove('flash');
   }, interval * 16 + 200);
 }
@@ -6971,6 +7007,14 @@ let seEditMode = false;
 
 function enterSEEditMode() {
   seEditMode = true;
+  seTab = 'details'; // always show the song details form when editing
+  // Sync tab button highlight
+  ['details','mynotes','media','charts'].forEach(t => {
+    const b1 = document.getElementById(`se-tab-${t}`);
+    const b2 = document.getElementById(`sep-tab-${t}`);
+    if (b1) b1.classList.toggle('active', t === seTab);
+    if (b2) b2.classList.toggle('active', t === seTab);
+  });
   // pg-song-edit buttons
   const editBtn = document.getElementById('seEditBtn');
   const cancelBtn = document.getElementById('seCancelBtn');
@@ -7567,7 +7611,7 @@ async function openSongModal(id) {
     if (dbTitle) dbTitle.textContent = s?.title || '';
   const dbMeta = document.getElementById('dbDetailMeta');
   if (dbMeta) dbMeta.innerHTML = [
-    s.bpm ? `<span class="chip bpm-chip" style="font-size:11px;pointer-events:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
+    s.bpm ? `<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
     s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>` : ''
   ].join('');
     renderSETab();
@@ -7969,7 +8013,7 @@ async function saveSong() {
     { const s = window._seCurrentSong || {};
     const dbMeta = document.getElementById('dbDetailMeta');
     if (dbMeta) dbMeta.innerHTML = [
-    s.bpm ? `<span class="chip bpm-chip" style="font-size:11px;pointer-events:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
+    s.bpm ? `<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
     s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>` : ''
   ].join(''); }
     renderSETab();
@@ -8251,6 +8295,11 @@ function openSettings() {
   const btn = document.getElementById('pwaInstallBtn');
   if (btn) btn.style.display = window._installPrompt ? 'flex' : 'none';
   document.getElementById('settingsModal').classList.remove('hidden');
+  // Scroll to top
+  requestAnimationFrame(() => {
+    const body = document.querySelector('#settingsModal .modal-body');
+    if (body) body.scrollTop = 0;
+  });
 }
 function closeSettings() {
   document.getElementById('settingsModal').classList.add('hidden');
@@ -11312,7 +11361,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.165</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.173</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
