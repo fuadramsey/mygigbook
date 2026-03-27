@@ -50,7 +50,12 @@
   });
 </script>
 <title>MyGigBook</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Preconnect to Google Fonts for faster DNS + TLS handshake -->
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Load font CSS asynchronously — media trick prevents render-blocking -->
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <!-- Firebase -->
@@ -1114,7 +1119,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <div class="songs-toolbar" style="flex-shrink:0;">
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
-            <input class="search-input" id="dbSearch" placeholder="Search songs…" oninput="renderDB()">
+            <input class="search-input" id="dbSearch" placeholder="Search songs…" oninput="debounceRenderDB()">
           </div>
           <select class="filter-sel" id="dbFilterArtist" onchange="renderDB()"><option value="">Artist</option></select>
           <select class="filter-sel" id="dbFilterTag" onchange="renderDB()"><option value="">Tag</option></select>
@@ -1739,9 +1744,23 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         </button>
       </div>
 
+      <div class="settings-section-label" style="margin-top:8px">Help</div>
+      <button class="settings-row" onclick="closeSettings();openTutorial()">
+        <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><circle cx="12" cy="8" r="1" fill="currentColor" stroke="none"/></svg></div>
+        <span class="settings-row-label">Quick Start Tutorial
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Walk through the basics of MyGigBook</span>
+        </span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <button class="settings-row" onclick="closeSettings();openHelp()">
+        <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></div>
+        <span class="settings-row-label">Feature Guide</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.177</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.191</span>
       </div>
 
     </div>
@@ -4667,16 +4686,29 @@ async function removeMediaLink(platform, idx) {
 function startBpmFlash(bpm) {
   bpm = parseInt(bpm);
   if (!bpm || bpm <= 0 || bpm > 400) return;
+
+  // Pick the right chip:
+  // dbBpmChip  = DB detail header (unique, never clashes)
+  // fsBpmChip  = fullscreen overlay
+  // bpmChip    = song-in-setlist page header
+  function findChip() {
+    return document.getElementById('fsBpmChip')
+        || document.getElementById('dbBpmChip')
+        || document.getElementById('bpmChip');
+  }
+
   // Toggle off if already running
-  if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null;
-    const c = document.getElementById('fsBpmChip') || document.getElementById('bpmChip');
+  if (bpmTimer) {
+    clearInterval(bpmTimer); bpmTimer = null;
+    const c = findChip();
     if (c) c.classList.remove('flash');
     return;
   }
-  const interval = 60000 / bpm;
-  // Find chip — DB panel, fullscreen overlay, or main song page
-  const chip = document.getElementById('bpmChip') || document.getElementById('fsBpmChip');
+
+  const chip = findChip();
   if (!chip) return;
+
+  const interval = 60000 / bpm;
   let on = false;
   function flash() {
     on = !on;
@@ -4686,9 +4718,8 @@ function startBpmFlash(bpm) {
   bpmTimer = setInterval(flash, interval / 2);
   // auto-stop after 16 beats
   setTimeout(() => {
-    if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
-    const c = document.getElementById('bpmChip') || document.getElementById('fsBpmChip');
-    if (c) c.classList.remove('flash');
+    if (bpmTimer) { clearInterval(bpmTimer); bpmTimer = null; }
+    chip.classList.remove('flash');
   }, interval * 16 + 200);
 }
 
@@ -6890,6 +6921,11 @@ async function pickerRemove(songId, idx) {
 
 // ── SONG DB ──
 let dbSortField = 'title';
+let _renderDBTimer = null;
+function debounceRenderDB() {
+  clearTimeout(_renderDBTimer);
+  _renderDBTimer = setTimeout(() => renderDB(), 150);
+}
 
 function setSort(field) {
   dbSortField = field;
@@ -7617,7 +7653,7 @@ async function openSongModal(id) {
     if (dbTitle) dbTitle.textContent = s?.title || '';
   const dbMeta = document.getElementById('dbDetailMeta');
   if (dbMeta) dbMeta.innerHTML = [
-    s.bpm ? `<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
+    s.bpm ? `<span class="chip bpm-chip" id="dbBpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
     s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>` : ''
   ].join('');
     renderSETab();
@@ -8019,7 +8055,7 @@ async function saveSong() {
     { const s = window._seCurrentSong || {};
     const dbMeta = document.getElementById('dbDetailMeta');
     if (dbMeta) dbMeta.innerHTML = [
-    s.bpm ? `<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
+    s.bpm ? `<span class="chip bpm-chip" id="dbBpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
     s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>` : ''
   ].join(''); }
     renderSETab();
@@ -11074,6 +11110,276 @@ async function clearAllBugs() {
   showToast('All bug reports cleared');
 }
 
+// ── TUTORIAL ──
+// ── TUTORIAL ──
+// Each step: navigate to the right screen, spotlight the target element,
+// show a floating card at the bottom explaining what to do.
+const TUTORIAL_STEPS = [
+  {
+    title: 'Switch Groups',
+    body: 'Tap the group button in the top bar to switch between your bands or groups. Each group shares its own songs and setlists.',
+    setup: () => { closeSettings(); navTo('setlists'); },
+    targetId: 'groupFilterChip',
+    spotlightPad: 10
+  },
+  {
+    title: 'Create a Set',
+    body: 'Tap the + button at the bottom right to create a new setlist. Give it a name, then add songs from your database.',
+    setup: () => { closeSettings(); navTo('setlists'); },
+    targetQuery: '#pg-setlists .fab',
+    spotlightPad: 14
+  },
+  {
+    title: 'Enter Perform Mode',
+    body: 'Tap any setlist to open it, then tap a song to enter Perform Mode. Swipe left or right to move between songs.',
+    setup: async () => {
+      // If already on song page (second pass), stay here
+      if (pageStack[pageStack.length-1] === 'pg-song') return;
+      closeSettings();
+      // Navigate to first available song in perform mode
+      const sets = await dbAll('setlists');
+      if (!sets.length) { navTo('setlists'); return; }
+      const set = sets.sort((a,b) => (b.updatedAt||0)-(a.updatedAt||0))[0];
+      currentSetId = set.id;
+      const allSongs = await dbAll('songs');
+      const map = {}; allSongs.forEach(s => map[s.id] = s);
+      const items = (set.songs||[]).map(e => typeof e === 'string' ? (map[e] ? {type:'song',...map[e]} : null) : e).filter(Boolean);
+      currentSetSongs = items;
+      const idx = items.findIndex(s => s.type === 'song');
+      if (idx < 0) { navTo('setlists'); return; }
+      currentSongIdx = idx;
+      await renderSongPage(idx);
+      showPage('pg-song');
+    },
+    targetId: 'songPageBody',
+    spotlightPad: 4
+  },
+  {
+    title: 'View Your Notes',
+    body: 'Tap anywhere on the song content to reveal the tab bar. Switch between Lyrics, My Notes, All Notes and Charts. Tabs auto-hide after 2 seconds.',
+    setup: () => {
+      // Force the tab bar visible for this tutorial step
+      const bar = document.getElementById('noteTabBar');
+      if (bar) bar.classList.remove('tabs-hidden');
+    },
+    targetQuery: '#noteTabBar',
+    spotlightPad: 4,
+    cleanup: () => {
+      // Restore auto-hide when leaving this step
+      startTabAutoHide();
+    }
+  }
+];
+
+let _tutStep = 0;
+
+function openTutorial(stepNum) {
+  _tutStep = stepNum || 0;
+  document.getElementById('tutorialOverlay')?.remove();
+  _runTutorialStep();
+}
+
+async function _runTutorialStep() {
+  document.getElementById('tutorialOverlay')?.remove();
+
+  const step = TUTORIAL_STEPS[_tutStep];
+  const isLast = _tutStep === TUTORIAL_STEPS.length - 1;
+
+  // Navigate to the right screen first
+  if (step.setup) await step.setup();
+
+  // Wait for navigation + page transition to complete before spotlighting
+  setTimeout(() => {
+    // Find the target element to spotlight
+    let target = null;
+    if (step.targetId) target = document.getElementById(step.targetId);
+    else if (step.targetQuery) target = document.querySelector(step.targetQuery);
+
+    const pad = step.spotlightPad || 8;
+    let spotRect = null;
+    if (target) {
+      const r = target.getBoundingClientRect();
+      spotRect = {
+        top: r.top - pad,
+        left: r.left - pad,
+        width: r.width + pad * 2,
+        height: r.height + pad * 2
+      };
+    }
+
+    // Build overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'tutorialOverlay';
+    // pointer-events:all blocks all underlying clicks; card sets its own pointer-events
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9500;pointer-events:all;';
+
+    // Dark mask with spotlight cutout using SVG
+    if (spotRect) {
+      const svgMask = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgMask.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
+      const W = window.innerWidth, H = window.innerHeight;
+      const r = 12; // corner radius for spotlight
+      const { top: st, left: sl, width: sw, height: sh } = spotRect;
+      svgMask.innerHTML = `
+        <defs>
+          <mask id="tutSpotMask">
+            <rect width="${W}" height="${H}" fill="white"/>
+            <rect x="${sl}" y="${st}" width="${sw}" height="${sh}" rx="${r}" fill="black"/>
+          </mask>
+        </defs>
+        <rect width="${W}" height="${H}" fill="rgba(0,0,0,0.72)" mask="url(#tutSpotMask)"/>
+        <rect x="${sl}" y="${st}" width="${sw}" height="${sh}" rx="${r}" fill="none" stroke="var(--accent)" stroke-width="2.5" opacity="0.9"/>`;
+      overlay.appendChild(svgMask);
+
+      // Animated pulse ring around spotlight
+      const pulse = document.createElement('div');
+      pulse.style.cssText = `position:absolute;left:${sl - 6}px;top:${st - 6}px;width:${sw + 12}px;height:${sh + 12}px;border-radius:${r + 4}px;border:2px solid var(--accent);opacity:0;animation:tutPulse 1.8s ease-out infinite;pointer-events:none;`;
+      overlay.appendChild(pulse);
+    } else {
+      // No target — full dark overlay
+      const bg = document.createElement('div');
+      bg.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.72);';
+      overlay.appendChild(bg);
+    }
+
+    // Position card away from the spotlight:
+    // if target is in bottom half → card at top; otherwise card at bottom
+    const cardAtTop = spotRect && (spotRect.top + spotRect.height / 2) > window.innerHeight * 0.5;
+    const card = document.createElement('div');
+    if (cardAtTop) {
+      card.style.cssText = 'position:absolute;top:0;left:0;right:0;background:var(--surface);border-radius:0 0 24px 24px;padding:20px 20px 24px;box-shadow:0 4px 32px rgba(0,0,0,0.4);pointer-events:all;';
+    } else {
+      card.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,0.4);pointer-events:all;';
+    }
+    card.innerHTML = `
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:14px;">
+        ${TUTORIAL_STEPS.map((_,i) => `<div style="width:${i===_tutStep?'22':'8'}px;height:7px;border-radius:4px;background:${i===_tutStep?'var(--accent)':'var(--border2)'};transition:all 0.25s;"></div>`).join('')}
+      </div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1.5px;color:var(--text);margin-bottom:8px;">${step.title}</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:18px;">${step.body}</div>
+      <div style="display:flex;gap:10px;">
+        ${_tutStep > 0
+          ? `<button id="tutBack" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:14px;cursor:pointer;">← Back</button>`
+          : `<button id="tutSkip" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:14px;cursor:pointer;">Skip</button>`}
+        <button id="tutNext" style="flex:2;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#000;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">${isLast ? 'Done ✓' : 'Next →'}</button>
+      </div>`;
+    overlay.appendChild(card);
+
+    // Inject pulse + bounce animations if not already present
+    if (!document.getElementById('tutAnimStyle')) {
+      const style = document.createElement('style');
+      style.id = 'tutAnimStyle';
+      style.textContent = `
+        @keyframes tutPulse { 0%{opacity:0.6;transform:scale(1)} 100%{opacity:0;transform:scale(1.18)} }
+        @keyframes tutBounceUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes tutBounceDown { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }`;
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(overlay);
+
+    // Wire up buttons
+    // Helper to clean up before navigating between steps
+    function tutCleanup() {
+      // Close any modal that may have been opened during this step
+      const gfModal = document.getElementById('groupFilterModal');
+      if (gfModal && !gfModal.classList.contains('hidden')) closeGroupFilter();
+      // Run step-specific cleanup if defined
+      if (step.cleanup) step.cleanup();
+    }
+    document.getElementById('tutNext')?.addEventListener('click', async () => {
+      tutCleanup();
+      if (isLast) { overlay.remove(); return; }
+      // If step has a custom onNext, run it first (e.g. navigate into a song)
+      _tutStep++; _runTutorialStep();
+    });
+    document.getElementById('tutBack')?.addEventListener('click', () => {
+      tutCleanup();
+      _tutStep--; _runTutorialStep();
+    });
+    document.getElementById('tutSkip')?.addEventListener('click', () => {
+      tutCleanup();
+      overlay.remove();
+    });
+  }, 180);
+}
+
+// ── HELP / FEATURE GUIDE ──
+const HELP_SECTIONS = [
+  { title: 'Setlists', items: [
+    ['Create a set', 'Tap + on the Setlists screen. Name your set and optionally add a gig date.'],
+    ['Add songs', 'Open a set in edit mode, then tap + to pick songs from your database.'],
+    ['Reorder songs', 'Drag the grip handle on the left of any song row up or down.'],
+    ['Add a note between songs', 'Tap the notepad icon on a song row to insert a text note below it.'],
+  ]},
+  { title: 'Perform Mode', items: [
+    ['Enter perform mode', 'Tap any song inside an open setlist.'],
+    ['Navigate songs', 'Swipe left/right, or use ← → arrow keys on desktop.'],
+    ['Show/hide tabs', 'Tap anywhere on the song content. Tabs auto-hide after 2 seconds.'],
+    ['Pin tabs open', 'Tap the 📌 pin button in the tab bar to keep it always visible.'],
+    ['Auto-scroll', 'Tap the scroll button in the toolbar. Adjust speed with − and +.'],
+    ['Fullscreen', 'Tap ⛶ in the toolbar. Swipe to navigate, tap to reveal controls.'],
+    ['Tempo flash', 'Tap the BPM chip in the song header to flash the tempo visually.'],
+    ['Concert A tuning', 'Tap the tuning fork icon in the top bar.'],
+  ]},
+  { title: 'Song Database', items: [
+    ['Add a song', 'Go to Songs and tap +. Fill in title, key, BPM, and attach lyrics/charts.'],
+    ['Tap tempo', 'In the song edit form, tap the TAP button repeatedly to detect BPM.'],
+    ['Attach files', 'In the Media or Charts tab, tap + to attach PDFs or images.'],
+    ['Zoom lyrics', 'Use − / + in the toolbar below the tabs to zoom in or out.'],
+  ]},
+  { title: 'Groups', items: [
+    ['Create a group', 'Tap My Groups (people icon). Groups let you share songs and sets with bandmates.'],
+    ['Invite members', 'Share the invite code shown in your group settings.'],
+    ['Switch groups', 'Use the group filter chips at the top of the Setlists screen.'],
+    ['Group ownership', 'Only the group creator can delete shared songs and sets.'],
+  ]},
+  { title: 'Audio', items: [
+    ['Attach audio', 'In the Media tab of a song, tap + to upload an audio file.'],
+    ['Auto-download', 'Enable Auto-download in Settings → Audio to cache all audio locally.'],
+    ['Playback controls', 'Play, loop, and set loop points using the audio player in the song view.'],
+  ]},
+  { title: 'Appearance & Settings', items: [
+    ['Themes', 'Choose Light, Dark, High Contrast, Dim, or Custom in Settings → Appearance.'],
+    ['Font size', 'Adjust Small / Medium / Large / X-Large in Settings → Font Size.'],
+    ['Default tab', 'Set which tab opens first (Lyrics, My Notes, etc.) in Settings → Default Song Tab.'],
+    ['Sync', 'Pull data from other devices using the sync button at the top of Setlists.'],
+  ]},
+];
+
+function openHelp() {
+  const existing = document.getElementById('helpOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'helpOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9400;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+
+  const sectionsHtml = HELP_SECTIONS.map(sec => `
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1.5px;color:var(--accent);padding:0 0 8px;border-bottom:1px solid var(--border2);margin-bottom:10px;">${sec.title}</div>
+      ${sec.items.map(([label, desc]) => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+          <div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:2px;">${label}</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.5;">${desc}</div>
+        </div>`).join('')}
+    </div>`).join('');
+
+  overlay.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+      <button onclick="document.getElementById('helpOverlay').remove()" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:4px;display:flex;align-items:center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:22px;height:22px;"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);flex:1;">Feature Guide</span>
+      <button onclick="document.getElementById('helpOverlay').remove();openTutorial()" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--accent);background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);border-radius:20px;padding:4px 12px;cursor:pointer;">▶ Tutorial</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:20px 16px;">
+      ${sectionsHtml}
+    </div>`;
+
+  document.body.appendChild(overlay);
+}
+
 async function updateBugBadge() {
   if (!currentIsAdmin) return;
   const reports = await dbAll('bugreports');
@@ -11367,7 +11673,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.177</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.191</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
