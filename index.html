@@ -1248,21 +1248,31 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <button id="seSaveBtn" class="btn primary" style="padding:6px 16px;font-size:13px;flex-shrink:0;display:none;" onclick="saveSong()">Save</button>
   </div>
   <!-- Tab bar -->
-  <div class="note-tab-bar" style="display:flex;align-items:center;flex-shrink:0;">
-    <div style="flex:1;display:flex;">
-      <button class="note-tab active" id="sep-tab-details" onclick="switchSETab('details')" >Details</button>
-      <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
-      <button class="note-tab" id="sep-tab-media" onclick="switchSETab('media')" >Media</button>
-      <button class="note-tab" id="sep-tab-charts" onclick="switchSETab('charts')" >Charts</button>
+  <div style="background:var(--surface);flex-shrink:0;">
+    <div class="note-tab-bar" style="display:flex;align-items:center;border-bottom:1px solid var(--border);">
+      <div style="flex:1;display:flex;">
+        <button class="note-tab active" id="sep-tab-details" onclick="switchSETab('details')" >Details</button>
+        <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
+        <button class="note-tab" id="sep-tab-media" onclick="switchSETab('media')" >Media</button>
+        <button class="note-tab" id="sep-tab-charts" onclick="switchSETab('charts')" >Charts</button>
+      </div>
     </div>
-    <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
-      <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <div style="width:12px;"></div>
-      <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
-      <span class="scroll-speed-label" id="seScrollSpeedLabel">×${scrollSpeed}</span>
-      <button class="scroll-speed-btn" onclick="changeSESpeed(1)">+</button>
+    <!-- Toolbar row — below tabs -->
+    <div id="seScrollToolbar" style="display:none;align-items:center;justify-content:space-between;padding:3px 8px;border-bottom:1px solid var(--border);gap:4px;">
+      <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
+        <button class="scroll-speed-btn se-zoom-btn" onclick="changeSEZoom(-1)" title="Zoom out" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/></svg></button>
+        <span class="se-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">100%</span>
+        <button class="scroll-speed-btn se-zoom-btn" onclick="changeSEZoom(1)" title="Zoom in" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div style="width:4px;"></div>
+        <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
+        <span class="scroll-speed-label" id="seScrollSpeedLabel">×1</span>
+        <button class="scroll-speed-btn" onclick="changeSESpeed(1)">+</button>
+      </div>
     </div>
   </div>
   <div class="note-area" id="sepTabBody" style="padding:16px;overflow-y:auto;touch-action:pan-y;"></div>
@@ -1731,7 +1741,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.173</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.177</span>
       </div>
 
     </div>
@@ -3699,7 +3709,13 @@ function tapTempo() {
   clearTimeout(_tapTimer);
   _tapTimer = setTimeout(() => { _tapTimes = []; }, 3000);
 
-  const btn = document.getElementById('tapTempoBtn');
+  // Scope lookup to active body so mobile (sepTabBody) and desktop (seTabBody) don't conflict
+  const onEditPage = pageStack[pageStack.length - 1] === 'pg-song-edit';
+  const activeBody = onEditPage
+    ? document.getElementById('sepTabBody')
+    : document.getElementById('seTabBody');
+  const scope = activeBody || document;
+  const btn = scope.getElementById ? scope.getElementById('tapTempoBtn') : scope.querySelector('#tapTempoBtn');
 
   if (_tapTimes.length < 2) {
     // first tap — show waiting indicator
@@ -3712,8 +3728,8 @@ function tapTempo() {
   const avg = intervals.reduce((a,b) => a+b, 0) / intervals.length;
   const bpm = Math.round(60000 / avg);
 
-  // update BPM field
-  const fBpm = document.getElementById('fBpm');
+  // update BPM field — scoped to active body
+  const fBpm = scope.querySelector ? scope.querySelector('#fBpm') : document.getElementById('fBpm');
   if (fBpm) fBpm.value = bpm;
 
   // show BPM on button
@@ -7152,7 +7168,7 @@ function renderSETab() {
     const _hasLocalAudio = id && window._audioCache?.[_audioKey];
     const _cloudAudio = id && !_hasLocalAudio && window._cloudAudioMap?.[id];
     const sePlayer = _hasLocalAudio
-      ? buildFullAudioPlayer(_audioKey, currentSongIdx >= 0 ? currentSongIdx : 0)
+      ? buildFullAudioPlayer(_audioKey, Math.max(0, currentSongIdx))
       : _cloudAudio
         ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;flex-shrink:0;color:var(--text3);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -7174,11 +7190,6 @@ function renderSETab() {
       const dbZoom = parseFloat(localStorage.getItem(dbZoomKey) || '1');
       body.innerHTML = `
         ${sePlayer}
-        <div style="display:flex;align-items:center;gap:4px;margin-bottom:10px;">
-          <button onclick="changeDBZoom(-0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
-          <span id="dbZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(dbZoom*100)}%</span>
-          <button onclick="changeDBZoom(0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
-        </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             ${s.key ? `<span class="chip accent">${esc(s.key)}</span>` : ''}
@@ -7298,11 +7309,6 @@ function renderSETab() {
       const dbZoomMN = parseFloat(localStorage.getItem(dbZoomKeyMN) || '1');
       body.innerHTML = `
         ${sePlayer}
-        <div style="display:flex;align-items:center;gap:4px;margin-bottom:10px;">
-          <button onclick="changeDBZoom(-0.1,'${dbZoomKeyMN}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
-          <span id="dbZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(dbZoomMN*100)}%</span>
-          <button onclick="changeDBZoom(0.1,'${dbZoomKeyMN}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
-        </div>
         ${myNoteHtml
           ? `<div class="note-display" style="white-space:pre-wrap;min-height:80px;font-size:${Math.round(getBaseFontPx()*dbZoomMN)}px;line-height:1.6;">${myNoteHtml}</div>`
           : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
@@ -11361,7 +11367,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.173</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.177</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
