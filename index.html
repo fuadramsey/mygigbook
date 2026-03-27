@@ -387,7 +387,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .set-stat { text-align: center; }
 .set-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--accent); line-height: 1; }
 .set-stat-lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin-top: 1px; }
-.song-row { display: flex; align-items: center; gap: 10px; padding: 13px 12px 13px 8px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; user-select: none; }
+.song-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; user-select: none; }
 .song-row:active { background: var(--surface2); }
 .song-row.dragging { opacity: 0.35; }
 .song-row.drag-over { border-top: 2px solid var(--accent); }
@@ -1717,7 +1717,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.160</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.162</span>
       </div>
 
     </div>
@@ -3248,7 +3248,10 @@ function openNoteFullscreen(idx) {
     const noteDisplay = document.createElement('div');
     noteDisplay.className = 'note-display';
     noteDisplay.style.cssText = `font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;text-align:center;max-width:640px;width:100%;`;
-    noteDisplay.innerHTML = s.text ? esc(s.text) : '<span style="color:var(--text3);font-style:italic;">No note text.</span>';
+    // Read from the live DOM — always current, even before saving
+    const _inlineDom = document.getElementById('inlineNoteDisplay');
+    const _noteContent = _inlineDom ? _inlineDom.innerHTML : (s.text ? esc(s.text) : '');
+    noteDisplay.innerHTML = _noteContent || '<span style="color:var(--text3);font-style:italic;">No note text.</span>';
     noteScrollArea.appendChild(noteDisplay);
     noteOverlay.appendChild(noteTitleBar);
     noteOverlay.appendChild(noteScrollArea);
@@ -11295,7 +11298,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.160</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.162</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
