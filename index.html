@@ -1760,7 +1760,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.191</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.193</span>
       </div>
 
     </div>
@@ -11306,6 +11306,13 @@ async function _runTutorialStep() {
 
 // ── HELP / FEATURE GUIDE ──
 const HELP_SECTIONS = [
+  { title: 'About MyGigBook', items: [
+    ['What is MyGigBook?', 'MyGigBook is a band setlist manager built for live performance. Organise your songs, build setlists, attach lyrics and charts, and perform with confidence — all from your phone or tablet.'],
+    ['Works offline', 'MyGigBook works completely offline once loaded. Your songs, setlists, and notes are stored locally on your device so you can perform without an internet connection.'],
+    ['Install the app', 'For the best experience, install MyGigBook as a web app. On iOS tap the Share button then “Add to Home Screen”. On Android tap the browser menu and choose “Install App”. This gives you a full-screen experience and faster load times.'],
+    ['Syncing your data', 'Tap the sync button at the top of the Setlists screen to pull the latest changes from the cloud. Sync pushes and pulls songs, setlists, groups, and notes. Audio files and attachments are downloaded separately via Settings → Auto-download.'],
+    ['Multi-device support', 'Sign in with the same username on any device and sync to access your content everywhere. Each device stores a local copy so everything works offline after the first sync.'],
+  ]},
   { title: 'Setlists', items: [
     ['Create a set', 'Tap + on the Setlists screen. Name your set and optionally add a gig date.'],
     ['Add songs', 'Open a set in edit mode, then tap + to pick songs from your database.'],
@@ -11328,11 +11335,14 @@ const HELP_SECTIONS = [
     ['Attach files', 'In the Media or Charts tab, tap + to attach PDFs or images.'],
     ['Zoom lyrics', 'Use − / + in the toolbar below the tabs to zoom in or out.'],
   ]},
-  { title: 'Groups', items: [
-    ['Create a group', 'Tap My Groups (people icon). Groups let you share songs and sets with bandmates.'],
-    ['Invite members', 'Share the invite code shown in your group settings.'],
-    ['Switch groups', 'Use the group filter chips at the top of the Setlists screen.'],
-    ['Group ownership', 'Only the group creator can delete shared songs and sets.'],
+  { title: 'Groups & Private Mode', items: [
+    ['Create a group', 'Tap My Groups (people icon). Groups let you share songs and setlists with your bandmates in real time.'],
+    ['Invite members', 'Share the invite code shown in your group settings. Members can join from any device.'],
+    ['Switch groups', 'Use the group filter chip at the top of the Setlists screen to view only that group\u2019s content.'],
+    ['Group ownership', 'Only the group creator can delete shared songs and sets. Members can view and perform but not remove content.'],
+    ['Private mode', 'Every user has a built-in Private group. Songs and setlists created in Private are only visible to you \u2014 no other group member can see them. Switch to Private using the group filter chip.'],
+    ['What each user sees', 'When a group filter is active you only see: (1) songs shared in that group, and (2) your own private songs. Songs shared in a different group you are not a member of are hidden. This keeps each band\u2019s content separate.'],
+    ['Sharing a song to a group', 'Open the song in the database, tap Edit, then use the Groups section to add it to one or more groups. Once shared, all members of that group can see it.'],
   ]},
   { title: 'Audio', items: [
     ['Attach audio', 'In the Media tab of a song, tap + to upload an audio file.'],
@@ -11343,7 +11353,11 @@ const HELP_SECTIONS = [
     ['Themes', 'Choose Light, Dark, High Contrast, Dim, or Custom in Settings → Appearance.'],
     ['Font size', 'Adjust Small / Medium / Large / X-Large in Settings → Font Size.'],
     ['Default tab', 'Set which tab opens first (Lyrics, My Notes, etc.) in Settings → Default Song Tab.'],
-    ['Sync', 'Pull data from other devices using the sync button at the top of Setlists.'],
+    ['Sync', 'Tap the sync icon on the Setlists screen to push and pull all changes to and from the cloud. Sync automatically runs when you log in. For audio files, enable Auto-download in Settings → Audio.'],
+    ['Backup & Restore', 'Use Settings → Data → Backup & Restore to export a full snapshot of your songs, setlists, and settings as a JSON file. Store it somewhere safe and use Restore to recover your data on any device.'],
+    ['Export to CSV', 'Settings → Data → Export Songs to CSV creates a spreadsheet-compatible file of your entire song database — useful for sharing with others or keeping a readable record.'],
+    ['Import from CSV', 'You can bulk-import songs from a CSV file via Settings → Data → Import Songs. The file must include at minimum a Title column.'],
+    ['Export attachments', 'Download all your PDFs and images as a ZIP file from Settings → Data → Export Attachments.'],
   ]},
 ];
 
@@ -11673,7 +11687,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.191</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.193</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
