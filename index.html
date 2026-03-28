@@ -1760,7 +1760,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.195</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.206</span>
       </div>
 
     </div>
@@ -3327,17 +3327,51 @@ function openNoteFullscreen(idx) {
 
   // ── TITLE BAR — always visible, matches song page header ──
   const titleBar = document.createElement('div');
-  titleBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;z-index:1;';
-  const _bpmChipHtml = s.bpm ? `<span class="chip bpm-chip" id="fsBpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-    ${s.bpm} BPM</span>` : '';
-  const _keyHtml = s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,56px);color:var(--accent);line-height:1;letter-spacing:2px;flex-shrink:0;">${esc(s.key)}</div>` : '';
-  titleBar.innerHTML = `
-    <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(33px,7.5vw,60px);letter-spacing:1px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;">${esc(s.title||'')}</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">${_bpmChipHtml}${_keyHtml}</div>
-    </div>
-    <button id="fsDismissBtn" style="background:none;border:none;color:var(--text3);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>`;
+  titleBar.style.cssText = 'background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:1;';
+
+  function buildFsTitleHtml(songIdx) {
+    const cs = currentSetSongs[songIdx] || s;
+    const prevS = songIdx > 0 ? currentSetSongs[songIdx - 1] : null;
+    const nextS = songIdx < currentSetSongs.length - 1 ? currentSetSongs[songIdx + 1] : null;
+    const bpmHtml = cs.bpm ? `<span class="chip bpm-chip" id="fsBpmChip" onclick="startBpmFlash(${cs.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${cs.bpm} BPM</span>` : '';
+    const keyHtml = cs.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,5vw,44px);color:var(--accent);line-height:1;letter-spacing:2px;flex-shrink:0;">${esc(cs.key)}</div>` : '';
+    const prevLabel = prevS ? (prevS.type === 'note' ? '— note —' : esc(prevS.title||'')) : '';
+    const nextLabel = nextS ? (nextS.type === 'note' ? '— note —' : esc(nextS.title||'')) : '';
+    const setName = document.getElementById('songPageSetNameText')?.textContent || '';
+    return `
+      <div style="display:flex;align-items:center;gap:5px;padding:5px 8px 0;">
+        <button id="fsNavPrev" style="display:flex;align-items:center;gap:3px;flex:1;min-width:0;padding:4px 7px;height:36px;background:${prevS?'var(--surface2)':'transparent'};border:1px solid ${prevS?'var(--border)':'transparent'};border-radius:8px;cursor:${prevS?'pointer':'default'};color:var(--text);opacity:${prevS?'1':'0.2'};">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;flex-shrink:0;"><path d="M15 18l-6-6 6-6"/></svg>
+          <span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center;">${prevLabel}</span>
+          <span style="width:13px;flex-shrink:0;"></span>
+        </button>
+        <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;max-width:110px;">
+          <button onclick="openSetlistDropdown()" style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1.5px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:3px;">${esc(setName)}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:10px;height:10px;flex-shrink:0;"><path d="M6 9l6 6 6-6"/></svg></button>
+          <span style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;font-weight:600;">${songIdx+1} / ${currentSetSongs.length}</span>
+        </div>
+        <button id="fsNavNext" style="display:flex;align-items:center;gap:3px;flex:1;min-width:0;padding:4px 7px;height:36px;background:${nextS?'var(--surface2)':'transparent'};border:1px solid ${nextS?'var(--border)':'transparent'};border-radius:8px;cursor:${nextS?'pointer':'default'};color:var(--text);opacity:${nextS?'1':'0.2'};">
+          <span style="width:13px;flex-shrink:0;"></span>
+          <span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center;">${nextLabel}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button id="fsDismissBtn" style="background:none;border:none;color:var(--text3);width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:3px 14px 8px;flex-wrap:wrap;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,5.5vw,50px);letter-spacing:1px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;">${cs.type==='note'?'— note —':esc(cs.title||'')}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">${bpmHtml}${keyHtml}</div>
+      </div>`;
+  }
+
+  function refreshFsTitleBar(newIdx) {
+    titleBar.innerHTML = buildFsTitleHtml(newIdx);
+    titleBar.querySelector('#fsNavPrev')?.addEventListener('click', () => { if (newIdx > 0) fsNavigateTo(newIdx-1,'right'); });
+    titleBar.querySelector('#fsNavNext')?.addEventListener('click', () => { if (newIdx < currentSetSongs.length-1) fsNavigateTo(newIdx+1,'left'); });
+    // dismiss wired after close() is defined below
+    titleBar.querySelector('#fsDismissBtn')?.addEventListener('click', () => close());
+  }
+
+  // Initial render
+  refreshFsTitleBar(idx);
 
   // ── TAB BAR + TOOLBAR wrapper — overlays content when hidden ──
   // Use position:absolute so hiding them gives scroll area the full space
@@ -3395,8 +3429,11 @@ function openNoteFullscreen(idx) {
   overlay.appendChild(scrollArea);
   document.body.appendChild(overlay);
 
-  // Store natural height so we can collapse/expand chromeWrap
-  const _chromeH = chromeWrap.scrollHeight || 120;
+  // chromeWrap (tab bar + toolbar) is permanently hidden in fullscreen
+  chromeWrap.style.maxHeight = '0px';
+  chromeWrap.style.opacity = '0';
+  chromeWrap.style.pointerEvents = 'none';
+  chromeWrap.style.transition = 'none';
 
   renderTabBar();
 
@@ -3425,18 +3462,11 @@ function openNoteFullscreen(idx) {
       scrollArea.innerHTML = `<div class="note-display" style="white-space:pre-wrap;text-align:center;max-width:560px;margin:40px auto;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${noteText ? esc(noteText) : '<span style="color:var(--text3);font-style:italic;">No note text.</span>'}</div>`;
       return;
     }
-    if (activeTab === noteTab) {
-      const noteArea = document.getElementById('noteArea');
-      scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
-      applyFsZoom();
-    } else {
-      switchNoteTab(activeTab, idx);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        const noteArea = document.getElementById('noteArea');
-        scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
-        applyFsZoom();
-      }));
-    }
+    // Always read from noteArea — set noteTab first without calling renderSongPage
+    noteTab = activeTab;
+    const noteArea = document.getElementById('noteArea');
+    scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
+    applyFsZoom();
   }
 
   toolbar.querySelector('#fsZoomMinus').addEventListener('click', () => {
@@ -3517,45 +3547,13 @@ function openNoteFullscreen(idx) {
 
   const close = () => { stopFsScroll(); if (_fsHideTimer) clearTimeout(_fsHideTimer); window._fsNavigateTo = null; overlay.remove(); };
   overlay._close = close;
-  titleBar.querySelector('#fsDismissBtn').addEventListener('click', close);
-
   // ── AUTOHIDE: only tabBar+toolbar collapse; titleBar always visible ──
   // Use max-height collapse so scrollArea gains the freed space
   let _fsHideTimer = null;
-  let _fsHidden = false;
-
-  function fsShowChrome() {
-    if (_fsHidden) {
-      chromeWrap.style.maxHeight = chromeWrap.scrollHeight + 'px';
-      chromeWrap.style.opacity = '1';
-      chromeWrap.style.pointerEvents = '';
-      _fsHidden = false;
-    }
-    clearTimeout(_fsHideTimer);
-    _fsHideTimer = setTimeout(fsHideChrome, 2000);
-  }
-
-  function fsHideChrome() {
-    // Capture height before collapsing (may not be set yet)
-    if (chromeWrap.style.maxHeight === '' || chromeWrap.style.maxHeight === 'none') {
-      chromeWrap.style.maxHeight = chromeWrap.scrollHeight + 'px';
-    }
-    requestAnimationFrame(() => {
-      chromeWrap.style.maxHeight = '0px';
-      chromeWrap.style.opacity = '0';
-      chromeWrap.style.pointerEvents = 'none';
-      _fsHidden = true;
-    });
-  }
-
-  // Tap on scroll area reveals chrome — restart timer
-  // Must NOT prevent default so scroll and pinch still work
-  scrollArea.addEventListener('touchstart', () => { if (_fsHidden) fsShowChrome(); }, { passive: true });
-  scrollArea.addEventListener('click', () => { fsShowChrome(); });
-
-  // Start autohide timer (show first, then hide after 2s)
-  chromeWrap.style.maxHeight = chromeWrap.scrollHeight + 'px';
-  fsShowChrome();
+  // Chrome (tab bar + toolbar) is permanently hidden in fullscreen
+  // Tap/click on scroll area does nothing to chrome
+  function fsShowChrome() {} // no-op — chrome stays hidden
+  function fsHideChrome() {} // no-op
 
   // swipe left/right — stay in fullscreen, slide to adjacent song
   let swipeSx = 0, swipeSy = 0, swipeWasPinch = false, fsDragging = false, fsDx = 0;
@@ -3586,46 +3584,44 @@ function openNoteFullscreen(idx) {
     scrollArea.style.transition = 'none';
     scrollArea.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
 
-    // Update main page song index
+    // Update state immediately — no full renderSongPage needed in fullscreen
     idx = newIdx;
+    currentSongIdx = newIdx;
+    s = currentSetSongs[newIdx];
     stopScroll(); stopAudio();
     if (bpmTimer) { clearInterval(bpmTimer); bpmTimer = null; }
     editingNote = false;
-    renderSongPage(newIdx).then(() => {
-      // Update fullscreen title bar
-      const newS = currentSetSongs[newIdx];
-      if (newS) {
-        const titleEl = titleBar.querySelector('div[style*="Bebas Neue"]');
-        if (titleEl) titleEl.textContent = newS.type === 'note' ? '— note —' : (newS.title || '');
-        // Rebuild BPM chip for new song
-        const oldChip = document.getElementById('fsBpmChip');
-        if (oldChip) oldChip.remove();
-        if (newS.bpm) {
-          const newChip = document.createElement('span');
-          newChip.className = 'chip bpm-chip';
-          newChip.id = 'fsBpmChip';
-          newChip.title = 'Tap to flash tempo';
-          newChip.style.cssText = 'font-size:11px;cursor:pointer;';
-          newChip.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${newS.bpm} BPM`;
-          newChip.onclick = () => startBpmFlash(newS.bpm);
-          const metaDiv = titleBar.querySelector('div[style*="flex-shrink:0"]');
-          if (metaDiv) metaDiv.prepend(newChip);
-        }
+    activeTab = noteTab;
+    loadSongZoom(s?.id);
+
+    // Update title bar and load content — lightweight, no IDB page rebuild
+    refreshFsTitleBar(newIdx);
+
+    // Load note content directly for scroll area
+    (async () => {
+      const newSong = currentSetSongs[newIdx];
+      if (newSong?.type === 'note') {
+        scrollArea.innerHTML = `<div class="note-display" style="white-space:pre-wrap;text-align:center;max-width:560px;margin:40px auto;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${newSong.text ? esc(newSong.text) : '<span style="color:var(--text3);font-style:italic;">No note text.</span>'}</div>`;
+      } else if (newSong) {
+        const userKey = `${currentUser||'me'}_${newSong.id}`;
+        const noteEntry = await dbGet('notes', userKey);
+        const noteHtml = noteEntry?.content || noteEntry?.text || '';
+        scrollArea.innerHTML = noteHtml
+          ? `<div class="note-display rte-body" style="font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${noteHtml}</div>`
+          : `<div class="note-display" style="font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;color:var(--text3);font-style:italic;">No notes for this song.</div>`;
       }
-      // Update tab content — pass fresh song ref
-      activeTab = noteTab;
-      // Temporarily update s so loadTabContent sees the new song
-      s = currentSetSongs[newIdx];
-      loadTabContent();
-      // Slide in
-      requestAnimationFrame(() => {
-        scrollArea.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-        scrollArea.style.transform = 'translateX(0)';
-      });
-      // Clean up outgoing
-      setTimeout(() => { outgoing.remove(); scrollArea.style.transition = ''; }, 280);
-      fsShowChrome();
+      applyFsZoom();
+    })();
+
+    // Slide in immediately — don't wait for content
+    requestAnimationFrame(() => {
+      scrollArea.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+      scrollArea.style.transform = 'translateX(0)';
     });
+    // Clean up outgoing
+    setTimeout(() => { outgoing.remove(); scrollArea.style.transition = ''; }, 280);
+
+    // Background page syncs when fullscreen is closed — no lazy call needed here
   }
   // Expose for keyboard navigation — must be set after function is defined
   window._fsNavigateTo = fsNavigateTo;
@@ -3932,7 +3928,7 @@ function openSetlistDropdown() {
 
   const overlay = document.createElement('div');
   overlay.id = 'setlistDropdown';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:7000;display:flex;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:8500;display:flex;';
 
   // Left panel — 3/4 width, slides in
   const panel = document.createElement('div');
@@ -3968,7 +3964,14 @@ function openSetlistDropdown() {
     }
     row.addEventListener('click', () => {
       closeSetlistDropdown(() => {
-        if (i !== currentSongIdx) swipeTo(i, i > currentSongIdx ? 'left' : 'right');
+        if (i !== currentSongIdx) {
+          // If fullscreen is open, navigate within it
+          if (window._fsNavigateTo && document.getElementById('noteFullscreenOverlay')) {
+            window._fsNavigateTo(i, i > currentSongIdx ? 'left' : 'right');
+          } else {
+            swipeTo(i, i > currentSongIdx ? 'left' : 'right');
+          }
+        }
       });
     });
     list.appendChild(row);
@@ -4111,7 +4114,8 @@ async function renderSongPage(idx) {
         if (meta) {
           window._cloudAudioMap[s.id] = meta;
           // re-render this page to show download button
-          if (currentSongIdx === idx) renderSongPage(idx);
+          // Only re-render if fullscreen is not open (avoid recursion)
+          if (currentSongIdx === idx && !document.getElementById('noteFullscreenOverlay')) renderSongPage(idx);
         }
       });
     }
@@ -11687,7 +11691,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.195</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.206</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
