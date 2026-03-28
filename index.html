@@ -1761,7 +1761,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.215</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.216</span>
       </div>
 
     </div>
@@ -3346,7 +3346,7 @@ function openNoteFullscreen(idx) {
           <span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center;">${prevLabel}</span>
           <span style="width:13px;flex-shrink:0;"></span>
         </button>
-        <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;max-width:clamp(110px,22vw,220px);">
+        <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:clamp(120px,28vw,280px);max-width:clamp(120px,35vw,340px);">
           <button onclick="openSetlistDropdown()" style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1.5px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:3px;">${esc(setName)}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:10px;height:10px;flex-shrink:0;"><path d="M6 9l6 6 6-6"/></svg></button>
           <span style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;font-weight:600;">${songIdx+1} / ${currentSetSongs.length}</span>
         </div>
@@ -11693,7 +11693,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.215</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.216</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
