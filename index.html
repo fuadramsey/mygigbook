@@ -434,6 +434,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .listen-confirm-row input::placeholder { color: var(--text3); }
 .note-content { padding: 16px; }
 .note-display { font-family: 'DM Mono', monospace; font-size: 18px; line-height: 1; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
+#noteFullscreenOverlay .rte-body { background: none !important; border: none !important; padding: 0 !important; min-height: unset !important; border-radius: 0 !important; }
 .tab-block { display: block; font-family: 'DM Mono', monospace; white-space: pre; overflow-x: auto; background: var(--surface2); border: 1px solid var(--border2); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 14px; margin: 6px 0; line-height: 1.5; font-size: 0.95em; -webkit-overflow-scrolling: touch; }
 .tab-block::before { content: '🎸 TAB'; display: block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); font-family: 'DM Mono', monospace; margin-bottom: 6px; opacity: 0.8; }
 .note-display.empty { color: var(--text3); font-style: italic; }
@@ -1760,7 +1761,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.207</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.215</span>
       </div>
 
     </div>
@@ -3418,9 +3419,13 @@ function openNoteFullscreen(idx) {
     </div>`;
 
   // ── CONTENT ──
+  // scrollArea is the sole scroll container — no inner wrapper, no extra layers
   const scrollArea = document.createElement('div');
   scrollArea.id = 'fsNoteArea';
-  scrollArea.style.cssText = 'flex:1;overflow-y:auto;padding:20px 24px;-webkit-overflow-scrolling:touch;touch-action:pan-y;';
+  scrollArea.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;padding:20px 24px;-webkit-overflow-scrolling:touch;touch-action:pan-y;min-height:0;';
+
+  // scrollInner is just an alias so we don't have to rename all references
+  const scrollInner = scrollArea;
 
   chromeWrap.appendChild(tabBar);
   chromeWrap.appendChild(toolbar);
@@ -3442,13 +3447,12 @@ function openNoteFullscreen(idx) {
     const fs = `${Math.round(basePx * noteZoom)}px`;
     const lh = `1.6`;
     // Target all text containers — note-display, rte-body, and any element with font-size inline style
-    const targets = scrollArea.querySelectorAll('.note-display, .rte-body');
+    const targets = scrollInner.querySelectorAll('.note-display, .rte-body');
     if (targets.length > 0) {
       targets.forEach(el => { el.style.fontSize = fs; el.style.lineHeight = lh; });
     } else {
-      // Fallback: set font size on scrollArea itself (covers plain text content)
-      scrollArea.style.fontSize = fs;
-      scrollArea.style.lineHeight = lh;
+      scrollInner.style.fontSize = fs;
+      scrollInner.style.lineHeight = lh;
     }
     toolbar.querySelectorAll('.fs-zoom-label').forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
   }
@@ -3459,13 +3463,28 @@ function openNoteFullscreen(idx) {
     // For setlist note items — read text directly from the song object
     if (s && s.type === 'note') {
       const noteText = s.text || '';
-      scrollArea.innerHTML = `<div class="note-display" style="white-space:pre-wrap;text-align:center;max-width:560px;margin:40px auto;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${noteText ? esc(noteText) : '<span style="color:var(--text3);font-style:italic;">No note text.</span>'}</div>`;
+      scrollInner.innerHTML = `<div class="note-display" style="white-space:pre-wrap;text-align:center;max-width:560px;margin:40px auto;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${noteText ? esc(noteText) : '<span style="color:var(--text3);font-style:italic;">No note text.</span>'}</div>`;
       return;
     }
     // Always read from noteArea — set noteTab first without calling renderSongPage
     noteTab = activeTab;
     const noteArea = document.getElementById('noteArea');
-    scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
+    if (noteArea) {
+      // Strip rte-body class from any elements to prevent bordered-box styling in fullscreen
+      const tmp = document.createElement('div');
+      tmp.innerHTML = noteArea.innerHTML;
+      tmp.querySelectorAll('.rte-body').forEach(el => {
+        el.classList.remove('rte-body');
+        el.style.background = 'none';
+        el.style.border = 'none';
+        el.style.padding = '0';
+        el.style.minHeight = 'unset';
+        el.style.borderRadius = '0';
+      });
+      scrollInner.innerHTML = tmp.innerHTML;
+    } else {
+      scrollInner.innerHTML = '';
+    }
     applyFsZoom();
   }
 
@@ -3474,7 +3493,7 @@ function openNoteFullscreen(idx) {
     if (s?.id) saveSongZoom(s.id);
     // Reload content from noteArea (which applyNoteZoom already updated) then apply fs zoom
     const noteAreaEl = document.getElementById('noteArea');
-    if (noteAreaEl) scrollArea.innerHTML = noteAreaEl.innerHTML;
+    if (noteAreaEl) scrollInner.innerHTML = noteAreaEl.innerHTML;
     applyNoteZoom(); applyFsZoom();
     fsShowChrome(); // reset autohide timer on interaction
   });
@@ -3482,7 +3501,7 @@ function openNoteFullscreen(idx) {
     noteZoom = Math.round(Math.min(3.0, noteZoom + 0.1) * 10) / 10;
     if (s?.id) saveSongZoom(s.id);
     const noteAreaEl = document.getElementById('noteArea');
-    if (noteAreaEl) scrollArea.innerHTML = noteAreaEl.innerHTML;
+    if (noteAreaEl) scrollInner.innerHTML = noteAreaEl.innerHTML;
     applyNoteZoom(); applyFsZoom();
     fsShowChrome();
   });
@@ -3508,8 +3527,8 @@ function openNoteFullscreen(idx) {
         if (accumulated >= 1) {
           const move = Math.floor(accumulated);
           accumulated -= move;
-          scrollArea.scrollTop += move;
-          if (scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 2) {
+          scrollInner.scrollTop += move;
+          if (scrollInner.scrollTop + scrollInner.clientHeight >= scrollInner.scrollHeight - 2) {
             stopFsScroll(); return;
           }
         }
@@ -3561,7 +3580,6 @@ function openNoteFullscreen(idx) {
   // Navigate to a new song within fullscreen with a slide animation
   function fsNavigateTo(newIdx, direction) {
     if (newIdx < 0 || newIdx >= currentSetSongs.length) return;
-    const W = overlay.offsetWidth;
 
     // Ghost strip — briefly visible on the leading edge during slide
     const ghostSong = currentSetSongs[newIdx];
@@ -3572,19 +3590,7 @@ function openNoteFullscreen(idx) {
     // Remove ghost when slide finishes
     setTimeout(() => ghost.remove(), 280);
 
-    const outgoing = scrollArea.cloneNode(true);
-    outgoing.style.cssText = `position:absolute;inset:0;overflow:hidden;will-change:transform;background:var(--bg);z-index:1;border:none;outline:none;box-shadow:none;`;
-    scrollArea.parentNode.insertBefore(outgoing, scrollArea);
-
-    // Animate outgoing out
-    outgoing.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-    outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
-
-    // Slide scroll area in from opposite side
-    scrollArea.style.transition = 'none';
-    scrollArea.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
-
-    // Update state immediately — no full renderSongPage needed in fullscreen
+    // Update state
     idx = newIdx;
     currentSongIdx = newIdx;
     s = currentSetSongs[newIdx];
@@ -3594,50 +3600,43 @@ function openNoteFullscreen(idx) {
     activeTab = noteTab;
     loadSongZoom(s?.id);
 
-    // Update title bar and load content — lightweight, no IDB page rebuild
+    // Fade out current content
+    scrollInner.style.transition = 'opacity 0.15s ease';
+    scrollInner.style.opacity = '0';
+
+    // Update title bar
     refreshFsTitleBar(newIdx);
 
-    // Load note content directly for scroll area
+    // Load new content then fade in
     (async () => {
       const newSong = currentSetSongs[newIdx];
       if (newSong?.type === 'note') {
-        scrollArea.innerHTML = `<div class="note-display" style="white-space:pre-wrap;text-align:center;max-width:560px;margin:40px auto;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${newSong.text ? esc(newSong.text) : '<span style="color:var(--text3);font-style:italic;">No note text.</span>'}</div>`;
+        scrollInner.innerHTML = `<div class="note-display" style="white-space:pre-wrap;text-align:center;max-width:560px;margin:40px auto;font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${newSong.text ? esc(newSong.text) : '<span style="color:var(--text3);font-style:italic;">No note text.</span>'}</div>`;
       } else if (newSong) {
         const userKey = `${currentUser||'me'}_${newSong.id}`;
         const noteEntry = await dbGet('notes', userKey);
         const noteHtml = noteEntry?.content || noteEntry?.text || '';
-        scrollArea.innerHTML = noteHtml
-          ? `<div class="note-display rte-body" style="font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;">${noteHtml}</div>`
+        scrollInner.innerHTML = noteHtml
+          ? `<div class="note-display" style="font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;background:none;border:none;padding:0;min-height:unset;">${noteHtml}</div>`
           : `<div class="note-display" style="font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;color:var(--text3);font-style:italic;">No notes for this song.</div>`;
       }
       applyFsZoom();
+      scrollInner.scrollTop = 0;
+      scrollInner.style.transition = 'opacity 0.15s ease';
+      scrollInner.style.opacity = '1';
+      setTimeout(() => { scrollInner.style.transition = ''; }, 160);
     })();
-
-    // Slide in immediately — don't wait for content
-    requestAnimationFrame(() => {
-      scrollArea.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-      scrollArea.style.transform = 'translateX(0)';
-    });
-    // Clean up outgoing — also clear transform to avoid compositing border artifact
-    setTimeout(() => {
-      outgoing.remove();
-      scrollArea.style.transition = '';
-      scrollArea.style.transform = '';
-      scrollArea.style.willChange = '';
-    }, 300);
-
-    // Background page syncs when fullscreen is closed — no lazy call needed here
   }
   // Expose for keyboard navigation — must be set after function is defined
   window._fsNavigateTo = fsNavigateTo;
 
-  scrollArea.addEventListener('touchstart', e => {
+  scrollInner.addEventListener('touchstart', e => {
     if (e.touches.length > 1) { swipeWasPinch = true; fsDragging = false; return; }
     swipeWasPinch = false; fsDragging = false; fsDx = 0;
     swipeSx = e.touches[0].clientX; swipeSy = e.touches[0].clientY;
   }, { passive: true });
 
-  scrollArea.addEventListener('touchmove', e => {
+  scrollInner.addEventListener('touchmove', e => {
     if (e.touches.length > 1) { swipeWasPinch = true; return; }
     if (swipeWasPinch) return;
     const cx = e.touches[0].clientX;
@@ -3646,7 +3645,6 @@ function openNoteFullscreen(idx) {
     if (!fsDragging && Math.abs(fsDx) > 8) {
       if (absDy > Math.abs(fsDx)) return; // vertical — ignore
       fsDragging = true;
-      scrollArea.style.transition = 'none';
       // Create ghost strip for this drag
       const canNext2 = idx < currentSetSongs.length - 1;
       const canPrev2 = idx > 0;
@@ -3670,7 +3668,7 @@ function openNoteFullscreen(idx) {
       let clamped = fsDx;
       if (fsDx < 0 && !canNext) clamped = fsDx * 0.2;
       if (fsDx > 0 && !canPrev) clamped = fsDx * 0.2;
-      scrollArea.style.transform = `translateX(${clamped * 0.92}px)`;
+      // Visual feedback via ghost only — no transform on scrollInner
       // Fade ghost in with progress
       if (overlay._fsGhost) {
         const fsW = overlay.offsetWidth;
@@ -3679,7 +3677,7 @@ function openNoteFullscreen(idx) {
     }
   }, { passive: true });
 
-  scrollArea.addEventListener('touchend', e => {
+  scrollInner.addEventListener('touchend', e => {
     if (e.touches.length > 0) return;
     if (swipeWasPinch) { swipeWasPinch = false; return; }
     if (!fsDragging) { fsDragging = false; return; }
@@ -3691,18 +3689,17 @@ function openNoteFullscreen(idx) {
     const removeGhost = () => { if (overlay._fsGhost) { overlay._fsGhost.remove(); overlay._fsGhost = null; } };
     if (goLeft || goRight) {
       removeGhost();
+      // Reset any drag transform on scrollInner before fsNavigateTo takes over
       fsNavigateTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
     } else {
-      // Snap back
-      scrollArea.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
-      scrollArea.style.transform = 'translateX(0)';
-      setTimeout(() => { scrollArea.style.transition = ''; scrollArea.style.transform = ''; removeGhost(); }, 230);
+      // Snap back — just remove ghost (no transform to reverse)
+      setTimeout(() => { removeGhost(); }, 50);
     }
   }, { passive: true });
 
   loadTabContent();
   // pinch-to-zoom in fullscreen — custom handler that updates the fs content
-  setupNoteAreaPinchZoom(scrollArea, idx, (committedZoom) => {
+  setupNoteAreaPinchZoom(scrollInner, idx, (committedZoom) => {
     // noteZoom already set by setupNoteAreaPinchZoom before calling here
     const s = currentSetSongs[idx];
     if (s?.id) saveSongZoom(s.id);
@@ -11696,7 +11693,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.207</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.215</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
