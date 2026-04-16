@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.237</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.238</span>
       </div>
 
     </div>
@@ -5437,42 +5437,50 @@ function swipeTo(idx, direction, skipAnimation) {
   editingNote = false;
   if (!direction) direction = idx > currentSongIdx ? 'left' : 'right';
   const page = document.getElementById('pg-song');
-  const pageArea = document.getElementById('page-area');
   if (!page || skipAnimation) { renderSongPage(idx); return; }
   const W = window.innerWidth;
 
-  // Freeze current view as fixed overlay
+  // Both panels are position:fixed on document.body — fully escape overflow:hidden
   const rect = page.getBoundingClientRect();
-  const snap = document.createElement('div');
-  snap.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9100;pointer-events:none;overflow:hidden;background:var(--bg);`;
-  const snapInner = page.cloneNode(true);
-  snapInner.style.cssText = 'position:absolute;inset:0;transform:none;transition:none;';
-  snapInner.removeAttribute('id');
-  snap.appendChild(snapInner);
-  document.body.appendChild(snap);
+  const fixedStyle = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9100;pointer-events:none;overflow:hidden;background:var(--bg);`;
 
-  // Render new song while snap covers screen
+  // Outgoing: snapshot of current song
+  const outgoing = document.createElement('div');
+  outgoing.style.cssText = fixedStyle;
+  const outSnap = page.cloneNode(true);
+  outSnap.style.cssText = 'position:absolute;inset:0;transform:none;transition:none;';
+  outSnap.removeAttribute('id');
+  outgoing.appendChild(outSnap);
+  document.body.appendChild(outgoing);
+
+  // Hide real page while we render new content
+  page.style.visibility = 'hidden';
+
+  // Render new song content
   renderSongPage(idx).then(() => {
-    // Unlock page-area overflow so pg-song can slide in
-    if (pageArea) pageArea.style.overflow = 'visible';
+    // Incoming: snapshot of new song, starts off-screen
+    const incoming = document.createElement('div');
+    const startX = direction === 'left' ? W : -W;
+    incoming.style.cssText = fixedStyle + `transform:translateX(${startX}px);`;
+    const inSnap = page.cloneNode(true);
+    inSnap.style.cssText = 'position:absolute;inset:0;transform:none;transition:none;';
+    inSnap.removeAttribute('id');
+    incoming.appendChild(inSnap);
+    document.body.appendChild(incoming);
 
-    // Position pg-song off-screen
-    page.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translateX(' + (direction === 'left' ? W : -W) + 'px);transition:none;';
-
+    // Animate both simultaneously
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      // Slide snap out
-      snap.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
-      snap.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
-      // Slide pg-song in
-      page.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
-      page.style.transform = 'translateX(0)';
+      const easing = 'cubic-bezier(0.4,0,0.2,1)';
+      outgoing.style.transition = `transform 0.3s ${easing}`;
+      outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
+      incoming.style.transition = `transform 0.3s ${easing}`;
+      incoming.style.transform = 'translateX(0)';
     }));
 
     setTimeout(() => {
-      snap.remove();
-      page.style.cssText = '';
-      page.classList.add('active');
-      if (pageArea) pageArea.style.overflow = '';
+      outgoing.remove();
+      incoming.remove();
+      page.style.visibility = '';
     }, 320);
   });
 
@@ -5545,13 +5553,13 @@ function setupSwipe(idx) {
     const goRight = dx > 0 && idx > 0 && committed;
 
     if (goLeft || goRight) {
-      // Snap dragSnap all the way off screen then navigate
+      // Snap dragSnap off screen, then render new song (no duplicate animation)
       const targetX = goLeft ? -W : W;
       dragSnap.style.transition = 'transform 0.2s cubic-bezier(0.4,0,1,1)';
       dragSnap.style.transform = `translateX(${targetX}px)`;
       setTimeout(() => {
         removeDragSnap();
-        swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
+        swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right', true);
       }, 200);
     } else {
       // Snap back
