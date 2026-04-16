@@ -952,7 +952,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Center: set name + counter only (song title already in page body) -->
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden;">
-        <div id="songPageSetName" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.1;"></div>
+        <button id="songPageSetName" onclick="openSetlistDropdown()" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.1;background:none;border:none;cursor:pointer;padding:2px 4px;display:flex;align-items:center;gap:4px;"></button>
         <span id="songNavCounter" style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:0.5px;"></span>
       </div>
 
@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.225</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.227</span>
       </div>
 
     </div>
@@ -3217,7 +3217,13 @@ async function renderSongPage(idx) {
   if (!s) return;
 
   const currentSet = await dbGet('setlists', currentSetId);
-  document.getElementById('songPageSetName').textContent = currentSet?.name || '';
+  const _snEl = document.getElementById('songPageSetName');
+  if (_snEl) {
+    const _snName = currentSet?.name || '';
+    _snEl.innerHTML = _snName
+      ? `${esc(_snName)}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:11px;height:11px;flex-shrink:0;opacity:0.7;"><path d="M6 9l6 6 6-6"/></svg>`
+      : '';
+  }
   updateTopNav(idx);
 
   // ── NOTE SLIDE ──
@@ -5424,37 +5430,132 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-function swipeTo(idx) {
-  if (idx<0||idx>=currentSetSongs.length) return;
-  stopScroll();
-  stopTuningFork();
-  stopAudio();
-  if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
-  editingNote=false; renderSongPage(idx);
-  // blur so arrow keys work immediately after navigation
+function swipeTo(idx, direction, skipAnimation) {
+  if (idx < 0 || idx >= currentSetSongs.length) return;
+  stopScroll(); stopTuningFork(); stopAudio();
+  if (bpmTimer) { clearInterval(bpmTimer); bpmTimer = null; }
+  editingNote = false;
+  if (!direction) direction = idx > currentSongIdx ? 'left' : 'right';
+  const body = document.getElementById('songPageBody');
+  if (!body || skipAnimation) { renderSongPage(idx); return; }
+
+  // Snapshot outgoing
+  const W = window.innerWidth;
+  const outgoing = document.createElement('div');
+  outgoing.style.cssText = 'position:absolute;inset:0;overflow:hidden;background:var(--bg);z-index:1;';
+  outgoing.innerHTML = body.innerHTML;
+  body.style.position = 'relative';
+  body.style.overflow = 'hidden';
+  body.appendChild(outgoing);
+
+  renderSongPage(idx).then(() => {
+    // Slide outgoing out
+    outgoing.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
+    outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
+    // Slide body in from opposite side
+    body.style.transition = 'none';
+    body.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
+    requestAnimationFrame(() => {
+      body.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
+      body.style.transform = 'translateX(0)';
+    });
+    setTimeout(() => {
+      outgoing.remove();
+      body.style.position = '';
+      body.style.overflow = '';
+      body.style.transition = '';
+      body.style.transform = '';
+    }, 240);
+  });
   if (document.activeElement) document.activeElement.blur();
 }
 
 function setupSwipe(idx) {
   const body = document.getElementById('songPageBody');
-  let sx=0, sy=0, ignore=false;
+  const W = window.innerWidth;
+  let sx = 0, sy = 0, dx = 0, dragging = false, ignore = false, wasPinch = false;
+
   const ts = e => {
-    // ignore swipes that start on the tab bar area
+    if (e.touches.length > 1) { wasPinch = true; return; }
+    wasPinch = false; dragging = false; dx = 0;
+    body._swipeJustHappened = false;
     const target = e.target;
     ignore = !!(target.closest('.note-tab-bar') || target.closest('.note-tabs') || target.closest('.note-tab'));
-    sx=e.touches[0].clientX; sy=e.touches[0].clientY;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
   };
+
+  const tm = e => {
+    if (e.touches.length > 1) { wasPinch = true; return; }
+    if (ignore || wasPinch) return;
+    const cx = e.touches[0].clientX;
+    dx = cx - sx;
+    const absDy = Math.abs(e.touches[0].clientY - sy);
+    if (!dragging) {
+      if (Math.abs(dx) < 8) return;
+      if (absDy > Math.abs(dx)) { ignore = true; return; }
+      dragging = true;
+      body.style.transition = 'none';
+      body.style.position = 'relative';
+      body.style.overflow = 'visible';
+    }
+    if (dragging) {
+      const canPrev = idx > 0;
+      const canNext = idx < currentSetSongs.length - 1;
+      let clamped = dx;
+      if (dx < 0 && !canNext) clamped = dx * 0.2;
+      if (dx > 0 && !canPrev) clamped = dx * 0.2;
+      body.style.transform = `translateX(${clamped * 0.92}px)`;
+    }
+  };
+
   const te = e => {
-    if (ignore) return;
-    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
-    if (Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx)) return;
-    if (dx<0&&idx<currentSetSongs.length-1) swipeTo(idx+1);
-    else if (dx>0&&idx>0) swipeTo(idx-1);
+    if (e.touches.length > 0) return;
+    if (!dragging) { wasPinch = false; return; }
+    const committed = Math.abs(dx) > W * 0.35;
+    const goLeft = dx < 0 && idx < currentSetSongs.length - 1 && committed;
+    const goRight = dx > 0 && idx > 0 && committed;
+    if (goLeft || goRight) {
+      body.style.overflow = 'hidden';
+      const targetX = goLeft ? -W : W;
+      body.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
+      body.style.transform = `translateX(${targetX}px)`;
+      setTimeout(() => {
+        body.style.transform = '';
+        body.style.transition = '';
+        body.style.overflow = '';
+        body.style.position = '';
+        swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right', true);
+      }, 180);
+    } else {
+      body.style.overflow = '';
+      body.style.position = '';
+      body.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
+      body.style.transform = 'translateX(0)';
+      setTimeout(() => { body.style.transition = ''; body.style.transform = ''; }, 230);
+    }
+    if (dragging || wasPinch) {
+      body._swipeJustHappened = true;
+      setTimeout(() => { body._swipeJustHappened = false; }, 350);
+    }
+    dragging = false; wasPinch = false;
   };
-  if (body._ts) { body.removeEventListener('touchstart',body._ts); body.removeEventListener('touchend',body._te); }
-  body._ts=ts; body._te=te;
-  body.addEventListener('touchstart',ts,{passive:true});
-  body.addEventListener('touchend',te,{passive:true});
+
+  if (body._ts) {
+    body.removeEventListener('touchstart', body._ts);
+    body.removeEventListener('touchmove', body._tm);
+    body.removeEventListener('touchend', body._te);
+  }
+  body._ts = ts; body._tm = tm; body._te = te;
+  body.addEventListener('touchstart', ts, { passive: true });
+  body.addEventListener('touchmove', tm, { passive: true });
+  body.addEventListener('touchend', te, { passive: true });
+  if (!body._clickReveal) {
+    body._clickReveal = true;
+    body.addEventListener('click', () => {
+      if (body._swipeJustHappened) return;
+      showTabBar(true);
+    });
+  }
 }
 
 // ── PICKER ──
