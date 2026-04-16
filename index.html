@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.227</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.230</span>
       </div>
 
     </div>
@@ -5439,34 +5439,38 @@ function swipeTo(idx, direction, skipAnimation) {
   const body = document.getElementById('songPageBody');
   if (!body || skipAnimation) { renderSongPage(idx); return; }
 
-  // Snapshot outgoing
   const W = window.innerWidth;
-  const outgoing = document.createElement('div');
-  outgoing.style.cssText = 'position:absolute;inset:0;overflow:hidden;background:var(--bg);z-index:1;';
-  outgoing.innerHTML = body.innerHTML;
-  body.style.position = 'relative';
-  body.style.overflow = 'hidden';
-  body.appendChild(outgoing);
+  const bodyRect = body.getBoundingClientRect();
 
+  // Snapshot outgoing as a fixed overlay on document.body
+  // so renderSongPage can safely replace body.innerHTML without destroying it
+  const outgoing = document.createElement('div');
+  outgoing.style.cssText = `position:fixed;top:${bodyRect.top}px;left:0;width:100%;height:${bodyRect.height}px;overflow:hidden;background:var(--bg);z-index:7999;pointer-events:none;`;
+  outgoing.innerHTML = body.innerHTML;
+  document.body.appendChild(outgoing);
+
+  // Render new content into body (outgoing is safe on document.body)
   renderSongPage(idx).then(() => {
-    // Slide outgoing out
-    outgoing.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
-    outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
-    // Slide body in from opposite side
+    // Start new content off-screen
     body.style.transition = 'none';
     body.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
+
     requestAnimationFrame(() => {
+      // Slide outgoing out
+      outgoing.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
+      outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
+      // Slide new content in
       body.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
       body.style.transform = 'translateX(0)';
     });
+
     setTimeout(() => {
       outgoing.remove();
-      body.style.position = '';
-      body.style.overflow = '';
       body.style.transition = '';
       body.style.transform = '';
     }, 240);
   });
+
   if (document.activeElement) document.activeElement.blur();
 }
 
@@ -5551,10 +5555,7 @@ function setupSwipe(idx) {
   body.addEventListener('touchend', te, { passive: true });
   if (!body._clickReveal) {
     body._clickReveal = true;
-    body.addEventListener('click', () => {
-      if (body._swipeJustHappened) return;
-      showTabBar(true);
-    });
+    // Click on body — no tab bar toggle needed (tabs always visible in this version)
   }
 }
 
@@ -5591,6 +5592,85 @@ async function openPicker() {
   }
   renderPicker();
 }
+// ── SETLIST SONG DROPDOWN ──
+function openSetlistDropdown() {
+  if (document.getElementById('setlistDropdown')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'setlistDropdown';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:8500;display:flex;';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'width:75%;max-width:400px;background:var(--surface);display:flex;flex-direction:column;overflow:hidden;box-shadow:4px 0 24px rgba(0,0,0,0.4);transform:translateX(-100%);transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);';
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;';
+  const setNameEl = document.getElementById('songPageSetName');
+  const setNameText = setNameEl?.textContent?.replace('▾','').trim() || 'Setlist';
+  header.innerHTML = `<span style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${esc(setNameText)}</span>
+    <button onclick="closeSetlistDropdown()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:4px 8px;">✕</button>`;
+
+  // Song list
+  const list = document.createElement('div');
+  list.style.cssText = 'overflow-y:auto;flex:1;';
+  let songPos = 0;
+  currentSetSongs.forEach((item, i) => {
+    const row = document.createElement('div');
+    const isCurrent = i === currentSongIdx;
+    if (item.type === 'note') {
+      row.style.cssText = `padding:8px 14px;border-bottom:1px solid var(--border);background:${isCurrent?'var(--surface2)':'none'};display:flex;align-items:center;gap:10px;cursor:pointer;`;
+      row.innerHTML = `<span style="font-size:12px;color:var(--text3);font-style:italic;">— note —</span>`;
+    } else {
+      songPos++;
+      row.style.cssText = `padding:10px 14px;border-bottom:1px solid var(--border);background:${isCurrent?'var(--surface2)':'none'};display:flex;align-items:center;gap:10px;cursor:pointer;${isCurrent?'border-left:3px solid var(--accent);':''}`;
+      row.innerHTML = `
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text3);min-width:28px;">${songPos}</span>
+        <span style="flex:1;font-size:15px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(item.title||'')}</span>
+        ${item.key?`<span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);">${esc(item.key)}</span>`:''}`;
+    }
+    row.addEventListener('click', () => {
+      closeSetlistDropdown(() => {
+        if (i !== currentSongIdx) swipeTo(i, i > currentSongIdx ? 'left' : 'right');
+      });
+    });
+    list.appendChild(row);
+  });
+
+  panel.appendChild(header);
+  panel.appendChild(list);
+  overlay.appendChild(panel);
+
+  // Dim area — tap to close
+  const dim = document.createElement('div');
+  dim.style.cssText = 'flex:1;background:rgba(0,0,0,0.4);';
+  dim.addEventListener('click', () => closeSetlistDropdown());
+  overlay.appendChild(dim);
+  document.body.appendChild(overlay);
+
+  // Slide in
+  requestAnimationFrame(() => { panel.style.transform = 'translateX(0)'; });
+
+  // Scroll current song into view
+  setTimeout(() => {
+    const rows = list.children;
+    if (rows[currentSongIdx]) rows[currentSongIdx].scrollIntoView({ block: 'center' });
+  }, 50);
+}
+
+function closeSetlistDropdown(cb) {
+  const overlay = document.getElementById('setlistDropdown');
+  if (!overlay) { if (cb) cb(); return; }
+  const panel = overlay.querySelector('div');
+  if (panel) {
+    panel.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
+    panel.style.transform = 'translateX(-100%)';
+  }
+  setTimeout(() => {
+    overlay.remove();
+    if (cb) cb();
+  }, 190);
+}
+
 function closePicker() { document.getElementById('pickerModal').classList.add('hidden'); }
 document.getElementById('pickerModal').addEventListener('click', e => { if(e.target===e.currentTarget) closePicker(); });
 
