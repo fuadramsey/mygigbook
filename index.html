@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.233</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.234</span>
       </div>
 
     </div>
@@ -5437,29 +5437,30 @@ function swipeTo(idx, direction, skipAnimation) {
   editingNote = false;
   if (!direction) direction = idx > currentSongIdx ? 'left' : 'right';
   const page = document.getElementById('pg-song');
+  const pageArea = document.getElementById('page-area');
   if (!page || skipAnimation) { renderSongPage(idx); return; }
 
   const W = window.innerWidth;
-  const H = window.innerHeight;
 
-  // Take a screenshot of the current visible page as a fixed canvas
+  // 1. Freeze current screen as a fixed overlay (escapes all overflow:hidden clips)
+  const pageRect = page.getBoundingClientRect();
   const outgoing = document.createElement('div');
-  outgoing.style.cssText = `position:fixed;inset:0;z-index:7999;pointer-events:none;background:var(--bg);overflow:hidden;`;
-  // Clone the whole pg-song visual
+  outgoing.style.cssText = `position:fixed;top:${pageRect.top}px;left:${pageRect.left}px;width:${pageRect.width}px;height:${pageRect.height}px;z-index:9000;pointer-events:none;background:var(--bg);overflow:hidden;`;
   const clone = page.cloneNode(true);
-  clone.style.cssText = 'position:absolute;inset:0;overflow:hidden;';
+  clone.style.cssText = 'position:absolute;inset:0;';
   clone.removeAttribute('id');
   outgoing.appendChild(clone);
   document.body.appendChild(outgoing);
 
-  // Render new content while outgoing covers the screen
+  // 2. Render new content (page is visually covered by outgoing)
   renderSongPage(idx).then(() => {
-    // Now animate: outgoing slides out, page slides in from side
-    // Temporarily allow page to be seen sliding in from outside
+
+    // 3. Unlock overflow on page-area so pg-song can slide in from outside
+    if (pageArea) { pageArea.style.overflow = 'visible'; }
     page.style.transition = 'none';
     page.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
-    page.style.overflow = 'visible';
 
+    // 4. Animate both: outgoing slides out, page slides in
     requestAnimationFrame(() => requestAnimationFrame(() => {
       outgoing.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
       outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
@@ -5467,12 +5468,13 @@ function swipeTo(idx, direction, skipAnimation) {
       page.style.transform = 'translateX(0)';
     }));
 
+    // 5. Clean up
     setTimeout(() => {
       outgoing.remove();
       page.style.transition = '';
       page.style.transform = '';
-      page.style.overflow = '';
-    }, 300);
+      if (pageArea) { pageArea.style.overflow = ''; }
+    }, 310);
   });
 
   if (document.activeElement) document.activeElement.blur();
@@ -5527,12 +5529,10 @@ function setupSwipe(idx) {
     if (dragging) {
       const canPrev = idx > 0;
       const canNext = idx < currentSetSongs.length - 1;
-      let clamped = dx;
-      if (dx < 0 && !canNext) clamped = dx * 0.2;
-      if (dx > 0 && !canPrev) clamped = dx * 0.2;
-      // Fade ghost in with progress
+      // Fade ghost in with drag progress
       if (ghostEl) {
-        ghostEl.style.opacity = String(Math.min(0.95, Math.abs(dx) / (W * 0.3)));
+        const progress = Math.min(0.98, Math.abs(dx) / (W * 0.3));
+        ghostEl.style.opacity = String(progress);
       }
     }
   };
