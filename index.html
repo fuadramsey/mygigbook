@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.236</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.237</span>
       </div>
 
     </div>
@@ -5481,9 +5481,31 @@ function swipeTo(idx, direction, skipAnimation) {
 
 function setupSwipe(idx) {
   const body = document.getElementById('songPageBody');
-  if (!body) return;
+  const page = document.getElementById('pg-song');
+  const pageArea = document.getElementById('page-area');
+  if (!body || !page) return;
   const W = window.innerWidth;
   let sx = 0, sy = 0, dx = 0, dragging = false, ignore = false, wasPinch = false;
+  let dragSnap = null; // fixed clone of current page that moves with finger
+
+  function startDragSnap() {
+    if (dragSnap) return;
+    const rect = page.getBoundingClientRect();
+    dragSnap = document.createElement('div');
+    dragSnap.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9100;pointer-events:none;overflow:hidden;background:var(--bg);`;
+    const inner = page.cloneNode(true);
+    inner.style.cssText = 'position:absolute;inset:0;transform:none;transition:none;';
+    inner.removeAttribute('id');
+    dragSnap.appendChild(inner);
+    document.body.appendChild(dragSnap);
+    // Hide the real page behind the snap
+    page.style.visibility = 'hidden';
+  }
+
+  function removeDragSnap() {
+    if (dragSnap) { dragSnap.remove(); dragSnap = null; }
+    page.style.visibility = '';
+  }
 
   const ts = e => {
     if (e.touches.length > 1) { wasPinch = true; return; }
@@ -5502,18 +5524,44 @@ function setupSwipe(idx) {
       if (Math.abs(dx) < 8) return;
       if (absDy > Math.abs(dx)) { ignore = true; return; }
       dragging = true;
+      startDragSnap();
+    }
+    if (dragging && dragSnap) {
+      const canPrev = idx > 0;
+      const canNext = idx < currentSetSongs.length - 1;
+      let clamped = dx;
+      if (dx < 0 && !canNext) clamped = dx * 0.15;
+      if (dx > 0 && !canPrev) clamped = dx * 0.15;
+      dragSnap.style.transform = `translateX(${clamped}px)`;
     }
   };
 
   const te = e => {
     if (e.touches.length > 0) return;
     if (!dragging) { wasPinch = false; return; }
+
     const committed = Math.abs(dx) > W * 0.3;
     const goLeft  = dx < 0 && idx < currentSetSongs.length - 1 && committed;
     const goRight = dx > 0 && idx > 0 && committed;
+
     if (goLeft || goRight) {
-      swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
+      // Snap dragSnap all the way off screen then navigate
+      const targetX = goLeft ? -W : W;
+      dragSnap.style.transition = 'transform 0.2s cubic-bezier(0.4,0,1,1)';
+      dragSnap.style.transform = `translateX(${targetX}px)`;
+      setTimeout(() => {
+        removeDragSnap();
+        swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
+      }, 200);
+    } else {
+      // Snap back
+      if (dragSnap) {
+        dragSnap.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
+        dragSnap.style.transform = 'translateX(0)';
+        setTimeout(() => removeDragSnap(), 230);
+      }
     }
+
     if (dragging || wasPinch) {
       body._swipeJustHappened = true;
       setTimeout(() => { body._swipeJustHappened = false; }, 350);
