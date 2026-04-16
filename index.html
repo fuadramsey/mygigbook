@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.231</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.232</span>
       </div>
 
     </div>
@@ -5441,34 +5441,43 @@ function swipeTo(idx, direction, skipAnimation) {
 
   const W = window.innerWidth;
   const bodyRect = body.getBoundingClientRect();
+  const top = bodyRect.top;
+  const height = bodyRect.height;
 
-  // Snapshot outgoing as a fixed overlay on document.body
-  // so renderSongPage can safely replace body.innerHTML without destroying it
+  // Both outgoing and incoming are position:fixed overlays
+  // so they escape the .page overflow:hidden clip and are fully visible
+  const baseStyle = `position:fixed;top:${top}px;left:0;width:100%;height:${height}px;overflow-y:auto;overflow-x:hidden;background:var(--bg);z-index:7999;pointer-events:none;padding:0;`;
+
+  // Snapshot outgoing content
   const outgoing = document.createElement('div');
-  outgoing.style.cssText = `position:fixed;top:${bodyRect.top}px;left:0;width:100%;height:${bodyRect.height}px;overflow:hidden;background:var(--bg);z-index:7999;pointer-events:none;`;
+  outgoing.style.cssText = baseStyle;
   outgoing.innerHTML = body.innerHTML;
   document.body.appendChild(outgoing);
 
-  // Render new content into body (outgoing is safe on document.body)
+  // Render new content — body.innerHTML gets replaced here
   renderSongPage(idx).then(() => {
-    // Start new content off-screen
-    body.style.transition = 'none';
-    body.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
+    // Capture new content as incoming fixed overlay
+    const incoming = document.createElement('div');
+    incoming.style.cssText = baseStyle + `transform:translateX(${direction === 'left' ? W : -W}px);`;
+    incoming.innerHTML = body.innerHTML;
+    // Hide body during animation
+    body.style.visibility = 'hidden';
+    document.body.appendChild(incoming);
 
     requestAnimationFrame(() => {
       // Slide outgoing out
-      outgoing.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
+      outgoing.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
       outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
-      // Slide new content in
-      body.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
-      body.style.transform = 'translateX(0)';
+      // Slide incoming in
+      incoming.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+      incoming.style.transform = 'translateX(0)';
     });
 
     setTimeout(() => {
       outgoing.remove();
-      body.style.transition = '';
-      body.style.transform = '';
-    }, 240);
+      incoming.remove();
+      body.style.visibility = '';
+    }, 270);
   });
 
   if (document.activeElement) document.activeElement.blur();
@@ -5541,23 +5550,9 @@ function setupSwipe(idx) {
     const goLeft = dx < 0 && idx < currentSetSongs.length - 1 && committed;
     const goRight = dx > 0 && idx > 0 && committed;
     if (goLeft || goRight) {
-      body.style.overflow = 'hidden';
-      const targetX = goLeft ? -W : W;
-      body.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
-      body.style.transform = `translateX(${targetX}px)`;
-      setTimeout(() => {
-        body.style.transform = '';
-        body.style.transition = '';
-        body.style.overflow = '';
-        body.style.position = '';
-        swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right', true);
-      }, 180);
+      swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
     } else {
-      body.style.overflow = '';
-      body.style.position = '';
-      body.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
-      body.style.transform = 'translateX(0)';
-      setTimeout(() => { body.style.transition = ''; body.style.transform = ''; }, 230);
+      // Snap back — nothing to undo since we don't move body during drag
     }
     if (dragging || wasPinch) {
       body._swipeJustHappened = true;
