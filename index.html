@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.230</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.231</span>
       </div>
 
     </div>
@@ -5488,6 +5488,17 @@ function setupSwipe(idx) {
     sx = e.touches[0].clientX; sy = e.touches[0].clientY;
   };
 
+  let ghostEl = null;
+
+  function makeGhost(title, side) {
+    const g = document.createElement('div');
+    const borderSide = side === 'right' ? 'border-left' : 'border-right';
+    g.style.cssText = `position:fixed;top:0;${side}:0;width:56px;height:100%;background:var(--surface2);${borderSide}:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:7998;pointer-events:none;opacity:0;transition:opacity 0.1s;`;
+    g.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;transform:${side==='right'?'none':'rotate(180deg)'};letter-spacing:2px;padding:16px 0;white-space:nowrap;max-height:80vh;overflow:hidden;text-overflow:ellipsis;">${esc(title||'')}</div>`;
+    document.body.appendChild(g);
+    return g;
+  }
+
   const tm = e => {
     if (e.touches.length > 1) { wasPinch = true; return; }
     if (ignore || wasPinch) return;
@@ -5498,9 +5509,16 @@ function setupSwipe(idx) {
       if (Math.abs(dx) < 8) return;
       if (absDy > Math.abs(dx)) { ignore = true; return; }
       dragging = true;
-      body.style.transition = 'none';
-      body.style.position = 'relative';
-      body.style.overflow = 'visible';
+      // Create ghost for the adjacent song
+      const canNext = idx < currentSetSongs.length - 1;
+      const canPrev = idx > 0;
+      if (dx < 0 && canNext && !ghostEl) {
+        const ns = currentSetSongs[idx + 1];
+        ghostEl = makeGhost(ns?.type === 'note' ? '— note —' : (ns?.title || ''), 'right');
+      } else if (dx > 0 && canPrev && !ghostEl) {
+        const ps = currentSetSongs[idx - 1];
+        ghostEl = makeGhost(ps?.type === 'note' ? '— note —' : (ps?.title || ''), 'left');
+      }
     }
     if (dragging) {
       const canPrev = idx > 0;
@@ -5508,12 +5526,16 @@ function setupSwipe(idx) {
       let clamped = dx;
       if (dx < 0 && !canNext) clamped = dx * 0.2;
       if (dx > 0 && !canPrev) clamped = dx * 0.2;
-      body.style.transform = `translateX(${clamped * 0.92}px)`;
+      // Fade ghost in with progress
+      if (ghostEl) {
+        ghostEl.style.opacity = String(Math.min(0.95, Math.abs(dx) / (W * 0.3)));
+      }
     }
   };
 
   const te = e => {
     if (e.touches.length > 0) return;
+    if (ghostEl) { ghostEl.remove(); ghostEl = null; }
     if (!dragging) { wasPinch = false; return; }
     const committed = Math.abs(dx) > W * 0.35;
     const goLeft = dx < 0 && idx < currentSetSongs.length - 1 && committed;
