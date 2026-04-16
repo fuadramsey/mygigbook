@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.232</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.233</span>
       </div>
 
     </div>
@@ -5436,48 +5436,43 @@ function swipeTo(idx, direction, skipAnimation) {
   if (bpmTimer) { clearInterval(bpmTimer); bpmTimer = null; }
   editingNote = false;
   if (!direction) direction = idx > currentSongIdx ? 'left' : 'right';
-  const body = document.getElementById('songPageBody');
-  if (!body || skipAnimation) { renderSongPage(idx); return; }
+  const page = document.getElementById('pg-song');
+  if (!page || skipAnimation) { renderSongPage(idx); return; }
 
   const W = window.innerWidth;
-  const bodyRect = body.getBoundingClientRect();
-  const top = bodyRect.top;
-  const height = bodyRect.height;
+  const H = window.innerHeight;
 
-  // Both outgoing and incoming are position:fixed overlays
-  // so they escape the .page overflow:hidden clip and are fully visible
-  const baseStyle = `position:fixed;top:${top}px;left:0;width:100%;height:${height}px;overflow-y:auto;overflow-x:hidden;background:var(--bg);z-index:7999;pointer-events:none;padding:0;`;
-
-  // Snapshot outgoing content
+  // Take a screenshot of the current visible page as a fixed canvas
   const outgoing = document.createElement('div');
-  outgoing.style.cssText = baseStyle;
-  outgoing.innerHTML = body.innerHTML;
+  outgoing.style.cssText = `position:fixed;inset:0;z-index:7999;pointer-events:none;background:var(--bg);overflow:hidden;`;
+  // Clone the whole pg-song visual
+  const clone = page.cloneNode(true);
+  clone.style.cssText = 'position:absolute;inset:0;overflow:hidden;';
+  clone.removeAttribute('id');
+  outgoing.appendChild(clone);
   document.body.appendChild(outgoing);
 
-  // Render new content — body.innerHTML gets replaced here
+  // Render new content while outgoing covers the screen
   renderSongPage(idx).then(() => {
-    // Capture new content as incoming fixed overlay
-    const incoming = document.createElement('div');
-    incoming.style.cssText = baseStyle + `transform:translateX(${direction === 'left' ? W : -W}px);`;
-    incoming.innerHTML = body.innerHTML;
-    // Hide body during animation
-    body.style.visibility = 'hidden';
-    document.body.appendChild(incoming);
+    // Now animate: outgoing slides out, page slides in from side
+    // Temporarily allow page to be seen sliding in from outside
+    page.style.transition = 'none';
+    page.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
+    page.style.overflow = 'visible';
 
-    requestAnimationFrame(() => {
-      // Slide outgoing out
-      outgoing.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      outgoing.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
       outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
-      // Slide incoming in
-      incoming.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-      incoming.style.transform = 'translateX(0)';
-    });
+      page.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
+      page.style.transform = 'translateX(0)';
+    }));
 
     setTimeout(() => {
       outgoing.remove();
-      incoming.remove();
-      body.style.visibility = '';
-    }, 270);
+      page.style.transition = '';
+      page.style.transform = '';
+      page.style.overflow = '';
+    }, 300);
   });
 
   if (document.activeElement) document.activeElement.blur();
