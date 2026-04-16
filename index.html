@@ -1176,6 +1176,12 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <select id="pickerArtistFilter" class="filter-sel" onchange="renderPicker()" style="max-width:120px;flex-shrink:0;">
         <option value="">All artists</option>
       </select>
+      <select id="pickerGroupFilter" class="filter-sel" onchange="renderPicker()" style="max-width:120px;flex-shrink:0;">
+        <option value="">All groups</option>
+      </select>
+      <select id="pickerTagFilter" class="filter-sel" onchange="renderPicker()" style="max-width:120px;flex-shrink:0;">
+        <option value="">All tags</option>
+      </select>
     </div>
     <div class="modal-body" id="pickerList"></div>
   </div>
@@ -1572,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.223</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.225</span>
       </div>
 
     </div>
@@ -5461,6 +5467,27 @@ async function openPicker() {
   const sel = document.getElementById('pickerArtistFilter');
   sel.innerHTML = '<option value="">All artists</option>' +
     artists.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  // populate group filter — default to activeGroupFilter
+  const allGroups = await dbAll('groups');
+  const privateId = getPrivateGroupId();
+  const myGroups = allGroups.filter(g =>
+    g.id !== privateId && (g.createdBy === currentUser || (g.members||[]).includes(currentUser))
+  ).sort((a,b) => a.name.localeCompare(b.name));
+  const groupSel = document.getElementById('pickerGroupFilter');
+  if (groupSel) {
+    const defaultGroup = activeGroupFilter && activeGroupFilter !== privateId ? activeGroupFilter : '';
+    groupSel.innerHTML = '<option value="">All groups</option>' +
+      `<option value="__private__"${activeGroupFilter===privateId?' selected':''}>🔒 Private</option>` +
+      myGroups.map(g => `<option value="${g.id}"${g.id===defaultGroup?' selected':''}>${esc(g.name)}</option>`).join('');
+  }
+  // populate tag filter
+  const tagSel = document.getElementById('pickerTagFilter');
+  if (tagSel) {
+    const allTags = [...new Set(songs.flatMap(s => s.tags||[]).filter(Boolean))].sort();
+    const curTag = tagSel.value;
+    tagSel.innerHTML = '<option value="">All tags</option>' +
+      allTags.map(t => `<option value="${esc(t)}"${curTag===t?' selected':''}>${esc(t)}</option>`).join('');
+  }
   renderPicker();
 }
 function closePicker() { document.getElementById('pickerModal').classList.add('hidden'); }
@@ -5485,8 +5512,23 @@ async function renderPicker() {
   let songs=await dbAll('songs');
   const q=document.getElementById('pickerSearch').value.toLowerCase();
   const artistFilter=document.getElementById('pickerArtistFilter')?.value || '';
+  const pickerGroupFilter=document.getElementById('pickerGroupFilter')?.value || '';
+  // visibility: own songs + songs in user's groups
+  const allGroups2 = await dbAll('groups');
+  const userGroupIds2 = new Set(allGroups2.filter(g=>g.createdBy===currentUser||(g.members||[]).includes(currentUser)).map(g=>g.id));
+  if (!currentIsAdmin) {
+    songs = songs.filter(s => !s.createdBy || s.createdBy===currentUser || (s.groupIds||[]).some(gid=>userGroupIds2.has(gid)));
+  }
   if(q) songs=songs.filter(s=>(s.title+' '+(s.artist||'')).toLowerCase().includes(q));
   if(artistFilter) songs=songs.filter(s=>s.artist===artistFilter);
+  if (pickerGroupFilter === '__private__') {
+    const privateId2 = getPrivateGroupId();
+    songs = songs.filter(s => { const ids=s.groupIds||[]; return ids.length===0||(ids.length===1&&ids[0]===privateId2)||ids.includes(privateId2); });
+  } else if (pickerGroupFilter) {
+    songs = songs.filter(s=>(s.groupIds||[]).includes(pickerGroupFilter));
+  }
+  const pickerTagFilter = document.getElementById('pickerTagFilter')?.value || '';
+  if (pickerTagFilter) songs = songs.filter(s => (s.tags||[]).includes(pickerTagFilter));
   songs.sort((a,b)=>a.title.localeCompare(b.title));
   const el=document.getElementById('pickerList');
   if(!songs.length){el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3)">No songs in database yet.</div>';return;}
