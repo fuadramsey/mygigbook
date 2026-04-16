@@ -1131,6 +1131,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
           </div>
           <select class="filter-sel" id="dbFilterArtist" onchange="renderDB()"><option value="">Artist</option></select>
           <select class="filter-sel" id="dbFilterTag" onchange="renderDB()"><option value="">Tag</option></select>
+          <select class="filter-sel" id="dbFilterGroup" onchange="renderDB()"><option value="">All Groups</option></select>
         </div>
         <div class="sort-bar" style="display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;align-items:center;">
           <button class="sort-btn active" id="sort-title" onclick="setSort('title')">Title</button>
@@ -1304,8 +1305,14 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
         <input class="search-input" id="pickerSearch" placeholder="Search…" oninput="renderPicker()" onkeydown="pickerSearchKeydown(event)">
       </div>
-      <select id="pickerArtistFilter" class="filter-sel" onchange="renderPicker()" style="max-width:120px;flex-shrink:0;">
+      <select id="pickerArtistFilter" class="filter-sel" onchange="renderPicker()" style="max-width:110px;flex-shrink:0;">
         <option value="">All artists</option>
+      </select>
+      <select id="pickerGroupFilter" class="filter-sel" onchange="renderPicker()" style="max-width:110px;flex-shrink:0;">
+        <option value="">All groups</option>
+      </select>
+      <select id="pickerTagFilter" class="filter-sel" onchange="renderPicker()" style="max-width:110px;flex-shrink:0;">
+        <option value="">All tags</option>
       </select>
     </div>
     <div class="modal-body" id="pickerList"></div>
@@ -1768,7 +1775,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.219</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.220</span>
       </div>
 
     </div>
@@ -6832,12 +6839,33 @@ async function openPicker() {
   document.getElementById('pickerSearch').value = '';
   document.getElementById('pickerModal').classList.remove('hidden');
   setTimeout(() => document.getElementById('pickerSearch').focus(), 80);
-  // populate artist filter
   const songs = await dbAll('songs');
+  // populate artist filter
   const artists = [...new Set(songs.map(s => s.artist).filter(Boolean))].sort();
   const sel = document.getElementById('pickerArtistFilter');
   sel.innerHTML = '<option value="">All artists</option>' +
     artists.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  // populate group filter — default to activeGroupFilter
+  const allGroups = await dbAll('groups');
+  const privateId = getPrivateGroupId();
+  const myGroups = allGroups.filter(g =>
+    g.id !== privateId && (g.createdBy === currentUser || (g.members||[]).includes(currentUser))
+  ).sort((a,b) => a.name.localeCompare(b.name));
+  const groupSel = document.getElementById('pickerGroupFilter');
+  if (groupSel) {
+    const defaultGroup = activeGroupFilter && activeGroupFilter !== privateId ? activeGroupFilter : '';
+    const defaultPrivate = activeGroupFilter === privateId;
+    groupSel.innerHTML = '<option value="">All groups</option>' +
+      `<option value="__private__"${defaultPrivate?' selected':''}>🔒 Private</option>` +
+      myGroups.map(g => `<option value="${g.id}"${g.id===defaultGroup?' selected':''}>${esc(g.name)}</option>`).join('');
+  }
+  // populate tag filter
+  const tagSel = document.getElementById('pickerTagFilter');
+  if (tagSel) {
+    const allTags = [...new Set(songs.flatMap(s => s.tags||[]).filter(Boolean))].sort();
+    tagSel.innerHTML = '<option value="">All tags</option>' +
+      allTags.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  }
   renderPicker();
 }
 function closePicker() { document.getElementById('pickerModal').classList.add('hidden'); }
@@ -6860,10 +6888,25 @@ async function renderPicker() {
     }
   });
   let songs=await dbAll('songs');
+  // visibility: own songs + songs in user's groups
+  const allGrps = await dbAll('groups');
+  const userGrpIds = new Set(allGrps.filter(g=>g.createdBy===currentUser||(g.members||[]).includes(currentUser)).map(g=>g.id));
+  if (!currentIsAdmin) {
+    songs = songs.filter(s => !s.createdBy || s.createdBy===currentUser || (s.groupIds||[]).some(gid=>userGrpIds.has(gid)));
+  }
   const q=document.getElementById('pickerSearch').value.toLowerCase();
   const artistFilter=document.getElementById('pickerArtistFilter')?.value || '';
+  const pickerGroupFilter=document.getElementById('pickerGroupFilter')?.value || '';
+  const pickerTagFilter=document.getElementById('pickerTagFilter')?.value || '';
   if(q) songs=songs.filter(s=>(s.title+' '+(s.artist||'')).toLowerCase().includes(q));
   if(artistFilter) songs=songs.filter(s=>s.artist===artistFilter);
+  if(pickerTagFilter) songs=songs.filter(s=>(s.tags||[]).includes(pickerTagFilter));
+  if(pickerGroupFilter==='__private__') {
+    const pid=getPrivateGroupId();
+    songs=songs.filter(s=>{const ids=s.groupIds||[];return ids.length===0||(ids.length===1&&ids[0]===pid)||ids.includes(pid);});
+  } else if(pickerGroupFilter) {
+    songs=songs.filter(s=>(s.groupIds||[]).includes(pickerGroupFilter));
+  }
   songs.sort((a,b)=>a.title.localeCompare(b.title));
   const el=document.getElementById('pickerList');
   if(!songs.length){el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3)">No songs in database yet.</div>';return;}
@@ -6979,9 +7022,22 @@ async function renderDB() {
   const q = document.getElementById('dbSearch').value.toLowerCase();
   const artistFilter = document.getElementById('dbFilterArtist')?.value || '';
   const tagFilter = document.getElementById('dbFilterTag')?.value || '';
+  const groupEl = document.getElementById('dbFilterGroup');
+  // Default group filter to activeGroupFilter on first load
+  let groupFilter = groupEl?.value || '';
+  if (!groupFilter && activeGroupFilter) {
+    const privateId = getPrivateGroupId();
+    groupFilter = activeGroupFilter === privateId ? '__private__' : activeGroupFilter;
+  }
   if (q) songs = songs.filter(s => (s.title+' '+(s.artist||'')).toLowerCase().includes(q));
   if (artistFilter) songs = songs.filter(s => s.artist === artistFilter);
   if (tagFilter) songs = songs.filter(s => (s.tags||[]).includes(tagFilter));
+  if (groupFilter === '__private__') {
+    const pid = getPrivateGroupId();
+    songs = songs.filter(s => { const ids = s.groupIds||[]; return ids.length===0||(ids.length===1&&ids[0]===pid)||ids.includes(pid); });
+  } else if (groupFilter) {
+    songs = songs.filter(s => (s.groupIds||[]).includes(groupFilter));
+  }
   // populate artist dropdown
   const artistEl = document.getElementById('dbFilterArtist');
   if (artistEl) {
@@ -6990,11 +7046,20 @@ async function renderDB() {
     artistEl.innerHTML = '<option value="">Artist</option>' + allArtists.map(a => `<option${cur===a?' selected':''}>${esc(a)}</option>`).join('');
   }
   // populate tag dropdown
-  const tagEl = document.getElementById('dbFilterTag');
-  if (tagEl) {
+  const tagEl2 = document.getElementById('dbFilterTag');
+  if (tagEl2) {
     const allTags = [...new Set(songs.flatMap(s => s.tags||[]).filter(Boolean))].sort();
-    const curTag = tagEl.value;
-    tagEl.innerHTML = '<option value="">Tag</option>' + allTags.map(t => `<option${curTag===t?' selected':''}>${esc(t)}</option>`).join('');
+    const curTag = tagEl2.value;
+    tagEl2.innerHTML = '<option value="">Tag</option>' + allTags.map(t => `<option${curTag===t?' selected':''}>${esc(t)}</option>`).join('');
+  }
+  // populate group dropdown
+  if (groupEl) {
+    const privateId = getPrivateGroupId();
+    const curGroup = groupEl.value || groupFilter;
+    const myGroups = userGroups.filter(g => g.id !== privateId).sort((a,b) => a.name.localeCompare(b.name));
+    groupEl.innerHTML = '<option value="">All Groups</option>' +
+      `<option value="__private__"${curGroup==='__private__'?' selected':''}>🔒 Private</option>` +
+      myGroups.map(g => `<option value="${g.id}"${curGroup===g.id?' selected':''}>${esc(g.name)}</option>`).join('');
   }
 
   songs.sort((a, b) => {
@@ -11706,7 +11771,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.219</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.220</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
