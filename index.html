@@ -1302,7 +1302,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 <div class="toast" id="toast"></div>
 
 <!-- NEW GROUP MODAL -->
-<div class="modal-overlay hidden" id="newGroupModal" onclick="if(event.target===this)closeNewGroupModal()">
+<div class="modal-overlay hidden" id="newGroupModal" onclick="if(event.target===this)closeNewGroupModal()" style="z-index:1500;">
   <div class="modal-sheet">
     <div class="modal-header">
       <span class="modal-title">New Group</span>
@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.238</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.239</span>
       </div>
 
     </div>
@@ -5495,23 +5495,44 @@ function setupSwipe(idx) {
   const W = window.innerWidth;
   let sx = 0, sy = 0, dx = 0, dragging = false, ignore = false, wasPinch = false;
   let dragSnap = null; // fixed clone of current page that moves with finger
+  let peekSnap = null; // fixed panel showing next/prev song peeking in from edge
 
-  function startDragSnap() {
+  function startDragSnap(dir) {
     if (dragSnap) return;
     const rect = page.getBoundingClientRect();
+    const baseStyle = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;pointer-events:none;overflow:hidden;background:var(--bg);`;
+
+    // Current page clone — moves with finger
     dragSnap = document.createElement('div');
-    dragSnap.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9100;pointer-events:none;overflow:hidden;background:var(--bg);`;
+    dragSnap.style.cssText = baseStyle + 'z-index:9101;';
     const inner = page.cloneNode(true);
     inner.style.cssText = 'position:absolute;inset:0;transform:none;transition:none;';
     inner.removeAttribute('id');
     dragSnap.appendChild(inner);
     document.body.appendChild(dragSnap);
-    // Hide the real page behind the snap
+
+    // Peek panel — next/prev song title, slides in from opposite edge
+    const adjIdx = dir === 'left' ? idx + 1 : idx - 1;
+    if (adjIdx >= 0 && adjIdx < currentSetSongs.length) {
+      const adjSong = currentSetSongs[adjIdx];
+      const adjTitle = adjSong?.type === 'note' ? '— note —' : (adjSong?.title || '');
+      const adjKey = adjSong?.key || '';
+      peekSnap = document.createElement('div');
+      peekSnap.style.cssText = baseStyle + `z-index:9100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 24px;transform:translateX(${dir === 'left' ? W : -W}px);`;
+      peekSnap.innerHTML = `
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,6vw,56px);letter-spacing:1px;color:var(--text);text-align:center;line-height:1.1;">${esc(adjTitle)}</div>
+        ${adjKey ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,8vw,64px);color:var(--accent);letter-spacing:2px;">${esc(adjKey)}</div>` : ''}
+        <div style="font-size:13px;color:var(--text3);font-family:'DM Mono',monospace;">${adjIdx + 1} / ${currentSetSongs.length}</div>`;
+      document.body.appendChild(peekSnap);
+    }
+
+    // Hide the real page
     page.style.visibility = 'hidden';
   }
 
   function removeDragSnap() {
     if (dragSnap) { dragSnap.remove(); dragSnap = null; }
+    if (peekSnap) { peekSnap.remove(); peekSnap = null; }
     page.style.visibility = '';
   }
 
@@ -5532,7 +5553,8 @@ function setupSwipe(idx) {
       if (Math.abs(dx) < 8) return;
       if (absDy > Math.abs(dx)) { ignore = true; return; }
       dragging = true;
-      startDragSnap();
+      // Pass initial direction hint
+      startDragSnap(dx < 0 ? 'left' : 'right');
     }
     if (dragging && dragSnap) {
       const canPrev = idx > 0;
@@ -5541,6 +5563,10 @@ function setupSwipe(idx) {
       if (dx < 0 && !canNext) clamped = dx * 0.15;
       if (dx > 0 && !canPrev) clamped = dx * 0.15;
       dragSnap.style.transform = `translateX(${clamped}px)`;
+      // Peek panel moves in from opposite direction
+      if (peekSnap) {
+        peekSnap.style.transform = `translateX(${clamped + (dx < 0 ? W : -W)}px)`;
+      }
     }
   };
 
@@ -5553,10 +5579,15 @@ function setupSwipe(idx) {
     const goRight = dx > 0 && idx > 0 && committed;
 
     if (goLeft || goRight) {
-      // Snap dragSnap off screen, then render new song (no duplicate animation)
       const targetX = goLeft ? -W : W;
+      // Fly current page out
       dragSnap.style.transition = 'transform 0.2s cubic-bezier(0.4,0,1,1)';
       dragSnap.style.transform = `translateX(${targetX}px)`;
+      // Slide peek panel to center
+      if (peekSnap) {
+        peekSnap.style.transition = 'transform 0.2s cubic-bezier(0.4,0,1,1)';
+        peekSnap.style.transform = 'translateX(0)';
+      }
       setTimeout(() => {
         removeDragSnap();
         swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right', true);
