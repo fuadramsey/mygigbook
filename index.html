@@ -1578,7 +1578,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.234</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.235</span>
       </div>
 
     </div>
@@ -5439,42 +5439,41 @@ function swipeTo(idx, direction, skipAnimation) {
   const page = document.getElementById('pg-song');
   const pageArea = document.getElementById('page-area');
   if (!page || skipAnimation) { renderSongPage(idx); return; }
-
   const W = window.innerWidth;
 
-  // 1. Freeze current screen as a fixed overlay (escapes all overflow:hidden clips)
-  const pageRect = page.getBoundingClientRect();
-  const outgoing = document.createElement('div');
-  outgoing.style.cssText = `position:fixed;top:${pageRect.top}px;left:${pageRect.left}px;width:${pageRect.width}px;height:${pageRect.height}px;z-index:9000;pointer-events:none;background:var(--bg);overflow:hidden;`;
-  const clone = page.cloneNode(true);
-  clone.style.cssText = 'position:absolute;inset:0;';
-  clone.removeAttribute('id');
-  outgoing.appendChild(clone);
-  document.body.appendChild(outgoing);
+  // Freeze current view as fixed overlay
+  const rect = page.getBoundingClientRect();
+  const snap = document.createElement('div');
+  snap.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9100;pointer-events:none;overflow:hidden;background:var(--bg);`;
+  const snapInner = page.cloneNode(true);
+  snapInner.style.cssText = 'position:absolute;inset:0;transform:none;transition:none;';
+  snapInner.removeAttribute('id');
+  snap.appendChild(snapInner);
+  document.body.appendChild(snap);
 
-  // 2. Render new content (page is visually covered by outgoing)
+  // Render new song while snap covers screen
   renderSongPage(idx).then(() => {
+    // Unlock page-area overflow so pg-song can slide in
+    if (pageArea) pageArea.style.overflow = 'visible';
 
-    // 3. Unlock overflow on page-area so pg-song can slide in from outside
-    if (pageArea) { pageArea.style.overflow = 'visible'; }
-    page.style.transition = 'none';
-    page.style.transform = direction === 'left' ? `translateX(${W}px)` : `translateX(-${W}px)`;
+    // Position pg-song off-screen
+    page.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translateX(' + (direction === 'left' ? W : -W) + 'px);transition:none;';
 
-    // 4. Animate both: outgoing slides out, page slides in
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      outgoing.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
-      outgoing.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
-      page.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
+      // Slide snap out
+      snap.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+      snap.style.transform = direction === 'left' ? `translateX(-${W}px)` : `translateX(${W}px)`;
+      // Slide pg-song in
+      page.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
       page.style.transform = 'translateX(0)';
     }));
 
-    // 5. Clean up
     setTimeout(() => {
-      outgoing.remove();
-      page.style.transition = '';
-      page.style.transform = '';
-      if (pageArea) { pageArea.style.overflow = ''; }
-    }, 310);
+      snap.remove();
+      page.style.cssText = '';
+      page.classList.add('active');
+      if (pageArea) pageArea.style.overflow = '';
+    }, 320);
   });
 
   if (document.activeElement) document.activeElement.blur();
@@ -5482,72 +5481,38 @@ function swipeTo(idx, direction, skipAnimation) {
 
 function setupSwipe(idx) {
   const body = document.getElementById('songPageBody');
+  if (!body) return;
   const W = window.innerWidth;
   let sx = 0, sy = 0, dx = 0, dragging = false, ignore = false, wasPinch = false;
 
   const ts = e => {
     if (e.touches.length > 1) { wasPinch = true; return; }
     wasPinch = false; dragging = false; dx = 0;
-    body._swipeJustHappened = false;
     const target = e.target;
     ignore = !!(target.closest('.note-tab-bar') || target.closest('.note-tabs') || target.closest('.note-tab'));
     sx = e.touches[0].clientX; sy = e.touches[0].clientY;
   };
 
-  let ghostEl = null;
-
-  function makeGhost(title, side) {
-    const g = document.createElement('div');
-    const borderSide = side === 'right' ? 'border-left' : 'border-right';
-    g.style.cssText = `position:fixed;top:0;${side}:0;width:56px;height:100%;background:var(--surface2);${borderSide}:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:7998;pointer-events:none;opacity:0;transition:opacity 0.1s;`;
-    g.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;transform:${side==='right'?'none':'rotate(180deg)'};letter-spacing:2px;padding:16px 0;white-space:nowrap;max-height:80vh;overflow:hidden;text-overflow:ellipsis;">${esc(title||'')}</div>`;
-    document.body.appendChild(g);
-    return g;
-  }
-
   const tm = e => {
     if (e.touches.length > 1) { wasPinch = true; return; }
     if (ignore || wasPinch) return;
-    const cx = e.touches[0].clientX;
-    dx = cx - sx;
+    dx = e.touches[0].clientX - sx;
     const absDy = Math.abs(e.touches[0].clientY - sy);
     if (!dragging) {
       if (Math.abs(dx) < 8) return;
       if (absDy > Math.abs(dx)) { ignore = true; return; }
       dragging = true;
-      // Create ghost for the adjacent song
-      const canNext = idx < currentSetSongs.length - 1;
-      const canPrev = idx > 0;
-      if (dx < 0 && canNext && !ghostEl) {
-        const ns = currentSetSongs[idx + 1];
-        ghostEl = makeGhost(ns?.type === 'note' ? '— note —' : (ns?.title || ''), 'right');
-      } else if (dx > 0 && canPrev && !ghostEl) {
-        const ps = currentSetSongs[idx - 1];
-        ghostEl = makeGhost(ps?.type === 'note' ? '— note —' : (ps?.title || ''), 'left');
-      }
-    }
-    if (dragging) {
-      const canPrev = idx > 0;
-      const canNext = idx < currentSetSongs.length - 1;
-      // Fade ghost in with drag progress
-      if (ghostEl) {
-        const progress = Math.min(0.98, Math.abs(dx) / (W * 0.3));
-        ghostEl.style.opacity = String(progress);
-      }
     }
   };
 
   const te = e => {
     if (e.touches.length > 0) return;
-    if (ghostEl) { ghostEl.remove(); ghostEl = null; }
     if (!dragging) { wasPinch = false; return; }
-    const committed = Math.abs(dx) > W * 0.35;
-    const goLeft = dx < 0 && idx < currentSetSongs.length - 1 && committed;
+    const committed = Math.abs(dx) > W * 0.3;
+    const goLeft  = dx < 0 && idx < currentSetSongs.length - 1 && committed;
     const goRight = dx > 0 && idx > 0 && committed;
     if (goLeft || goRight) {
       swipeTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
-    } else {
-      // Snap back — nothing to undo since we don't move body during drag
     }
     if (dragging || wasPinch) {
       body._swipeJustHappened = true;
@@ -5565,11 +5530,8 @@ function setupSwipe(idx) {
   body.addEventListener('touchstart', ts, { passive: true });
   body.addEventListener('touchmove', tm, { passive: true });
   body.addEventListener('touchend', te, { passive: true });
-  if (!body._clickReveal) {
-    body._clickReveal = true;
-    // Click on body — no tab bar toggle needed (tabs always visible in this version)
-  }
 }
+
 
 // ── PICKER ──
 async function openPicker() {
