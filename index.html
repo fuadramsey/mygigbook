@@ -1780,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.227</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.228</span>
       </div>
 
     </div>
@@ -7367,6 +7367,13 @@ function renderSETab() {
             </select>
           </div>
         </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Groups</label>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div id="songEditGroupBadges" style="display:flex;flex-wrap:wrap;gap:6px;flex:1;min-height:24px;"></div>
+            <button type="button" onclick="openSongGroupModal(document.getElementById('editSongId').value)" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:12px;font-family:inherit;white-space:nowrap;flex-shrink:0;">Manage</button>
+          </div>
+        </div>
         <div class="form-label" style="margin-bottom:6px;">Lyrics</div>
         <div class="rte-toolbar">
           <button class="rte-btn" onclick="rteCmd2('bold')" title="Bold"><strong>B</strong></button>
@@ -11841,7 +11848,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.227</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.228</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
