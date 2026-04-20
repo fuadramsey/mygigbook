@@ -457,6 +457,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .rte-highlight-btn { width: 30px; height: 28px; border: 1px solid transparent; border-radius: 6px; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.12s; flex-shrink: 0; }
 .rte-highlight-btn:hover { background: var(--surface3); }
 .rte-body { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 12px; min-height: 200px; outline: none; word-break: break-word; }
+.rte-body p, .rte-body div { margin-block-start: 0; margin-block-end: 0; }
+.rte-body[style*="line-height: 1"] p,
+.rte-body[style*="line-height: 1"] div,
+.rte-body[style*="line-height:1"] p,
+.rte-body[style*="line-height:1"] div { margin: 0 !important; padding: 0 !important; }
 .edit-note-btn { margin-top: 12px; width: 100%; padding: 11px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface2); color: var(--text2); font-family: inherit; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .save-btn { margin-top: 10px; width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: var(--radius); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .save-btn:active { opacity: 0.85; }
@@ -1775,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.223</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.224</span>
       </div>
 
     </div>
@@ -5301,16 +5306,27 @@ function rteLineSpacing(editorId, value) {
   const el = document.getElementById(editorId);
   if (!el) return;
   el.focus();
+  // When spacing is 1, also kill block margins for truly tight lines
+  const isTight = parseFloat(value) <= 1;
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
     // No selection — apply to whole editor
     el.style.lineHeight = value;
+    if (isTight) {
+      el.querySelectorAll('p, div, br').forEach(n => {
+        if (n.tagName === 'P' || n.tagName === 'DIV') {
+          n.style.margin = '0';
+          n.style.padding = '0';
+        }
+      });
+    }
     return;
   }
   const range = sel.getRangeAt(0);
   // Wrap selection in a div with line-height
   const div = document.createElement('div');
   div.style.lineHeight = value;
+  if (isTight) { div.style.margin = '0'; div.style.padding = '0'; }
   try {
     range.surroundContents(div);
   } catch(e) {
@@ -11776,7 +11792,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.223</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.224</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
