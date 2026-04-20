@@ -1780,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.226</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.227</span>
       </div>
 
     </div>
@@ -7394,6 +7394,21 @@ function renderSETab() {
         const keyEl = document.getElementById('fKey');
         if (keyEl && s.key) keyEl.value = s.key;
         populateTagSelect();
+        // populate group badges in edit form
+        (async () => {
+          const badgesEl = document.getElementById('songEditGroupBadges');
+          if (!badgesEl) return;
+          const allGroups = await dbAll('groups');
+          const songGroupIds = s.groupIds || [];
+          const privateId = getPrivateGroupId();
+          const sharedGroups = songGroupIds.filter(gid => gid !== privateId);
+          if (!sharedGroups.length) {
+            badgesEl.innerHTML = '<span style="font-size:12px;color:var(--text3);font-style:italic;">Private only</span>';
+          } else {
+            const names = sharedGroups.map(id => allGroups.find(g => g.id === id)?.name).filter(Boolean);
+            badgesEl.innerHTML = names.map(n => `<span style="background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.3);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--accent);font-family:'DM Mono',monospace;">${esc(n)}</span>`).join('');
+          }
+        })();
       });
     }
     // async audio inject if not cached
@@ -11826,7 +11841,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.226</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.227</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
