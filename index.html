@@ -1780,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.224</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.225</span>
       </div>
 
     </div>
@@ -9635,6 +9635,7 @@ async function openGroupFilter() {
       </div>
       <span class="settings-row-label" style="flex:1;">${esc(g.name)}${isPrivate?` <span style="font-size:10px;opacity:0.5;font-family:'DM Mono',monospace;">(personal)</span>`:''}</span>
       ${isActive ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M5 12l5 5 9-9"/></svg>` : ''}
+      ${isOwner && !isPrivate ? `<button onclick="event.stopPropagation();startRenameGroup('${g.id}','${esc(g.name)}')" style="flex-shrink:0;background:none;border:1px solid var(--border2);border-radius:20px;padding:3px 9px;font-size:11px;color:var(--text2);cursor:pointer;font-family:inherit;margin-left:6px;" title="Rename group">✏️</button>` : ''}
       ${!isOwner && !isPrivate ? `<button onclick="event.stopPropagation();closeGroupFilter();confirmLeaveGroupPrompt('${g.id}','${esc(g.name)}')" style="flex-shrink:0;background:none;border:1px solid rgba(255,68,68,0.4);border-radius:20px;padding:3px 9px;font-size:11px;color:var(--red);cursor:pointer;font-family:inherit;margin-left:6px;">Leave</button>` : ''}
     </div>`;
   }).join('') :
@@ -9674,6 +9675,46 @@ async function updateGroupMembersInModal() {
 
 function closeGroupFilter() {
   document.getElementById('groupFilterModal').classList.add('hidden');
+}
+
+function startRenameGroup(groupId, currentName) {
+  const existing = document.getElementById('renameGroupOverlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'renameGroupOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;color:var(--text);">Rename Group</div>
+      <input id="renameGroupInput" class="form-input" value="${esc(currentName)}" placeholder="Group name" maxlength="50"
+        onkeydown="if(event.key==='Enter')confirmRenameGroup('${groupId}');if(event.key==='Escape')document.getElementById('renameGroupOverlay').remove();">
+      <div style="display:flex;gap:10px;">
+        <button onclick="document.getElementById('renameGroupOverlay').remove()" class="btn ghost" style="flex:1;">Cancel</button>
+        <button onclick="confirmRenameGroup('${groupId}')" class="btn primary" style="flex:1;">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  setTimeout(() => {
+    const inp = document.getElementById('renameGroupInput');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 50);
+}
+
+async function confirmRenameGroup(groupId) {
+  const inp = document.getElementById('renameGroupInput');
+  const newName = inp?.value?.trim();
+  if (!newName) { showToast('Please enter a group name', 'err'); return; }
+  const g = await dbGet('groups', groupId);
+  if (!g || g.createdBy !== currentUser) { showToast('Only the owner can rename this group', 'err'); return; }
+  g.name = newName;
+  g.updatedAt = Date.now();
+  await dbPut('groups', g);
+  await syncOut();
+  document.getElementById('renameGroupOverlay')?.remove();
+  updateGroupFilterChips();
+  openGroupFilter(); // refresh list
+  showToast('Group renamed', 'ok');
 }
 
 async function setGroupFilter(groupId) {
@@ -11792,7 +11833,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.224</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.225</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
