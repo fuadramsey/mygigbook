@@ -1780,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.230</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.231</span>
       </div>
 
     </div>
@@ -2605,6 +2605,8 @@ function goBack() {
   // refresh list pages when returning to them
   if (ret === 'pg-setlists') { renderSetsList(); updateGroupFilterChips(); }
   if (ret === 'pg-db') {
+    const dbListEl2 = document.getElementById('dbList');
+    if (dbListEl2) dbListEl2.innerHTML = '';
     renderDB(); dbShowList(); dbUpdatePinBtn(); updateGroupFilterChips();
     const detailBar = document.getElementById('dbDetailBar');
     if (detailBar) detailBar.style.display = 'flex';
@@ -2644,7 +2646,11 @@ function navTo(tab) {
   const pg = 'pg-'+tab;
   document.getElementById(pg).classList.add('active');
   pageStack.push(pg);
-  if (tab==='db') { renderDB(); dbShowList(); dbUpdatePinBtn(); updateGroupFilterChips();
+  if (tab==='db') {
+    // Clear list before render to prevent flash of unfiltered results
+    const dbListEl = document.getElementById('dbList');
+    if (dbListEl) dbListEl.innerHTML = '';
+    renderDB(); dbShowList(); dbUpdatePinBtn(); updateGroupFilterChips();
     const detailBar = document.getElementById('dbDetailBar');
     if (detailBar) detailBar.style.display = 'flex';
   }
@@ -7097,6 +7103,8 @@ function durationToSecs(d) {
 }
 
 async function renderDB() {
+  // Don't render until user is logged in and group filter is initialized
+  if (!currentUser) return;
   let songs = await dbAll('songs');
   const userGroups = (await dbAll('groups')).filter(g =>
     g.createdBy === currentUser || (g.members||[]).includes(currentUser)
@@ -9493,7 +9501,6 @@ async function postLoginInit() {
   const adminRow = document.getElementById('adminSettingsRow');
   if (adminRow) adminRow.style.display = currentIsAdmin ? 'block' : 'none';
   await renderSetsList();
-  await renderDB();
   await renderGroups();
   // Prime audio cache from IDB so Download buttons don't flash for already-downloaded files
   primeAudioCache();
@@ -11930,7 +11937,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.230</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.231</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
