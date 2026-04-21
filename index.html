@@ -1780,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.229</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.230</span>
       </div>
 
     </div>
@@ -2224,20 +2224,28 @@ async function primeAudioCache() {
 }
 
 async function loadAudioHybrid(songId) {
-  const audioKey = `audio_${songId}`;
-  // check memory cache first
-  if (window._audioCache?.[audioKey]?.blobUrl) return window._audioCache[audioKey];
-  // check IndexedDB
-  try {
-    const entry = await dbGet('audio', audioKey);
+  // Returns first audio entry for backward compat
+  const entries = await loadAllAudioForSong(songId);
+  return entries.length ? window._audioCache[entries[0]] : null;
+}
+
+async function loadAllAudioForSong(songId) {
+  // Load ALL audio entries for a song into _audioCache, return array of keys
+  const all = await dbAll('audio');
+  const keys = all
+    .filter(e => e.id === `audio_${songId}` || e.id.startsWith(`audio_${songId}_`))
+    .sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0))
+    .map(e => e.id);
+  window._audioCache = window._audioCache || {};
+  for (const key of keys) {
+    if (window._audioCache[key]?.blobUrl) continue;
+    const entry = await dbGet('audio', key);
     if (entry?.data) {
-      if (window._audioCache[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
       const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
-      window._audioCache[audioKey] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true };
-      return window._audioCache[audioKey];
+      window._audioCache[key] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true };
     }
-  } catch(e) {}
-  return null; // not cached locally — show download button instead
+  }
+  return keys.filter(k => window._audioCache[k]?.blobUrl);
 }
 
 // Check if audio exists in cloud (Firestore files collection)
@@ -4563,57 +4571,115 @@ function buildListenContent(s) {
 }
 
 function buildFullAudioPlayer(audioKey, idx) {
+  // Backward compat: build a single compact player
+  return buildCompactAudioPlayer(audioKey, idx);
+}
+
+function buildCompactAudioPlayer(audioKey, idx) {
   const entry = window._audioCache?.[audioKey];
   if (!entry) return '';
-  const _audioCollapsed = localStorage.getItem('mgb_audio_collapsed') === '1';
-  return `<div class="audio-player${_audioCollapsed ? ' collapsed' : ''}" id="audioPlayer">
-    <div class="audio-player-top">
-      <button class="audio-play-btn" id="audioPlayBtn" onclick="toggleAudio('${audioKey}',${idx})">
-        <svg viewBox="0 0 24 24" id="audioPlayIcon"><path d="M8 5v14l11-7z"/></svg>
+  const safeKey = audioKey.replace(/[^a-zA-Z0-9_]/g, '_');
+  return `<div class="audio-player" id="ap_${safeKey}" style="padding:8px 10px;gap:6px;">
+    <div class="audio-player-top" style="gap:8px;">
+      <button class="audio-play-btn" id="apb_${safeKey}" onclick="toggleAudioKeyed('${audioKey}','${safeKey}',${idx})" style="width:32px;height:32px;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" id="api_${safeKey}"><path d="M8 5v14l11-7z"/></svg>
       </button>
-      <div class="audio-info">
-        <div class="audio-name">${esc(entry.name)}</div>
-        <div class="audio-time" id="audioTime">0:00 / 0:00</div>
+      <div class="audio-info" style="flex:1;min-width:0;">
+        <div id="apname_${safeKey}" class="audio-name" style="cursor:pointer;font-size:12px;" onclick="startRenameAudio('${audioKey}','${safeKey}')" title="Tap to rename">${esc(entry.name)}</div>
+        <div class="audio-time" id="apt_${safeKey}" style="font-size:10px;">0:00 / 0:00</div>
       </div>
-      <button class="sm-btn" onclick="downloadAudio('${audioKey}')" title="Download audio" style="color:var(--accent);border-color:rgba(220,38,38,0.3);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 4v12m0 0l-4-4m4 4l4-4"/><path d="M4 20h16"/></svg>
+      <button class="sm-btn" onclick="downloadAudio('${audioKey}')" title="Download" style="color:var(--accent);border-color:rgba(220,38,38,0.3);padding:3px 6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><path d="M12 4v10m0 0l-3-3m3 3l3-3"/><path d="M4 18h16"/></svg>
       </button>
-      <button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeAudio('${audioKey}',${idx})" title="Remove audio">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-      <button id="audioCollapseBtn" onclick="toggleAudioCollapse()" title="Collapse player"
-        style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg id="audioCollapseIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;transition:transform 0.2s;${_audioCollapsed ? '' : 'transform:rotate(180deg);'}"><path d="M6 9l6 6 6-6"/></svg>
+      <button class="sm-btn" onclick="removeAudioKeyed('${audioKey}',${idx})" title="Remove" style="color:var(--red);border-color:rgba(255,68,68,0.3);padding:3px 6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div class="audio-progress-wrap" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
-      <div class="audio-progress-fill" id="audioProgressFill"></div>
-      <div class="audio-loop-region" id="audioLoopRegion" style="display:none;left:0%;width:0%;"></div>
-      <div class="audio-loop-marker start" id="audioLoopMarkerStart" style="display:none;left:0%;"></div>
-      <div class="audio-loop-marker end" id="audioLoopMarkerEnd" style="display:none;left:0%;"></div>
-    </div>
-    <div class="loop-controls">
-      <button class="loop-btn set-start" onclick="setLoopStart()" title="Set loop start">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><line x1="5" y1="4" x2="5" y2="20"/><polyline points="5,4 15,12 5,20"/></svg>
-        Set Start
-      </button>
-      <span class="loop-time-label" id="loopStartLabel">—</span>
-      <button class="loop-btn set-end" onclick="setLoopEnd()" title="Set loop end" style="border-color:rgba(255,153,0,0.4);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;color:#ff9900;"><line x1="19" y1="4" x2="19" y2="20"/><polyline points="19,4 9,12 19,20"/></svg>
-        Set End
-      </button>
-      <span class="loop-time-label" id="loopEndLabel">—</span>
-      <div style="flex:1;"></div>
-      <button class="loop-btn" id="loopToggleBtn" onclick="toggleLoop()" title="Toggle loop">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-        Loop
-      </button>
-      <button class="loop-btn" onclick="clearLoop()" title="Clear loop markers" style="color:var(--red);border-color:rgba(255,68,68,0.3);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        Clear
-      </button>
+    <div class="audio-progress-wrap" id="apw_${safeKey}" onclick="seekAudioKeyed(event,'${audioKey}','${safeKey}')" style="cursor:pointer;">
+      <div class="audio-progress-fill" id="apf_${safeKey}"></div>
     </div>
   </div>`;
+}
+
+function buildAllAudioPlayers(songId, idx) {
+  const keys = Object.keys(window._audioCache || {})
+    .filter(k => k === `audio_${songId}` || k.startsWith(`audio_${songId}_`))
+    .sort();
+  if (!keys.length) return '';
+  return keys.map(k => buildCompactAudioPlayer(k, idx)).join('');
+}
+
+function toggleAudioKeyed(audioKey, safeKey, idx) {
+  // If a different track is playing, stop it and update its icon
+  if (_audioKey && _audioKey !== audioKey) {
+    const oldSafe = _audioKey.replace(/[^a-zA-Z0-9_]/g, '_');
+    const oldIcon = document.getElementById('api_' + oldSafe);
+    if (oldIcon) oldIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    if (_audioEl) { _audioEl.pause(); _audioEl.currentTime = 0; }
+  }
+  const audio = getOrCreateAudio(audioKey);
+  if (!audio) return;
+  const icon = document.getElementById('api_' + safeKey);
+  if (audio.paused) {
+    audio.play().catch(() => showToast('Could not play audio', 'err'));
+    if (icon) icon.innerHTML = '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>';
+  } else {
+    audio.pause();
+    if (icon) icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+  }
+}
+
+function seekAudioKeyed(e, audioKey, safeKey) {
+  const audio = getOrCreateAudio(audioKey);
+  if (!audio || !audio.duration) return;
+  const wrap = document.getElementById('apw_' + safeKey);
+  if (!wrap) return;
+  const rect = wrap.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  audio.currentTime = pct * audio.duration;
+}
+
+async function removeAudioKeyed(audioKey, idx) {
+  const entry = window._audioCache?.[audioKey];
+  const name = entry?.name ? `"${entry.name}"` : 'this audio file';
+  if (!confirm(`Remove ${name}?\n\nThis will delete it from this device and the cloud.`)) return;
+  if (_audioKey === audioKey) stopAudio();
+  await dbDel('audio', audioKey);
+  if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
+  delete window._audioCache[audioKey];
+  const songId = audioKey.replace(/^audio_/, '').replace(/_\d+$/, '');
+  const path = storagePath('audio', songId, audioKey);
+  fbStorageDelete(path);
+  fbDeleteFileMeta(audioKey);
+  showToast('Audio removed');
+  if (idx >= 0) await renderSongPage(idx);
+  else renderSETab();
+}
+
+function startRenameAudio(audioKey, safeKey) {
+  const entry = window._audioCache?.[audioKey];
+  if (!entry) return;
+  const nameEl = document.getElementById('apname_' + safeKey);
+  if (!nameEl) return;
+  const current = entry.name || '';
+  nameEl.innerHTML = `<input id="apin_${safeKey}" value="${esc(current)}"
+    style="font-size:12px;width:100%;background:var(--surface);border:1px solid var(--accent);border-radius:4px;padding:1px 4px;color:var(--text);font-family:inherit;"
+    onblur="confirmRenameAudio('${audioKey}','${safeKey}')"
+    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${esc(current)}';this.blur();}">`;
+  const inp = document.getElementById('apin_' + safeKey);
+  if (inp) { inp.focus(); inp.select(); }
+}
+
+async function confirmRenameAudio(audioKey, safeKey) {
+  const inp = document.getElementById('apin_' + safeKey);
+  if (!inp) return;
+  const newName = inp.value.trim() || (window._audioCache[audioKey]?.name || 'audio');
+  const nameEl = document.getElementById('apname_' + safeKey);
+  if (nameEl) nameEl.textContent = newName;
+  if (window._audioCache?.[audioKey]) window._audioCache[audioKey].name = newName;
+  // persist to IDB
+  const entry = await dbGet('audio', audioKey);
+  if (entry) { entry.name = newName; await dbPut('audio', entry); }
 }
 
 function downloadAudio(audioKey) {
@@ -4651,20 +4717,18 @@ function positionAudioPlayer() {
 }
 
 function buildAudioSection(s) {
-  const audioKey = `audio_${s?.id}`;
-  const audioEntry = s ? window._audioCache?.[audioKey] : null;
-  if (audioEntry) {
-    return buildFullAudioPlayer(audioKey, currentSongIdx);
-  }
-  return `<div class="audio-upload-zone" onclick="document.getElementById('audioFileInput').click()"
+  const allPlayers = buildAllAudioPlayers(s?.id, currentSongIdx);
+  return `${allPlayers}
+  <div class="audio-upload-zone" onclick="document.getElementById('audioFileInput').click()"
     ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
     ondragleave="this.style.borderColor=''"
-    ondrop="handleAudioDrop(event,${currentSongIdx})">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--text3);">
+    ondrop="handleAudioDrop(event,${currentSongIdx})"
+    style="padding:10px;gap:4px;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:22px;height:22px;color:var(--text3);">
       <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
     </svg>
-    <div style="font-size:14px;color:var(--text2);">Attach audio file</div>
-    <div style="font-size:12px;color:var(--text3);">MP3, WAV, M4A, AAC, OGG · Max 10 MB</div>
+    <div style="font-size:13px;color:var(--text2);">Attach audio file</div>
+    <div style="font-size:11px;color:var(--text3);">MP3, WAV, M4A, AAC, OGG · Max 10 MB</div>
   </div>
   <input type="file" id="audioFileInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleAudioFile(event,${currentSongIdx})">`;
 }
@@ -6327,10 +6391,12 @@ async function processAudioFile(file, idx) {
     showToast('Attaching audio…');
     const s = currentSetSongs[idx];
     if (!s) return;
-    const audioKey = `audio_${s.id}`;
+    const audioKey = `audio_${s.id}_${Date.now()}`;
     const arrayBuffer = await f.arrayBuffer();
-    stopAudio();
     await dbPut('audio', { id: audioKey, name: f.name, data: arrayBuffer, mimeType: f.type || 'audio/mpeg', updatedAt: Date.now() });
+    const blob = new Blob([arrayBuffer], { type: f.type || 'audio/mpeg' });
+    window._audioCache = window._audioCache || {};
+    window._audioCache[audioKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType: f.type, local: true };
     if (fbReady && online) {
       const path = storagePath('audio', s.id, audioKey);
       const url = await fbStorageUpload(path, arrayBuffer, f.type || 'audio/mpeg');
@@ -6342,20 +6408,7 @@ async function processAudioFile(file, idx) {
 }
 
 async function removeAudio(audioKey, idx) {
-  const entry = window._audioCache?.[audioKey];
-  const name = entry?.name ? `"${entry.name}"` : 'this audio file';
-  if (!confirm(`Remove ${name}?\n\nThis will delete it from this device and the cloud.`)) return;
-  stopAudio();
-  await dbDel('audio', audioKey);
-  if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-  delete window._audioCache[audioKey];
-  // delete from Firebase Storage
-  const songId = audioKey.replace('audio_', '');
-  const path = storagePath('audio', songId, audioKey);
-  fbStorageDelete(path);
-  fbDeleteFileMeta(audioKey);
-  showToast('Audio removed');
-  await renderSongPage(idx);
+  return removeAudioKeyed(audioKey, idx);
 }
 
 function getOrCreateAudio(audioKey) {
@@ -6370,9 +6423,15 @@ function getOrCreateAudio(audioKey) {
   audio.crossOrigin = 'anonymous';
   _audioEl = audio;
   _audioKey = audioKey;
-  audio.addEventListener('timeupdate', updateAudioUI);
-  audio.addEventListener('loadedmetadata', updateAudioUI);
-  audio.addEventListener('ended', () => { updateAudioUI(); updateAudioPlayIcons(false); });
+  audio.addEventListener('timeupdate', () => updateAudioUIKeyed(audioKey));
+  audio.addEventListener('loadedmetadata', () => updateAudioUIKeyed(audioKey));
+  audio.addEventListener('ended', () => {
+    updateAudioUIKeyed(audioKey);
+    const safeKey = audioKey.replace(/[^a-zA-Z0-9_]/g, '_');
+    const icon = document.getElementById('api_' + safeKey);
+    if (icon) icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    updateAudioPlayIcons(false);
+  });
   return audio;
 }
 
@@ -6575,19 +6634,29 @@ function fmtAudioTime(sec) {
 }
 
 function updateAudioUI() {
-  if (!_audioEl) return;
+  if (!_audioEl || !_audioKey) return;
+  updateAudioUIKeyed(_audioKey);
+}
+
+function updateAudioUIKeyed(audioKey) {
+  if (!_audioEl || _audioKey !== audioKey) return;
+  const safeKey = audioKey.replace(/[^a-zA-Z0-9_]/g, '_');
   const cur = _audioEl.currentTime;
   const dur = _audioEl.duration || 0;
   const pct = dur ? (cur / dur * 100).toFixed(1) + '%' : '0%';
   const timeStr = `${fmtAudioTime(cur)} / ${fmtAudioTime(dur)}`;
-  const ft = document.getElementById('audioTime');
-  const fp = document.getElementById('audioProgressFill');
+  // keyed elements (compact player)
+  const ft = document.getElementById('apt_' + safeKey);
+  const fp = document.getElementById('apf_' + safeKey);
   if (ft) ft.textContent = timeStr;
   if (fp) fp.style.width = pct;
-  // restore loop button state after re-render
+  // legacy single-player elements (fallback)
+  const ft2 = document.getElementById('audioTime');
+  const fp2 = document.getElementById('audioProgressFill');
+  if (ft2) ft2.textContent = timeStr;
+  if (fp2) fp2.style.width = pct;
   const loopBtn = document.getElementById('loopToggleBtn');
   if (loopBtn) loopBtn.classList.toggle('active', _loopActive);
-  // loop markers
   updateLoopUI();
 }
 
@@ -8068,8 +8137,8 @@ async function handleModalAudioFile(e) {
   checkAndHandleAudioFile(file, async (f) => {
     const songId = document.getElementById('editSongId').value;
     if (songId) {
-      // existing song — save immediately
-      const audioKey = `audio_${songId}`;
+      // existing song — save immediately with unique key
+      const audioKey = `audio_${songId}_${Date.now()}`;
       const ab = await f.arrayBuffer();
       await dbPut('audio', { id: audioKey, name: f.name, data: ab, mimeType: f.type || 'audio/mpeg', updatedAt: Date.now() });
       if (fbReady && online) {
@@ -8077,7 +8146,6 @@ async function handleModalAudioFile(e) {
         const url = await fbStorageUpload(path, ab, f.type || 'audio/mpeg');
         if (url) await fbSaveFileMeta(songId, 'audio', audioKey, { name: f.name, mimeType: f.type || 'audio/mpeg', downloadUrl: url, path });
       }
-      if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
       const blob = new Blob([ab], { type: f.type || 'audio/mpeg' });
       window._audioCache = window._audioCache || {};
       window._audioCache[audioKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType: f.type };
@@ -11862,7 +11930,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.229</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.230</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
