@@ -1780,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.234</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.235</span>
       </div>
 
     </div>
@@ -2659,8 +2659,7 @@ function navTo(tab) {
 
 // ── SETLISTS ──
 async function renderSetsList() {
-  if (!currentUser) return; // not logged in yet
-  if (activeGroupFilter === null) return; // group context not yet initialized
+  if (!currentUser || !_appReady) return; // not ready yet
   let sets = await dbAll('setlists');
   const privateGroupId = getPrivateGroupId();
   // visibility: own sets, or sets in groups user belongs to
@@ -7105,9 +7104,8 @@ function durationToSecs(d) {
 }
 
 async function renderDB() {
-  // Don't render until user is logged in AND group context is initialized
-  if (!currentUser) return;
-  if (activeGroupFilter === null) return; // not yet initialized — avoid flash of all songs
+  // Don't render until app is fully initialized
+  if (!currentUser || !_appReady) return;
   let songs = await dbAll('songs');
   const userGroups = (await dbAll('groups')).filter(g =>
     g.createdBy === currentUser || (g.members||[]).includes(currentUser)
@@ -9277,6 +9275,7 @@ async function saveChangePass() {
 
 function doLogout() {
   activeGroupFilter = null;
+  _appReady = false;
   localStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(SESSION_KEY + '_active');
   currentUser = '';
@@ -9563,6 +9562,7 @@ async function postLoginInit() {
     activeGroupFilter = null;
   }
   updateGroupFilterChips();
+  _appReady = true; // unlock renders now that group context is set
   await renderSetsList();
   await renderDB();
   // auto-sync from Firebase on startup if online
@@ -9715,6 +9715,7 @@ function isPrivateGroup(groupId) {
 }
 
 let activeGroupFilter = null; // always set to a group id after login
+let _appReady = false; // true after first filtered render is complete
 const GROUP_FILTER_KEY = 'mgb_last_group';
 
 async function openGroupFilter() {
@@ -11940,7 +11941,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.234</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.235</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
