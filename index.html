@@ -408,7 +408,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .song-row-title { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-row-sub { font-size: 12px; color: var(--text2); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
 .key-pill { font-family: 'DM Mono', monospace; font-size: 11px; background: rgba(220,38,38,0.12); color: var(--accent); padding: 2px 8px; border-radius: 5px; border: 1px solid rgba(220,38,38,0.2); }
-.song-row-key-badge { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--accent); background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; padding: 2px 12px; flex-shrink: 0; line-height: 1.2; letter-spacing: 1.5px; }
+.song-row-key-badge { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 600; color: var(--accent); background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; padding: 2px 12px; flex-shrink: 0; line-height: 1.4; letter-spacing: 0.5px; }
 .drag-grip { color: var(--text3); padding: 4px; cursor: grab; opacity: 0.4; }
 .drag-grip svg { width: 14px; height: 14px; }
 
@@ -1780,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.231</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.233</span>
       </div>
 
     </div>
@@ -2659,6 +2659,7 @@ function navTo(tab) {
 
 // ── SETLISTS ──
 async function renderSetsList() {
+  if (!currentUser) return; // not logged in yet
   let sets = await dbAll('setlists');
   const privateGroupId = getPrivateGroupId();
   // visibility: own sets, or sets in groups user belongs to
@@ -3995,7 +3996,7 @@ function openSetlistDropdown() {
       row.innerHTML = `
         <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${isCurrent?'var(--accent)':'var(--text3)'};flex-shrink:0;min-width:26px;text-align:right;line-height:1;">${i+1}</span>
         <span style="font-size:24px;font-weight:600;color:${isCurrent?'var(--text)':'var(--text2)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${esc(item.title||'')}</span>
-        ${item.key?`<span style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--accent);letter-spacing:1px;flex-shrink:0;">${esc(item.key)}</span>`:''}`;
+        ${item.key?`<span style="font-family:'DM Mono',monospace;font-weight:700;font-size:22px;color:var(--accent);letter-spacing:0.5px;flex-shrink:0;">${esc(item.key)}</span>`:''}`;
     }
     row.addEventListener('click', () => {
       closeSetlistDropdown(() => {
@@ -4240,7 +4241,7 @@ async function renderSongPage(idx) {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
               ${s.bpm} BPM<span class="bpm-hint">▶</span>
             </span>`:''}
-            ${s.key?`<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,56px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>`:''}
+            ${s.key?`<div style="font-family:'DM Mono',monospace;font-weight:700;font-size:clamp(28px,6vw,44px);color:var(--accent);line-height:1;letter-spacing:1px;">${esc(s.key)}</div>`:''}
           </div>
         </div>
       </div>
@@ -7103,8 +7104,9 @@ function durationToSecs(d) {
 }
 
 async function renderDB() {
-  // Don't render until user is logged in and group filter is initialized
+  // Don't render until user is logged in AND group context is initialized
   if (!currentUser) return;
+  if (activeGroupFilter === null) return; // not yet initialized — avoid flash of all songs
   let songs = await dbAll('songs');
   const userGroups = (await dbAll('groups')).filter(g =>
     g.createdBy === currentUser || (g.members||[]).includes(currentUser)
@@ -7856,7 +7858,7 @@ async function openSongModal(id) {
   const dbMeta = document.getElementById('dbDetailMeta');
   if (dbMeta) dbMeta.innerHTML = [
     s.bpm ? `<span class="chip bpm-chip" id="dbBpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
-    s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>` : ''
+    s.key ? `<div style="font-family:'DM Mono',monospace;font-weight:700;font-size:clamp(22px,3.5vw,34px);color:var(--accent);line-height:1;letter-spacing:1px;">${esc(s.key)}</div>` : ''
   ].join('');
     renderSETab();
     if (onDbPage && !isMobile()) dbScheduleHide();
@@ -8257,7 +8259,7 @@ async function saveSong() {
     const dbMeta = document.getElementById('dbDetailMeta');
     if (dbMeta) dbMeta.innerHTML = [
     s.bpm ? `<span class="chip bpm-chip" id="dbBpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${s.bpm} BPM</span>` : '',
-    s.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--accent);line-height:1;letter-spacing:2px;">${esc(s.key)}</div>` : ''
+    s.key ? `<div style="font-family:'DM Mono',monospace;font-weight:700;font-size:clamp(22px,3.5vw,34px);color:var(--accent);line-height:1;letter-spacing:1px;">${esc(s.key)}</div>` : ''
   ].join(''); }
     renderSETab();
     // Update the list row in-place — no re-sort, no position change
@@ -11937,7 +11939,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.231</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.233</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
