@@ -1780,7 +1780,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.228</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.229</span>
       </div>
 
     </div>
@@ -4575,6 +4575,9 @@ function buildFullAudioPlayer(audioKey, idx) {
         <div class="audio-name">${esc(entry.name)}</div>
         <div class="audio-time" id="audioTime">0:00 / 0:00</div>
       </div>
+      <button class="sm-btn" onclick="downloadAudio('${audioKey}')" title="Download audio" style="color:var(--accent);border-color:rgba(220,38,38,0.3);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 4v12m0 0l-4-4m4 4l4-4"/><path d="M4 20h16"/></svg>
+      </button>
       <button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeAudio('${audioKey}',${idx})" title="Remove audio">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -4611,6 +4614,17 @@ function buildFullAudioPlayer(audioKey, idx) {
       </button>
     </div>
   </div>`;
+}
+
+function downloadAudio(audioKey) {
+  const entry = window._audioCache?.[audioKey];
+  if (!entry?.blobUrl) { showToast('Audio not loaded yet', 'err'); return; }
+  const a = document.createElement('a');
+  a.href = entry.blobUrl;
+  a.download = entry.name || 'audio';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 function toggleAudioCollapse() {
@@ -11848,7 +11862,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.228</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.229</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
