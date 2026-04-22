@@ -1661,6 +1661,43 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         </div>
       </div>
 
+      <div class="settings-section-label" style="margin-top:8px">Setlist Behaviour</div>
+      <div class="settings-row" style="cursor:default;">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+        </div>
+        <span class="settings-row-label">Default fullscreen in setlist
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Auto-enter fullscreen when opening a song from a setlist.</span>
+        </span>
+        <div style="flex-shrink:0;">
+          <label style="position:relative;display:inline-block;width:42px;height:24px;">
+            <input type="checkbox" id="fsDefaultToggle" onchange="setFsDefault(this.checked)"
+              style="opacity:0;width:0;height:0;position:absolute;">
+            <span id="fsDefaultSlider" style="position:absolute;inset:0;background:var(--surface3);border-radius:12px;border:1px solid var(--border2);transition:background 0.2s;cursor:pointer;">
+              <span id="fsDefaultThumb" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></span>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-row" style="cursor:default;">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
+        </div>
+        <span class="settings-row-label">Pin tabs by default
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Always show the Lyrics / My Notes / Links tab bar when viewing a song. Off = tabs auto-hide.</span>
+        </span>
+        <div style="flex-shrink:0;">
+          <label style="position:relative;display:inline-block;width:42px;height:24px;">
+            <input type="checkbox" id="pinTabsToggle" onchange="setPinTabsDefault(this.checked)"
+              style="opacity:0;width:0;height:0;position:absolute;">
+            <span id="pinTabsSlider" style="position:absolute;inset:0;background:var(--surface3);border-radius:12px;border:1px solid var(--border2);transition:background 0.2s;cursor:pointer;">
+              <span id="pinTabsThumb" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></span>
+            </span>
+          </label>
+        </div>
+      </div>
+
       <div class="settings-section-label" style="margin-top:8px">Audio on This Device</div>
 
       <!-- Download all audio toggle -->
@@ -1781,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.239</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.241</span>
       </div>
 
     </div>
@@ -3914,8 +3951,8 @@ async function openSongPage(idx) {
   showPage('pg-song');
   // blur any focused element so arrow keys work without clicking
   if (document.activeElement) document.activeElement.blur();
-  // auto-enter fullscreen when opening a song from a setlist
-  if (!document.getElementById('noteFullscreenOverlay')) {
+  // auto-enter fullscreen when opening a song from a setlist (if enabled in settings)
+  if (isFsDefault() && !document.getElementById('noteFullscreenOverlay')) {
     openNoteFullscreen(idx);
   }
 }
@@ -8838,6 +8875,16 @@ function updateAutoDownloadUI() {
   if (thumb) { thumb.style.left = autoDownloadFiles ? '21px' : '3px'; thumb.style.background = autoDownloadFiles ? '#000' : '#fff'; }
 }
 
+function isFsDefault() { return localStorage.getItem('mgb_fs_default') !== '0'; }
+function setPinTabsDefault(on) {
+  localStorage.setItem('mgb_tabs_pinned', on ? '1' : '0');
+  updateSettingsUI();
+}
+function setFsDefault(on) {
+  localStorage.setItem('mgb_fs_default', on ? '1' : '0');
+  updateSettingsUI();
+}
+
 function setDefaultTab(tab) {
   localStorage.setItem('mgb_default_tab', tab);
   updateSettingsUI();
@@ -8896,6 +8943,24 @@ function updateSettingsUI() {
     btn.style.borderColor  = active ? 'var(--accent)' : 'var(--border2)';
     btn.style.fontWeight   = active ? '700' : '400';
   });
+  // pin tabs toggle
+  const pinOn = isTabsPinned();
+  const pinToggle = document.getElementById('pinTabsToggle');
+  const pinSlider = document.getElementById('pinTabsSlider');
+  const pinThumb = document.getElementById('pinTabsThumb');
+  if (pinToggle) pinToggle.checked = pinOn;
+  if (pinSlider) pinSlider.style.background = pinOn ? 'var(--accent)' : 'var(--surface3)';
+  if (pinThumb) pinThumb.style.left = pinOn ? '21px' : '3px';
+
+  // fullscreen default toggle
+  const fsOn = isFsDefault();
+  const fsToggle = document.getElementById('fsDefaultToggle');
+  const fsSlider = document.getElementById('fsDefaultSlider');
+  const fsThumb = document.getElementById('fsDefaultThumb');
+  if (fsToggle) fsToggle.checked = fsOn;
+  if (fsSlider) fsSlider.style.background = fsOn ? 'var(--accent)' : 'var(--surface3)';
+  if (fsThumb) fsThumb.style.left = fsOn ? '21px' : '3px';
+
   dbAll('audio').then(entries => {
     const el = document.getElementById('audioStorageSize');
     if (!el) return;
@@ -11959,7 +12024,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.239</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.241</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
