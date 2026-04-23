@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.245</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.246</span>
       </div>
 
     </div>
@@ -6904,19 +6904,25 @@ function setupSwipe(idx) {
     const rect = page ? page.getBoundingClientRect() : { top: 0, height: window.innerHeight };
     const startX = side === 'right' ? W : -W;
     const el = document.createElement('div');
-    el.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9050;pointer-events:none;background:var(--bg);transform:translateX(${startX}px);overflow:hidden;`;
+    // Match pg-song structure: topbar + songPageBody layout
+    el.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9050;pointer-events:none;background:var(--bg);transform:translateX(${startX}px);overflow:hidden;display:flex;flex-direction:column;`;
+
+    // Clone just the topbar (static, no DB needed)
+    const topbarSrc = page?.querySelector('.topbar');
+    if (topbarSrc) {
+      const tb = topbarSrc.cloneNode(true);
+      tb.style.flexShrink = '0';
+      el.appendChild(tb);
+    }
+
+    // Content area — populated async from IDB
+    const bodyEl = document.createElement('div');
+    bodyEl.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    el.appendChild(bodyEl);
     document.body.appendChild(el);
-    // Render adjacent song into the real pg-song body, clone it, then restore
-    const savedIdx = currentSongIdx;
-    const savedBody = body ? body.innerHTML : '';
-    renderSongPage(adjIdx).then(() => {
-      if (!page) return;
-      const clone = page.cloneNode(true);
-      clone.style.cssText = 'position:absolute;inset:0;transform:none;transition:none;';
-      clone.removeAttribute('id');
-      el.appendChild(clone);
-      // Restore the original song
-      renderSongPage(savedIdx);
+
+    buildAdjSongContent(adjSong, adjIdx).then(html => {
+      bodyEl.innerHTML = html;
     });
     return el;
   }
@@ -12097,7 +12103,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.245</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.246</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
