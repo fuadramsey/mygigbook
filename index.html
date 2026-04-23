@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.246</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.247</span>
       </div>
 
     </div>
@@ -7009,19 +7009,27 @@ function setupSwipe(idx) {
 
     if (goLeft || goRight) {
       const targetX = goLeft ? -W : W;
-      const adjTargetX = 0;
       if (dragSnap) {
         dragSnap.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
         dragSnap.style.transform = `translateX(${targetX}px)`;
       }
       if (adjSnap) {
         adjSnap.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
-        adjSnap.style.transform = `translateX(${adjTargetX}px)`;
+        adjSnap.style.transform = 'translateX(0)';
       }
       setTimeout(() => {
-        cancelDrag();
-        if (goLeft) swipeTo(idx + 1, 'left', true);
-        else        swipeTo(idx - 1, 'right', true);
+        // Remove snapshots but keep page hidden until renderSongPage finishes
+        if (dragSnap) { dragSnap.remove(); dragSnap = null; }
+        const _adj = adjSnap; adjSnap = null;
+        dragging = false;
+        const newIdx = goLeft ? idx + 1 : idx - 1;
+        const dir = goLeft ? 'left' : 'right';
+        // Render new song while adjSnap still covers screen
+        renderSongPage(newIdx).then(() => {
+          currentSongIdx = newIdx;
+          if (_adj) _adj.remove();
+          if (page) page.style.visibility = '';
+        });
       }, 180);
     } else {
       // Snap back
@@ -12103,7 +12111,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.246</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.247</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
