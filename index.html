@@ -488,8 +488,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .audio-info { flex: 1; min-width: 0; }
 .audio-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .audio-time { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; }
-.audio-progress-wrap { position: relative; height: 4px; background: var(--surface3); border-radius: 2px; cursor: pointer; }
-.audio-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; pointer-events: none; transition: width 0.1s linear; }
+.audio-progress-wrap { position: relative; height: 12px; background: var(--surface3); border-radius: 6px; cursor: pointer; }
+.audio-progress-fill { height: 100%; background: var(--accent); border-radius: 6px; width: 0%; pointer-events: none; transition: width 0.1s linear; }
 .audio-loop-region { position: absolute; top: 0; height: 100%; background: rgba(232,255,71,0.35); pointer-events: none; border-radius: 2px; }
 .audio-loop-marker { position: absolute; top: -8px; width: 4px; height: 20px; border-radius: 2px; cursor: ew-resize; touch-action: none; z-index: 10; }
 .audio-loop-marker::after { content: ''; position: absolute; top: 0; left: -8px; right: -8px; bottom: 0; } /* expand hit area */
@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.247</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.250</span>
       </div>
 
     </div>
@@ -4661,7 +4661,12 @@ function buildCompactAudioPlayer(audioKey, idx) {
         <svg viewBox="0 0 24 24" id="api_${safeKey}"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <div class="audio-info" style="flex:1;min-width:0;">
-        <div id="apname_${safeKey}" class="audio-name" style="cursor:pointer;font-size:12px;" onclick="startRenameAudio('${audioKey}','${safeKey}')" title="Tap to rename">${esc(entry.name)}</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div id="apname_${safeKey}" class="audio-name" style="font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(entry.name)}</div>
+          <button onclick="startRenameAudio('${audioKey}','${safeKey}')" title="Rename" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;flex-shrink:0;display:flex;align-items:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </div>
         <div class="audio-time" id="apt_${safeKey}" style="font-size:10px;">0:00 / 0:00</div>
       </div>
       <button class="sm-btn" onclick="downloadAudio('${audioKey}')" title="Download" style="color:var(--accent);border-color:rgba(220,38,38,0.3);padding:3px 6px;">
@@ -4673,6 +4678,30 @@ function buildCompactAudioPlayer(audioKey, idx) {
     </div>
     <div class="audio-progress-wrap" id="apw_${safeKey}" onclick="seekAudioKeyed(event,'${audioKey}','${safeKey}')" style="cursor:pointer;">
       <div class="audio-progress-fill" id="apf_${safeKey}"></div>
+      <div class="audio-loop-region" id="audioLoopRegion" style="display:none;left:0%;width:0%;"></div>
+      <div class="audio-loop-marker start" id="audioLoopMarkerStart" style="display:none;left:0%;"></div>
+      <div class="audio-loop-marker end" id="audioLoopMarkerEnd" style="display:none;left:0%;"></div>
+    </div>
+    <div class="loop-controls">
+      <button class="loop-btn set-start" onclick="setLoopStart()" title="Set loop start">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><line x1="5" y1="4" x2="5" y2="20"/><polyline points="5,4 15,12 5,20"/></svg>
+        Set Start
+      </button>
+      <span class="loop-time-label" id="loopStartLabel">—</span>
+      <button class="loop-btn set-end" onclick="setLoopEnd()" title="Set loop end">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;color:#ff9900;"><line x1="19" y1="4" x2="19" y2="20"/><polyline points="19,4 9,12 19,20"/></svg>
+        Set End
+      </button>
+      <span class="loop-time-label" id="loopEndLabel">—</span>
+      <div style="flex:1;"></div>
+      <button class="loop-btn" id="loopToggleBtn" onclick="toggleLoop()" title="Toggle loop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+        Loop
+      </button>
+      <button class="loop-btn" onclick="clearLoop()" title="Clear loop" style="color:var(--red);border-color:rgba(255,68,68,0.3);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        Clear
+      </button>
     </div>
   </div>`;
 }
@@ -7062,23 +7091,31 @@ function setupSwipe(idx) {
   body.addEventListener('touchstart', ts, { passive: true });
   body.addEventListener('touchmove',  tm, { passive: true });
   body.addEventListener('touchend',   te, { passive: true });
-  // Desktop: click anywhere in the song body reveals tabs (not during/after swipe)
-  if (!body._clickReveal) {
-    body._clickReveal = true;
-    body.addEventListener('click', () => {
-      if (body._swipeJustHappened) return;
-      showTabBar(true);
-    });
+  // Only reveal tabs when tapping the topbar or toolbar — NOT noteArea or audio players
+  function _shouldRevealTabs(e) {
+    if (body._swipeJustHappened) return false;
+    const t = e.target;
+    // Allow: topbar, toolbar row (zoom/scroll controls), tab pin button
+    if (t.closest('.topbar')) return true;
+    if (t.closest('#scrollToolbar')) return true;
+    // Block: note content area, audio player, upload zones
+    if (t.closest('#noteArea')) return false;
+    if (t.closest('.audio-player')) return false;
+    if (t.closest('.audio-upload-zone')) return false;
+    if (t.closest('[id^="ap_"]')) return false;
+    // Default: allow for toolbar row between tabs and noteArea
+    return true;
   }
 
-  // Touch on note content area reveals tabs
+  if (!body._clickReveal) {
+    body._clickReveal = true;
+    body.addEventListener('click', (e) => { if (_shouldRevealTabs(e)) showTabBar(true); });
+  }
+
   const noteArea = document.getElementById('noteArea');
   if (noteArea && !noteArea._tabReveal) {
     noteArea._tabReveal = true;
-    noteArea.addEventListener('touchend', (e) => {
-      if (e.touches.length === 0 && !body._swipeJustHappened) showTabBar(true);
-    }, { passive: true });
-    noteArea.addEventListener('click', () => { if (!body._swipeJustHappened) showTabBar(true); });
+    // Taps inside noteArea should NOT reveal tabs — do nothing here
   }
 }
 
@@ -12111,7 +12148,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.247</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.250</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
