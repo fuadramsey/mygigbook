@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.241</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.242</span>
       </div>
 
     </div>
@@ -3655,15 +3655,6 @@ function openNoteFullscreen(idx) {
   function fsNavigateTo(newIdx, direction) {
     if (newIdx < 0 || newIdx >= currentSetSongs.length) return;
 
-    // Ghost strip — briefly visible on the leading edge during slide
-    const ghostSong = currentSetSongs[newIdx];
-    const ghost = makeSwipeGhost(ghostSong?.type==='note' ? '— note —' : (ghostSong?.title||''), direction);
-    if (direction === 'left') { ghost.style.right = '0'; ghost.style.left = 'auto'; }
-    else { ghost.style.left = '0'; }
-    ghost.style.opacity = '1';
-    // Remove ghost when slide finishes
-    setTimeout(() => ghost.remove(), 280);
-
     // Update state
     idx = newIdx;
     currentSongIdx = newIdx;
@@ -3724,13 +3715,13 @@ function openNoteFullscreen(idx) {
       const canPrev2 = idx > 0;
       if (fsDx < 0 && canNext2) {
         if (!overlay._fsGhost) {
-          overlay._fsGhost = makeSwipeGhost(currentSetSongs[idx+1]?.type==='note' ? '— note —' : (currentSetSongs[idx+1]?.title||''), 'left');
+
           overlay._fsGhost.style.right = '0'; overlay._fsGhost.style.left = 'auto';
           overlay._fsGhost.style.opacity = '0';
         }
       } else if (fsDx > 0 && canPrev2) {
         if (!overlay._fsGhost) {
-          overlay._fsGhost = makeSwipeGhost(currentSetSongs[idx-1]?.type==='note' ? '— note —' : (currentSetSongs[idx-1]?.title||''), 'right');
+
           overlay._fsGhost.style.left = '0';
           overlay._fsGhost.style.opacity = '0';
         }
@@ -6817,28 +6808,9 @@ function swipeTo(idx, direction, skipAnimation) {
 }
 
 // Track all active ghost elements so they can be force-cleaned
-window._activeGhosts = window._activeGhosts || new Set();
-
-// Build a ghost strip element for swipe preview
-function makeSwipeGhost(title, direction) {
-  // direction 'left' = next song, strip on left edge of incoming (right side of screen)
-  // direction 'right' = prev song, strip on right edge of incoming (left side of screen)
-  const el = document.createElement('div');
-  const borderSide = direction === 'left' ? 'border-left' : 'border-right';
-  const shadow = direction === 'left' ? '-4px 0 20px rgba(0,0,0,0.35)' : '4px 0 20px rgba(0,0,0,0.35)';
-  const rotate = direction === 'left' ? 'rotate(180deg)' : 'none';
-  el.style.cssText = `position:fixed;top:0;width:52px;height:100%;background:var(--surface2);${borderSide}:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:9999;box-shadow:${shadow};pointer-events:none;transition:opacity 0.1s;`;
-  // Position off-screen initially — caller moves it
-  el.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;transform:${rotate};letter-spacing:2px;padding:16px 0;white-space:nowrap;font-weight:700;max-height:85vh;overflow:hidden;text-overflow:ellipsis;">${esc(title||'')}</div>`;
-  document.body.appendChild(el);
-  window._activeGhosts.add(el);
-  return el;
-}
-
-function clearAllGhosts() {
-  (window._activeGhosts || new Set()).forEach(g => { try { g.remove(); } catch(e) {} });
-  window._activeGhosts = new Set();
-}
+// Ghost preview removed
+function makeSwipeGhost() { return { style: {}, remove: () => {} }; }
+function clearAllGhosts() {}
 
 function setupSwipe(idx) {
   const body = document.getElementById('songPageBody');
@@ -6892,14 +6864,14 @@ function setupSwipe(idx) {
       if (dx < 0 && canNext) {
         // Dragging left → next song — strip peeks in from right edge of screen
         const nSong = currentSetSongs[idx + 1];
-        nextEl = makeSwipeGhost(nSong?.type==='note' ? '— note —' : (nSong?.title||''), 'left');
+
         nextEl.style.right = '0';
         nextEl.style.left = 'auto';
         nextEl.style.opacity = '0'; // starts invisible, fades in with drag
       } else if (dx > 0 && canPrev) {
         // Dragging right → prev song — strip peeks in from left edge of screen
         const pSong = currentSetSongs[idx - 1];
-        prevEl = makeSwipeGhost(pSong?.type==='note' ? '— note —' : (pSong?.title||''), 'right');
+
         prevEl.style.left = '0';
         prevEl.style.opacity = '0';
       }
@@ -12024,7 +11996,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.241</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.242</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
