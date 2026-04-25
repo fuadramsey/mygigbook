@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.252</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.253</span>
       </div>
 
     </div>
@@ -6933,35 +6933,30 @@ function setupSwipe(idx) {
 
   let sx=0, sy=0, dx=0;
   let dragging=false, ignore=false, wasPinch=false;
-  let dragSnap=null, adjSnap=null; // fixed overlays for drag preview
+  let dragSnap=null, adjSnap=null;
+  let _adjPrefetch=null; // pre-fetched content for adjacent song
 
-  // Build a fixed overlay containing the title + song info for an adjacent song
+  // Pre-fetch adj content before drag starts (on touchstart) so IDB read is done by drag time
+  function prefetchAdj(adjIdx) {
+    const adjSong = currentSetSongs[adjIdx];
+    if (!adjSong || adjSong.type === 'note') return;
+    _adjPrefetch = { idx: adjIdx, promise: buildAdjSongContent(adjSong, adjIdx) };
+  }
+
   function buildAdjSnap(adjIdx, side) {
     const adjSong = currentSetSongs[adjIdx];
     if (!adjSong) return null;
     const rect = page ? page.getBoundingClientRect() : { top: 0, height: window.innerHeight };
     const startX = side === 'right' ? W : -W;
     const el = document.createElement('div');
-    // Match pg-song structure: topbar + songPageBody layout
     el.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9050;pointer-events:none;background:var(--bg);transform:translateX(${startX}px);overflow:hidden;display:flex;flex-direction:column;`;
-
-    // Clone just the topbar (static, no DB needed)
-    const topbarSrc = page?.querySelector('.topbar');
-    if (topbarSrc) {
-      const tb = topbarSrc.cloneNode(true);
-      tb.style.flexShrink = '0';
-      el.appendChild(tb);
-    }
-
-    // Content area — populated async from IDB
     const bodyEl = document.createElement('div');
     bodyEl.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
     el.appendChild(bodyEl);
     document.body.appendChild(el);
-
-    buildAdjSongContent(adjSong, adjIdx).then(html => {
-      bodyEl.innerHTML = html;
-    });
+    // Use pre-fetched content if available, otherwise fetch now
+    const p = (_adjPrefetch?.idx === adjIdx) ? _adjPrefetch.promise : buildAdjSongContent(adjSong, adjIdx);
+    p.then(html => { if (el.isConnected) bodyEl.innerHTML = html; });
     return el;
   }
 
@@ -6969,16 +6964,22 @@ function setupSwipe(idx) {
     dragging = false;
     if (dragSnap) { dragSnap.remove(); dragSnap = null; }
     if (adjSnap)  { adjSnap.remove();  adjSnap = null;  }
-    if (page) { page.style.visibility = ''; }
+    if (page) page.style.visibility = '';
+    _adjPrefetch = null;
   }
 
   const ts = e => {
     if (e.touches.length > 1) { wasPinch = true; cancelDrag(); return; }
-    wasPinch = false; dragging = false;
+    wasPinch = false; dragging = false; _adjPrefetch = null;
     body._swipeJustHappened = false;
     const target = e.target;
     ignore = !!(target.closest('.note-tab-bar') || target.closest('.note-tabs') || target.closest('.note-tab'));
     sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0;
+    // Kick off IDB prefetch immediately on touch so content is ready by drag start
+    const canNext = idx < currentSetSongs.length - 1;
+    const canPrev = idx > 0;
+    if (canNext) prefetchAdj(idx + 1);
+    else if (canPrev) prefetchAdj(idx - 1);
   };
 
   const tm = e => {
@@ -6997,24 +6998,19 @@ function setupSwipe(idx) {
       const canPrev = idx > 0;
       const canNext = idx < currentSetSongs.length - 1;
 
-      // Snapshot current page as fixed overlay that follows finger
+      // Lightweight drag snapshot — use innerHTML not cloneNode to avoid deep clone cost
       const rect = page ? page.getBoundingClientRect() : { top: 0, height: window.innerHeight };
       dragSnap = document.createElement('div');
       dragSnap.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9100;pointer-events:none;background:var(--bg);overflow:hidden;`;
-      const clone = page ? page.cloneNode(true) : document.createElement('div');
-      clone.style.cssText = 'position:absolute;inset:0;transform:none;transition:none;';
-      clone.removeAttribute('id');
-      dragSnap.appendChild(clone);
+      const inner = document.createElement('div');
+      inner.style.cssText = 'position:absolute;inset:0;';
+      inner.innerHTML = page ? page.innerHTML : '';
+      dragSnap.appendChild(inner);
       document.body.appendChild(dragSnap);
-      // Hide real page behind snapshot
       if (page) page.style.visibility = 'hidden';
 
-      // Build adjacent song preview
-      if (dx < 0 && canNext) {
-        adjSnap = buildAdjSnap(idx + 1, 'right'); // enters from right
-      } else if (dx > 0 && canPrev) {
-        adjSnap = buildAdjSnap(idx - 1, 'left');  // enters from left
-      }
+      if (dx < 0 && canNext) adjSnap = buildAdjSnap(idx + 1, 'right');
+      else if (dx > 0 && canPrev) adjSnap = buildAdjSnap(idx - 1, 'left');
     }
 
     if (!dragging) return;
@@ -7026,14 +7022,10 @@ function setupSwipe(idx) {
     if (dx > 0 && !canPrev) clamped = dx * 0.2;
     clamped = clamped * 0.92;
 
-    // Move dragSnap with finger
     if (dragSnap) dragSnap.style.transform = `translateX(${clamped}px)`;
-
-    // Slide adjSnap in from the edge proportionally
     if (adjSnap) {
-      const adjTarget = dx < 0 ? W : -W; // where it started
-      const adjX = adjTarget + clamped; // moves toward 0 as finger drags
-      adjSnap.style.transform = `translateX(${adjX}px)`;
+      const adjTarget = dx < 0 ? W : -W;
+      adjSnap.style.transform = `translateX(${adjTarget + clamped}px)`;
     }
   };
 
@@ -7055,20 +7047,18 @@ function setupSwipe(idx) {
         adjSnap.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
         adjSnap.style.transform = 'translateX(0)';
       }
+      const _adj = adjSnap; adjSnap = null;
+      const newIdx = goLeft ? idx + 1 : idx - 1;
+      dragging = false; _adjPrefetch = null;
+      // Delay render until after commit animation, keeping adjSnap as cover
       setTimeout(() => {
-        // Remove snapshots but keep page hidden until renderSongPage finishes
         if (dragSnap) { dragSnap.remove(); dragSnap = null; }
-        const _adj = adjSnap; adjSnap = null;
-        dragging = false;
-        const newIdx = goLeft ? idx + 1 : idx - 1;
-        const dir = goLeft ? 'left' : 'right';
-        // Render new song while adjSnap still covers screen
         renderSongPage(newIdx).then(() => {
           currentSongIdx = newIdx;
           if (_adj) _adj.remove();
           if (page) page.style.visibility = '';
         });
-      }, 180);
+      }, 185);
     } else {
       // Snap back
       if (dragSnap) {
@@ -12157,7 +12147,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.252</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.253</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
