@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.253</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.254</span>
       </div>
 
     </div>
@@ -3704,7 +3704,7 @@ function openNoteFullscreen(idx) {
     el.style.cssText = `position:fixed;inset:0;z-index:7999;background:var(--bg);transform:translateX(${startX}px);overflow:hidden;pointer-events:none;display:flex;flex-direction:column;`;
     document.body.appendChild(el);
     // Load real content async
-    buildAdjSongContent(adjSong, adjIdx).then(html => { el.innerHTML = html; });
+    buildAdjSongContent(adjSong, adjIdx, 'fs').then(html => { el.innerHTML = html; });
     return el;
   }
 
@@ -6879,51 +6879,43 @@ function swipeTo(idx, direction, skipAnimation) {
 function makeSwipeGhost() { return { style: {}, remove: () => {} }; }
 function clearAllGhosts() {}
 
-// Build the inner HTML for an adjacent song preview (title bar + note content)
-async function buildAdjSongContent(adjSong, adjIdx) {
+// Build the inner HTML for an adjacent song preview
+// style: 'fs' = fullscreen centered layout, 'page' = normal pg-song layout
+async function buildAdjSongContent(adjSong, adjIdx, style) {
   if (!adjSong) return '';
-  const setName = document.getElementById('songPageSetNameText')?.textContent || '';
   const title = adjSong.type === 'note' ? '— note —' : (adjSong.title || '');
   const key   = adjSong.type !== 'note' && adjSong.key ? adjSong.key : '';
   const bpm   = adjSong.type !== 'note' && adjSong.bpm ? adjSong.bpm + ' BPM' : '';
 
-  // Header row matching song page topbar style
-  const header = `<div style="background:var(--surface);border-bottom:1px solid var(--border);padding:8px 12px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5vw,36px);letter-spacing:1px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(title)}</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-        ${key ? `<div style="font-family:'DM Mono',monospace;font-weight:700;font-size:clamp(20px,4vw,32px);color:var(--accent);line-height:1;">${esc(key)}</div>` : ''}
-        ${bpm ? `<span style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;">${esc(bpm)}</span>` : ''}
-      </div>
-    </div>
-    <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${adjIdx + 1} / ${currentSetSongs.length}${setName ? ' · ' + esc(setName) : ''}</div>
-  </div>`;
-
-  // Note content
+  // Load note content from IDB
   let noteHtml = '';
   if (adjSong.type === 'note') {
     noteHtml = `<div style="padding:24px;color:var(--text2);font-style:italic;text-align:center;font-size:15px;">${esc(adjSong.text || '') || '(no note text)'}</div>`;
   } else if (adjSong.id) {
-    // Try to get note from IDB — use current noteTab for consistency
     const tabKey = noteTab === 'default' ? `default_${adjSong.id}` : `${currentUser||'me'}_${adjSong.id}`;
     try {
       const noteEntry = await dbGet('notes', tabKey);
       const html = noteEntry?.content || noteEntry?.text || adjSong.notes || '';
-      if (html) {
-        noteHtml = `<div class="note-display" style="font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;padding:16px 20px;background:none;border:none;min-height:unset;">${html}</div>`;
-      } else {
-        // Fall back to lyrics stored on the song object
-        const lyrics = adjSong.notes || '';
-        noteHtml = lyrics
-          ? `<div class="note-display" style="font-size:${Math.round(getBaseFontPx()*noteZoom)}px;line-height:1.6;padding:16px 20px;">${lyrics}</div>`
-          : `<div style="padding:40px 24px;text-align:center;color:var(--text3);font-style:italic;">No notes</div>`;
-      }
+      const fs = Math.round(getBaseFontPx() * noteZoom);
+      noteHtml = html
+        ? `<div class="note-display" style="font-size:${fs}px;line-height:1.6;padding:16px 20px;background:none;border:none;min-height:unset;">${html}</div>`
+        : `<div style="padding:40px 24px;text-align:center;color:var(--text3);font-style:italic;">No notes</div>`;
     } catch(e) {
       noteHtml = `<div style="padding:40px 24px;text-align:center;color:var(--text3);font-style:italic;">No notes</div>`;
     }
   }
 
-  return header + `<div style="flex:1;overflow-y:auto;overflow-x:hidden;">` + noteHtml + `</div>`;
+  if (style === 'fs') {
+    // Fullscreen: centered title + key, then notes
+    return `<div style="padding:24px 20px 12px;flex-shrink:0;display:flex;align-items:center;gap:12px;justify-content:space-between;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,5vw,40px);letter-spacing:1px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(title)}</div>
+      ${key ? `<div style="font-family:'DM Mono',monospace;font-weight:700;font-size:clamp(20px,4vw,32px);color:var(--accent);flex-shrink:0;">${esc(key)}</div>` : ''}
+    </div>
+    <div style="flex:1;overflow-y:auto;overflow-x:hidden;">${noteHtml}</div>`;
+  } else {
+    // Normal page: matches songPageBody layout — note area with padding
+    return `<div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:0;">${noteHtml}</div>`;
+  }
 }
 
 function setupSwipe(idx) {
@@ -6940,7 +6932,7 @@ function setupSwipe(idx) {
   function prefetchAdj(adjIdx) {
     const adjSong = currentSetSongs[adjIdx];
     if (!adjSong || adjSong.type === 'note') return;
-    _adjPrefetch = { idx: adjIdx, promise: buildAdjSongContent(adjSong, adjIdx) };
+    _adjPrefetch = { idx: adjIdx, promise: buildAdjSongContent(adjSong, adjIdx, 'page') };
   }
 
   function buildAdjSnap(adjIdx, side) {
@@ -6955,7 +6947,7 @@ function setupSwipe(idx) {
     el.appendChild(bodyEl);
     document.body.appendChild(el);
     // Use pre-fetched content if available, otherwise fetch now
-    const p = (_adjPrefetch?.idx === adjIdx) ? _adjPrefetch.promise : buildAdjSongContent(adjSong, adjIdx);
+    const p = (_adjPrefetch?.idx === adjIdx) ? _adjPrefetch.promise : buildAdjSongContent(adjSong, adjIdx, 'page');
     p.then(html => { if (el.isConnected) bodyEl.innerHTML = html; });
     return el;
   }
@@ -12147,7 +12139,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.253</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.254</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
