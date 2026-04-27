@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.258</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.259</span>
       </div>
 
     </div>
@@ -6974,24 +6974,40 @@ function setupSwipe(idx) {
     const el = document.createElement('div');
     el.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9050;pointer-events:none;background:var(--bg);transform:translateX(${startX}px);overflow:hidden;display:flex;flex-direction:column;`;
 
-    // Clone the entire pg-song structure from dragSnap (same layout as current page)
-    // but replace the note content with the adjacent song's content
     if (page) {
       const pageClone = document.createElement('div');
       pageClone.style.cssText = 'position:absolute;inset:0;';
       pageClone.innerHTML = page.innerHTML;
-      // Clear note area content — will be filled async
+
+      // Update topbar with correct IDs from pg-song
+      const setNameEl = pageClone.querySelector('#songPageSetName');
+      if (setNameEl) {
+        const setName = document.getElementById('songPageSetName')?.textContent || '';
+        setNameEl.textContent = setName;
+      }
+      const counterEl = pageClone.querySelector('#songNavCounter');
+      if (counterEl) counterEl.textContent = `${adjIdx+1} / ${currentSetSongs.length}`;
+
+      // Update prev/next labels from adj song's perspective
+      const prevSong = adjIdx > 0 ? currentSetSongs[adjIdx-1] : null;
+      const nextSong = adjIdx < currentSetSongs.length-1 ? currentSetSongs[adjIdx+1] : null;
+      const prevLbl = pageClone.querySelector('#songNavPrevLabel');
+      const nextLbl = pageClone.querySelector('#songNavNextLabel');
+      if (prevLbl) prevLbl.textContent = prevSong ? (prevSong.type==='note' ? '— note —' : (prevSong.title||'')) : '';
+      if (nextLbl) nextLbl.textContent = nextSong ? (nextSong.type==='note' ? '— note —' : (nextSong.title||'')) : '';
+
+      // Toggle disabled state on prev/next buttons
+      const prevBtn = pageClone.querySelector('#songNavPrev');
+      const nextBtn = pageClone.querySelector('#songNavNext');
+      if (prevBtn) prevBtn.classList.toggle('disabled', adjIdx === 0);
+      if (nextBtn) nextBtn.classList.toggle('disabled', adjIdx === currentSetSongs.length-1);
+
+      // Clear note area — filled async below
       const noteArea = pageClone.querySelector('#noteArea');
       if (noteArea) noteArea.innerHTML = '';
-      // Update song title in topbar
-      const titleEl = pageClone.querySelector('#songPageTitle');
-      if (titleEl) titleEl.textContent = adjSong.title || '';
-      const keyEl = pageClone.querySelector('#songPageKey');
-      if (keyEl) keyEl.textContent = adjSong.key || '';
-      const counterEl = pageClone.querySelector('#songCounter');
-      if (counterEl) counterEl.textContent = `${adjIdx+1} / ${currentSetSongs.length}`;
+
       el.appendChild(pageClone);
-      // Fill note content async
+
       const p = (_adjPrefetch?.idx === adjIdx) ? _adjPrefetch.promise : buildAdjSongContent(adjSong, adjIdx, 'page');
       p.then(html => {
         if (!el.isConnected) return;
@@ -12190,7 +12206,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.258</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.259</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
