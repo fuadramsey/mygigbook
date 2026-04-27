@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.259</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.260</span>
       </div>
 
     </div>
@@ -2729,11 +2729,10 @@ function navTo(tab) {
 // ── SETLISTS ──
 async function renderSetsList() {
   if (!currentUser || !_appReady) return; // not ready yet
-  let sets = await dbAll('setlists');
+  let [sets, allGroups] = await Promise.all([dbAll('setlists'), dbAll('groups')]);
   const privateGroupId = getPrivateGroupId();
   // visibility: own sets, or sets in groups user belongs to
   if (!currentIsAdmin) {
-    const allGroups = await dbAll('groups');
     const userGroupIds = new Set(allGroups
       .filter(g => g.createdBy === currentUser || (g.members||[]).includes(currentUser))
       .map(g => g.id)
@@ -7189,14 +7188,14 @@ async function openPicker() {
   document.getElementById('pickerSearch').value = '';
   document.getElementById('pickerModal').classList.remove('hidden');
   setTimeout(() => document.getElementById('pickerSearch').focus(), 80);
-  const songs = await dbAll('songs');
+  const [songs, _opGroups] = await Promise.all([dbAll('songs'), dbAll('groups')]);
   // populate artist filter
   const artists = [...new Set(songs.map(s => s.artist).filter(Boolean))].sort();
   const sel = document.getElementById('pickerArtistFilter');
   sel.innerHTML = '<option value="">All artists</option>' +
     artists.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
   // populate group filter — default to activeGroupFilter
-  const allGroups = await dbAll('groups');
+  const allGroups = _opGroups;
   const privateId = getPrivateGroupId();
   const myGroups = allGroups.filter(g =>
     g.id !== privateId && (g.createdBy === currentUser || (g.members||[]).includes(currentUser))
@@ -7222,7 +7221,7 @@ function closePicker() { document.getElementById('pickerModal').classList.add('h
 document.getElementById('pickerModal').addEventListener('click', e => { if(e.target===e.currentTarget) closePicker(); });
 
 async function renderPicker() {
-  const set=await dbGet('setlists',currentSetId);
+  const [set, _rpSongs] = await Promise.all([dbGet('setlists',currentSetId), dbAll('songs')]);
   const setItems = (set?.songs||[]);
   // build a map of songId -> [position numbers] (1-based, songs only, skipping notes)
   const posMap = {};
@@ -7237,7 +7236,7 @@ async function renderPicker() {
       }
     }
   });
-  let songs=await dbAll('songs');
+  let songs=_rpSongs;
   // visibility: own songs + songs in user's groups
   const allGrps = await dbAll('groups');
   const userGrpIds = new Set(allGrps.filter(g=>g.createdBy===currentUser||(g.members||[]).includes(currentUser)).map(g=>g.id));
@@ -7350,8 +7349,8 @@ function durationToSecs(d) {
 async function renderDB() {
   // Don't render until app is fully initialized
   if (!currentUser || !_appReady) return;
-  let songs = await dbAll('songs');
-  const userGroups = (await dbAll('groups')).filter(g =>
+  let [songs, _groups] = await Promise.all([dbAll('songs'), dbAll('groups')]);
+  const userGroups = _groups.filter(g =>
     g.createdBy === currentUser || (g.members||[]).includes(currentUser)
   );
   const userGroupIds = new Set(userGroups.map(g => g.id));
@@ -9191,6 +9190,7 @@ async function seed(){
 
 async function deduplicateLocalDB() {
   // Remove duplicate songs by title+artist — keep the one with the latest updatedAt
+  // Use cache — both reads are fast
   const songs = await dbAll('songs');
   const seen = {};
   for (const s of songs) {
@@ -11179,9 +11179,9 @@ async function exportAttachments() {
 
 async function exportCSV() {
   // load all accessible songs from IndexedDB
-  let songs = await dbAll('songs');
+  let [songs, _csvGrps] = await Promise.all([dbAll('songs'), dbAll('groups')]);
   // filter to songs this user can access
-  const userGroups = (await dbAll('groups')).filter(g =>
+  const userGroups = _csvGrps.filter(g =>
     g.createdBy === currentUser || (g.members||[]).includes(currentUser)
   );
   const userGroupIds = new Set(userGroups.map(g => g.id));
@@ -11401,9 +11401,7 @@ async function createBackup() {
   prog.textContent = 'Gathering data…';
 
   try {
-    let songs = await dbAll('songs');
-    let sets  = await dbAll('setlists');
-    let groups = await dbAll('groups');
+    let [songs, sets, groups] = await Promise.all([dbAll('songs'), dbAll('setlists'), dbAll('groups')]);
 
     if (scope.startsWith('group_')) {
       const groupId = scope.replace('group_', '');
@@ -12213,7 +12211,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.259</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.260</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
