@@ -1,4 +1,4 @@
-// MyGigBook build script
+// MyGigBook build script update
 // Extracts JS and CSS from index.html, minifies each, reassembles
 // Run: node build.js
 
