@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.256</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.257</span>
       </div>
 
     </div>
@@ -1840,10 +1840,44 @@ function openDB() {
   });
 }
 const txs = (s,m='readonly') => db.transaction(s,m).objectStore(s);
+
+// ── In-memory cache for hot stores ──
+// Eliminates repeated full IDB table scans on every render
+const _CACHED_STORES = new Set(['songs','setlists','groups','notes']);
+const _dbCache = {};
+function _cacheInvalidate(store) { if (_dbCache[store]) _dbCache[store].valid = false; }
+function _cacheInvalidateAll() { Object.keys(_dbCache).forEach(s => { if (_dbCache[s]) _dbCache[s].valid = false; }); }
+
+const _dbAllRaw = s => new Promise((r,j) => { const q=txs(s).getAll(); q.onsuccess=()=>r(q.result); q.onerror=j; });
 const dbGet = (s,k) => new Promise((r,j) => { const q=txs(s).get(k); q.onsuccess=()=>r(q.result); q.onerror=j; });
-const dbAll = s => new Promise((r,j) => { const q=txs(s).getAll(); q.onsuccess=()=>r(q.result); q.onerror=j; });
-const dbPut = (s,v) => new Promise((r,j) => { const q=txs(s,'readwrite').put(v); q.onsuccess=()=>r(); q.onerror=j; });
-const dbDel = (s,k) => new Promise((r,j) => { const q=txs(s,'readwrite').delete(k); q.onsuccess=()=>r(); q.onerror=j; });
+
+async function dbAll(store) {
+  if (_CACHED_STORES.has(store)) {
+    if (_dbCache[store]?.valid) return _dbCache[store].data;
+    const data = await _dbAllRaw(store);
+    _dbCache[store] = { data, valid: true };
+    return data;
+  }
+  return _dbAllRaw(store);
+}
+
+async function dbPut(store, val) {
+  await new Promise((r,j) => { const q=txs(store,'readwrite').put(val); q.onsuccess=()=>r(); q.onerror=j; });
+  if (_CACHED_STORES.has(store) && _dbCache[store]?.valid) {
+    const arr = _dbCache[store].data;
+    const i = arr.findIndex(x => x.id === val.id);
+    if (i >= 0) arr[i] = val; else arr.push(val);
+  }
+}
+
+async function dbDel(store, key) {
+  await new Promise((r,j) => { const q=txs(store,'readwrite').delete(key); q.onsuccess=()=>r(); q.onerror=j; });
+  if (_CACHED_STORES.has(store) && _dbCache[store]?.valid) {
+    const arr = _dbCache[store].data;
+    const i = arr.findIndex(x => x.id === key);
+    if (i >= 0) arr.splice(i, 1);
+  }
+}
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2);
 
 // ── SYNC ──
@@ -12159,7 +12193,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.256</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.257</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
