@@ -987,7 +987,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <span id="groupFilterLabel">All</span>
       </button>
       <span style="flex:1"></span>
-      <button class="top-action" id="syncBtn" onclick="manualSync()" title="Sync with cloud" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px;min-width:48px;max-width:48px;overflow:hidden;">
+      <button class="top-action" id="syncBtn" onclick="manualSync()" title="Sync with cloud" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px;min-width:0;max-width:52px;overflow:hidden;flex-shrink:0;">
         <div style="display:flex;align-items:center;gap:4px;">
           <div class="sync-pip" id="syncPip"></div>
           <svg id="syncIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--text2);"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -996,7 +996,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       </button>
       <button class="top-action" onclick="promptUserName()" title="Set your name" style="display:flex;align-items:center;gap:6px;position:relative;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:20px;height:20px;flex-shrink:0"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        <span id="topbarNameLabel" style="font-size:13px;font-family:'DM Mono',monospace;letter-spacing:0.5px;color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <span id="topbarNameLabel" style="font-size:13px;font-family:'DM Mono',monospace;letter-spacing:0.5px;color:var(--text2);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:1;"></span>
         <span id="bugIndicator" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--surface);"></span>
       </button>
       <button class="top-action" id="editSetsBtn" onclick="toggleEditSets()" title="Edit setlists">
@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.257</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.258</span>
       </div>
 
     </div>
@@ -1962,12 +1962,9 @@ function fmtSyncTime(ts) {
   const d = new Date(ts);
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-  const isYesterday = d.toDateString() === yesterday.toDateString();
   const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (isToday) return `Today ${timeStr}`;
-  if (isYesterday) return `Yesterday ${timeStr}`;
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + timeStr;
+  if (isToday) return timeStr; // just "14:32" — no "Today" prefix
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }); // "Apr 25"
 }
 
 // ── FIREBASE FIRESTORE SYNC ──
@@ -12193,7 +12190,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.257</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.258</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
