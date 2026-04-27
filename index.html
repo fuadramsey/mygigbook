@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.254</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.256</span>
       </div>
 
     </div>
@@ -4660,7 +4660,7 @@ function buildCompactAudioPlayer(audioKey, idx) {
       <button class="sm-btn" onclick="rewindAudio('${audioKey}','${safeKey}')" title="Go to start" style="padding:3px 6px;flex-shrink:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="5" y1="4" x2="5" y2="20"/><polygon points="19,4 9,12 19,20" fill="currentColor" stroke="none"/></svg>
       </button>
-      <button class="audio-play-btn" id="apb_${safeKey}" onclick="toggleAudioKeyed('${audioKey}','${safeKey}',${idx})" style="width:32px;height:32px;flex-shrink:0;">
+      <button class="audio-play-btn" id="apb_${safeKey}" onclick="toggleAudioKeyed('${audioKey}','${safeKey}',${idx})" style="width:56px;height:32px;flex-shrink:0;border-radius:8px;">
         <svg viewBox="0 0 24 24" id="api_${safeKey}"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <div class="audio-info" style="flex:1;min-width:0;">
@@ -6942,13 +6942,33 @@ function setupSwipe(idx) {
     const startX = side === 'right' ? W : -W;
     const el = document.createElement('div');
     el.style.cssText = `position:fixed;top:${rect.top}px;left:0;width:100%;height:${rect.height}px;z-index:9050;pointer-events:none;background:var(--bg);transform:translateX(${startX}px);overflow:hidden;display:flex;flex-direction:column;`;
-    const bodyEl = document.createElement('div');
-    bodyEl.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
-    el.appendChild(bodyEl);
+
+    // Clone the entire pg-song structure from dragSnap (same layout as current page)
+    // but replace the note content with the adjacent song's content
+    if (page) {
+      const pageClone = document.createElement('div');
+      pageClone.style.cssText = 'position:absolute;inset:0;';
+      pageClone.innerHTML = page.innerHTML;
+      // Clear note area content — will be filled async
+      const noteArea = pageClone.querySelector('#noteArea');
+      if (noteArea) noteArea.innerHTML = '';
+      // Update song title in topbar
+      const titleEl = pageClone.querySelector('#songPageTitle');
+      if (titleEl) titleEl.textContent = adjSong.title || '';
+      const keyEl = pageClone.querySelector('#songPageKey');
+      if (keyEl) keyEl.textContent = adjSong.key || '';
+      const counterEl = pageClone.querySelector('#songCounter');
+      if (counterEl) counterEl.textContent = `${adjIdx+1} / ${currentSetSongs.length}`;
+      el.appendChild(pageClone);
+      // Fill note content async
+      const p = (_adjPrefetch?.idx === adjIdx) ? _adjPrefetch.promise : buildAdjSongContent(adjSong, adjIdx, 'page');
+      p.then(html => {
+        if (!el.isConnected) return;
+        const na = el.querySelector('#noteArea');
+        if (na) na.innerHTML = html;
+      });
+    }
     document.body.appendChild(el);
-    // Use pre-fetched content if available, otherwise fetch now
-    const p = (_adjPrefetch?.idx === adjIdx) ? _adjPrefetch.promise : buildAdjSongContent(adjSong, adjIdx, 'page');
-    p.then(html => { if (el.isConnected) bodyEl.innerHTML = html; });
     return el;
   }
 
@@ -12139,7 +12159,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.254</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.256</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
