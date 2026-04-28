@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.260</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.261</span>
       </div>
 
     </div>
@@ -3437,7 +3437,7 @@ function openNoteFullscreen(idx) {
     const prevS = songIdx > 0 ? currentSetSongs[songIdx - 1] : null;
     const nextS = songIdx < currentSetSongs.length - 1 ? currentSetSongs[songIdx + 1] : null;
     const bpmHtml = cs.bpm ? `<span class="chip bpm-chip" id="fsBpmChip" onclick="startBpmFlash(${cs.bpm})" title="Tap to flash tempo" style="font-size:11px;cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:10px;height:10px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${cs.bpm} BPM</span>` : '';
-    const keyHtml = cs.key ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,5vw,44px);color:var(--accent);line-height:1;letter-spacing:2px;flex-shrink:0;">${esc(cs.key)}</div>` : '';
+    const keyHtml = cs.key ? `<div style="font-family:'DM Mono',monospace;font-weight:700;font-size:clamp(24px,4vw,38px);color:var(--accent);line-height:1;letter-spacing:1px;flex-shrink:0;">${esc(cs.key)}</div>` : '';
     const prevLabel = prevS ? (prevS.type === 'note' ? '— note —' : esc(prevS.title||'')) : '';
     const nextLabel = nextS ? (nextS.type === 'note' ? '— note —' : esc(nextS.title||'')) : '';
     const setName = document.getElementById('songPageSetNameText')?.textContent || '';
@@ -12211,7 +12211,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.260</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.261</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
