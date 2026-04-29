@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.262</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.263</span>
       </div>
 
     </div>
@@ -4669,11 +4669,6 @@ function buildListenContent(s) {
       ${spotifyCard}
       ${youtubeCard}
 
-      <!-- LOCAL AUDIO FILE -->
-      <div style="margin-top:4px;">
-        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-family:'DM Mono',monospace;color:var(--text3);margin-bottom:10px;">Local Audio File</div>
-        ${buildAudioSection(s)}
-      </div>
     </div>`;
 }
 
@@ -7247,11 +7242,12 @@ function setupSwipe(idx) {
     // Allow: topbar, toolbar row (zoom/scroll controls), tab pin button
     if (t.closest('.topbar')) return true;
     if (t.closest('#scrollToolbar')) return true;
-    // Block: note content area, audio player, upload zones
+    // Block: note content area, audio player, upload zones, toolbar audio
     if (t.closest('#noteArea')) return false;
     if (t.closest('.audio-player')) return false;
     if (t.closest('.audio-upload-zone')) return false;
     if (t.closest('[id^="ap_"]')) return false;
+    if (t.closest('#toolbarAudioInline')) return false;
     // Default: allow for toolbar row between tabs and noteArea
     return true;
   }
@@ -12296,7 +12292,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.262</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.263</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
