@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.265</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.267</span>
       </div>
 
     </div>
@@ -4702,7 +4702,7 @@ function buildInlineToolbarAudio(s, idx) {
     </button>
     <!-- Play/Pause -->
     <button id="apb_${safeKey}" onclick="toggleAudioKeyed('${key}','${safeKey}',${idx})"
-      style="width:28px;height:28px;background:var(--accent);border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;">
+      style="width:52px;height:28px;background:var(--accent);border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;">
       <svg viewBox="0 0 24 24" id="api_${safeKey}" fill="currentColor" style="width:13px;height:13px;"><path d="M8 5v14l11-7z"/></svg>
     </button>
     <!-- File name / selector -->
@@ -7686,6 +7686,21 @@ function renderSETab() {
   // Use querySelectorAll because the toolbar ID exists in both the DB panel and pg-song-edit
   const showScroll = !seEditMode && (seTab === 'details' || seTab === 'mynotes');
   const dbZoom = parseFloat(localStorage.getItem('mgb_zoom_db_details') || '1');
+  // Populate inline audio player in DB panel toolbar
+  document.querySelectorAll('#seAudioInline').forEach(el => {
+    if (id && !seEditMode && (seTab === 'details' || seTab === 'mynotes')) {
+      loadAllAudioForSong(id).then(keys => {
+        if (!el.isConnected) return;
+        if (keys.length) {
+          el.innerHTML = buildInlineToolbarAudio(window._seCurrentSong || { id }, Math.max(0, currentSongIdx));
+        } else {
+          el.innerHTML = '';
+        }
+      });
+    } else {
+      el.innerHTML = '';
+    }
+  });
   document.querySelectorAll('#seScrollToolbar').forEach(scrollBar => {
     scrollBar.style.display = showScroll ? 'flex' : 'none';
     const lbl = scrollBar.querySelector('#seScrollSpeedLabel, .se-speed-label');
@@ -12261,7 +12276,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.265</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.267</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
