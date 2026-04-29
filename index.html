@@ -1818,7 +1818,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.261</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.262</span>
       </div>
 
     </div>
@@ -4325,6 +4325,7 @@ async function renderSongPage(idx) {
     });
   } catch(e) {}
 
+  const hasAudio = Object.keys(window._audioCache || {}).some(k => k === `audio_${s.id}` || k.startsWith(`audio_${s.id}_`));
   document.getElementById('songPageBody').innerHTML = `
     <div class="song-page-fixed">
       <div class="song-page-header">
@@ -4355,47 +4356,47 @@ async function renderSongPage(idx) {
         </button>
       </div>
       ${noteTab !== 'listen' && noteTab !== 'charts' ? `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 8px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:4px;">
-        <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
-          ${(noteTab === 'default' || noteTab === 'mine') && !editingNote ? `
-          <button onclick="startEditNote(${idx})" title="Edit" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text2);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          <div style="width:1px;height:20px;background:var(--border2);margin:0 2px;"></div>` : ''}
-          
-          <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/></svg></button>
-          <span class="note-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
-          <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
-        </div>
-        <div id="toolbarAudioSlot" style="flex:1;min-width:0;display:flex;justify-content:center;"></div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-          <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;align-items:center;gap:4px;">
-            
-            
-            <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
-              ${scrollPlaying
-                ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"> <rect x="5" y="2" width="14" height="20" rx="4"/> <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/> <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/> <polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+      <div style="display:flex;flex-direction:column;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 8px;gap:4px;">
+          <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
+            ${(noteTab === 'default' || noteTab === 'mine') && !editingNote ? `
+            <button onclick="startEditNote(${idx})" title="Edit" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text2);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <div style="width:4px;flex-shrink:0;"></div>
-            <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
-            <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
-            <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
+            <div style="width:1px;height:20px;background:var(--border2);margin:0 2px;"></div>` : ''}
+            <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/></svg></button>
+            <span class="note-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
+            <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px;"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4-4"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="10" y1="7" x2="10" y2="13"/></svg></button>
           </div>
-          <div style="width:4px;flex-shrink:0;"></div>
-          <button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
-            style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
-          </button>
+          <div style="flex:1;min-width:0;"></div>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+            <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;align-items:center;gap:4px;">
+              <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
+                ${scrollPlaying
+                  ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
+                  : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;"><rect x="5" y="2" width="14" height="20" rx="4"/><circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/><polyline points="9,17 12,20 15,17" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+              </button>
+              <div style="width:4px;flex-shrink:0;"></div>
+              <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
+              <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
+              <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
+            </div>
+            <div style="width:4px;flex-shrink:0;"></div>
+            <button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
+              style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
+            </button>
+          </div>
         </div>
+        ${hasAudio ? buildInlineToolbarAudio(s, idx) : ''}
       </div>` : `
       <div style="height:1px;background:var(--border);flex-shrink:0;"></div>`}
     </div>
     <div class="note-area" id="noteArea">
       ${noteTab === 'all'
-        ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + allNotesHtml
+        ? allNotesHtml
         : noteTab === 'listen'
-        ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + buildListenContent(s)
+        ? buildListenContent(s)
         : noteTab === 'charts'
         ? `<div id="chartsContent" style="padding:16px;">Loading…</div>`
         : buildNoteContent(activeNote, idx, true)}
@@ -4676,6 +4677,86 @@ function buildListenContent(s) {
     </div>`;
 }
 
+// Build a compact inline audio player that fits in the toolbar area
+function buildInlineToolbarAudio(s, idx) {
+  const audioKeys = Object.keys(window._audioCache || {})
+    .filter(k => k === `audio_${s.id}` || k.startsWith(`audio_${s.id}_`))
+    .sort();
+  if (!audioKeys.length) return '';
+
+  // For multiple files, show first one by default with a selector
+  const key = audioKeys[0];
+  const safeKey = key.replace(/[^a-zA-Z0-9_]/g, '_');
+  const entry = window._audioCache[key];
+  if (!entry) return '';
+
+  const multiSelector = audioKeys.length > 1
+    ? `<select id="toolbarAudioSelect" onchange="switchToolbarAudio(this.value,${idx})"
+        style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);padding:1px 4px;max-width:90px;font-family:'DM Mono',monospace;cursor:pointer;">
+        ${audioKeys.map((k2,i) => {
+          const e2 = window._audioCache[k2];
+          return `<option value="${k2}">${esc(e2?.name || `Track ${i+1}`)}</option>`;
+        }).join('')}
+      </select>` : `<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px;">${esc(entry.name)}</span>`;
+
+  return `<div id="toolbarAudioInline" style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-top:1px solid var(--border2);background:var(--surface);">
+    <!-- Rewind -->
+    <button onclick="rewindAudio('${key}','${safeKey}')" title="Rewind"
+      style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;flex-shrink:0;display:flex;align-items:center;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="5" y1="4" x2="5" y2="20"/><polygon points="19,4 9,12 19,20" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <!-- Play/Pause -->
+    <button id="apb_${safeKey}" onclick="toggleAudioKeyed('${key}','${safeKey}',${idx})"
+      style="width:28px;height:28px;background:var(--accent);border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;">
+      <svg viewBox="0 0 24 24" id="api_${safeKey}" fill="currentColor" style="width:13px;height:13px;"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <!-- File name / selector -->
+    ${multiSelector}
+    <!-- Progress + time -->
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+      <div class="audio-progress-wrap" id="apw_${safeKey}" onclick="seekAudioKeyed(event,'${key}','${safeKey}')" style="cursor:pointer;height:8px;border-radius:4px;">
+        <div class="audio-progress-fill" id="apf_${safeKey}" style="border-radius:4px;"></div>
+        <div class="audio-loop-region" id="audioLoopRegion" style="display:none;left:0%;width:0%;"></div>
+        <div class="audio-loop-marker start" id="audioLoopMarkerStart" style="display:none;left:0%;"></div>
+        <div class="audio-loop-marker end" id="audioLoopMarkerEnd" style="display:none;left:0%;"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+        <span class="audio-time" id="apt_${safeKey}" style="font-size:10px;">0:00 / 0:00</span>
+        <!-- Loop controls inline -->
+        <div style="display:flex;align-items:center;gap:3px;">
+          <button class="loop-btn set-start" onclick="setLoopStart()" title="Set loop start" style="padding:1px 5px;font-size:10px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:9px;height:9px;"><line x1="5" y1="4" x2="5" y2="20"/><polyline points="5,4 15,12 5,20"/></svg>S
+          </button>
+          <span class="loop-time-label" id="loopStartLabel" style="font-size:9px;">—</span>
+          <button class="loop-btn set-end" onclick="setLoopEnd()" title="Set loop end" style="padding:1px 5px;font-size:10px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:9px;height:9px;"><line x1="19" y1="4" x2="19" y2="20"/><polyline points="19,4 9,12 19,20"/></svg>E
+          </button>
+          <span class="loop-time-label" id="loopEndLabel" style="font-size:9px;">—</span>
+          <button class="loop-btn" id="loopToggleBtn" onclick="toggleLoop()" title="Loop" style="padding:1px 5px;font-size:10px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+          </button>
+          <button class="loop-btn" onclick="clearLoop()" title="Clear" style="padding:1px 5px;font-size:10px;color:var(--red);border-color:rgba(255,68,68,0.3);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:9px;height:9px;"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function switchToolbarAudio(newKey, idx) {
+  // Stop current audio, switch to new key
+  if (_audioKey && _audioKey !== newKey) stopAudio();
+  // Re-render to update IDs — just reload audio section
+  const panel = document.getElementById('toolbarAudioInline');
+  if (!panel) return;
+  const s = currentSetSongs[idx];
+  if (!s) return;
+  panel.outerHTML = buildInlineToolbarAudio(s, idx);
+  const sel = document.getElementById('toolbarAudioSelect');
+  if (sel) sel.value = newKey;
+}
+
 function buildFullAudioPlayer(audioKey, idx) {
   // Backward compat: build a single compact player
   return buildCompactAudioPlayer(audioKey, idx);
@@ -4848,15 +4929,19 @@ function toggleAudioCollapse() {
 }
 
 function positionAudioPlayer() {
-  const player = document.getElementById('audioPlayer');
-  const slot = document.getElementById('toolbarAudioSlot');
-  const noteArea = document.getElementById('noteArea');
-  if (!player) return;
-  if (player.classList.contains('collapsed') && slot) {
-    slot.appendChild(player);
-  } else if (noteArea) {
-    // put it back at the top of noteArea
-    noteArea.insertBefore(player, noteArea.firstChild);
+  // Audio panel now lives in toolbarAudioPanel — no repositioning needed
+}
+
+function toggleToolbarAudio() {
+  const panel = document.getElementById('toolbarAudioPanel');
+  const btn = document.getElementById('toolbarAudioBtn');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (btn) {
+    btn.style.color = isOpen ? 'var(--accent)' : 'var(--text)';
+    btn.style.background = isOpen ? 'var(--surface2)' : 'rgba(220,38,38,0.15)';
+    btn.style.borderColor = isOpen ? 'var(--border2)' : 'var(--accent)';
   }
 }
 
@@ -12211,7 +12296,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.261</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.262</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
