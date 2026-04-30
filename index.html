@@ -1819,7 +1819,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.268</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.269</span>
       </div>
 
     </div>
@@ -4199,7 +4199,9 @@ async function renderSongPage(idx) {
   const s = currentSetSongs[idx];
   if (!s) return;
 
-  const currentSet = await dbGet('setlists', currentSetId);
+  // Parallel: fetch setlist name + user note at the same time
+  const userKey2 = `${currentUser||'me'}_${currentSetSongs[idx]?.id}`;
+  const [currentSet] = await Promise.all([dbGet('setlists', currentSetId)]);
   const setNameEl = document.getElementById('songPageSetNameText');
   if (setNameEl) setNameEl.textContent = currentSet?.name || '';
   updateTopNav(idx);
@@ -4246,7 +4248,8 @@ async function renderSongPage(idx) {
           window._cloudAudioMap[s.id] = meta;
           // re-render this page to show download button
           // Only re-render if fullscreen is not open (avoid recursion)
-          if (currentSongIdx === idx && !document.getElementById('noteFullscreenOverlay')) renderSongPage(idx);
+          // Only re-render if still on same song and not mid-swipe
+          if (currentSongIdx === idx && !document.getElementById('noteFullscreenOverlay') && !document.getElementById('toolbarAudioInline')?.querySelector('audio')) renderSongPage(idx);
         }
       });
     }
@@ -4924,9 +4927,7 @@ function toggleAudioCollapse() {
   positionAudioPlayer();
 }
 
-function positionAudioPlayer() {
-  // Audio panel now lives in toolbarAudioPanel — no repositioning needed
-}
+function positionAudioPlayer() {} // legacy stub
 
 function toggleToolbarAudio() {
   const panel = document.getElementById('toolbarAudioPanel');
@@ -6654,6 +6655,7 @@ let _loopStart = null;   // seconds
 let _loopEnd   = null;   // seconds
 let _loopActive = false;
 let _loopCheckInterval = null;
+let _loopCheckFn = null;
 
 function setLoopStart() {
   if (!_audioEl) return;
@@ -6711,15 +6713,23 @@ function clearLoop() {
 
 function startLoopCheck() {
   stopLoopCheck();
-  _loopCheckInterval = setInterval(() => {
-    if (!_loopActive || !_audioEl || _loopStart === null || _loopEnd === null) return;
+  // Use timeupdate event instead of setInterval — fires only when audio is playing
+  // and avoids constant 50ms CPU polling
+  if (!_audioEl) return;
+  _loopCheckFn = () => {
+    if (!_loopActive || _loopStart === null || _loopEnd === null) return;
     if (_audioEl.currentTime >= _loopEnd) {
       _audioEl.currentTime = _loopStart;
     }
-  }, 50);
+  };
+  _audioEl.addEventListener('timeupdate', _loopCheckFn);
 }
 
 function stopLoopCheck() {
+  if (_loopCheckFn && _audioEl) {
+    _audioEl.removeEventListener('timeupdate', _loopCheckFn);
+    _loopCheckFn = null;
+  }
   if (_loopCheckInterval) { clearInterval(_loopCheckInterval); _loopCheckInterval = null; }
 }
 
@@ -12277,7 +12287,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.268</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.269</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
