@@ -1823,7 +1823,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.303</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.304</span>
       </div>
 
     </div>
@@ -4683,14 +4683,14 @@ function buildListenContent(s) {
 }
 
 // Build a compact inline audio player that fits in the toolbar area
-function buildInlineToolbarAudio(s, idx) {
+function buildInlineToolbarAudio(s, idx, activeKey) {
   const audioKeys = Object.keys(window._audioCache || {})
     .filter(k => k === `audio_${s.id}` || k.startsWith(`audio_${s.id}_`))
     .sort();
   if (!audioKeys.length) return '';
 
-  // For multiple files, show first one by default with a selector
-  const key = audioKeys[0];
+  // Use activeKey if provided and valid, otherwise first key
+  const key = (activeKey && audioKeys.includes(activeKey)) ? activeKey : audioKeys[0];
   const safeKey = key.replace(/[^a-zA-Z0-9_]/g, '_');
   const entry = window._audioCache[key];
   if (!entry) return '';
@@ -4773,9 +4773,9 @@ function switchToolbarAudio(newKey, idx) {
   const safeKey = newKey.replace(/[^a-zA-Z0-9_]/g, '_');
   const entry = window._audioCache[newKey];
   if (!entry) return;
-  // Re-render the whole inline player
+  // Re-render the whole inline player with newKey as the active track
   const target = panel || container;
-  const html = buildInlineToolbarAudio(s, idx >= 0 ? idx : 0);
+  const html = buildInlineToolbarAudio(s, idx >= 0 ? idx : 0, newKey);
   target.outerHTML = html;
   // Select the chosen track in the dropdown
   requestAnimationFrame(() => {
@@ -12300,7 +12300,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.303</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.304</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
