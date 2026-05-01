@@ -1822,7 +1822,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.299</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.300</span>
       </div>
 
     </div>
@@ -7680,11 +7680,13 @@ function renderSETab() {
   const dbZoom = parseFloat(localStorage.getItem('mgb_zoom_db_details') || '1');
   // Populate inline audio player in DB panel toolbar
   document.querySelectorAll('#seAudioInline').forEach(el => {
-    if (id && !seEditMode && (seTab === 'details' || seTab === 'mynotes')) {
+    if (id && (seTab === 'details' || seTab === 'mynotes')) {
       loadAllAudioForSong(id).then(keys => {
         if (!el.isConnected) return;
         if (keys.length) {
-          el.innerHTML = buildInlineToolbarAudio(window._seCurrentSong || { id }, Math.max(0, currentSongIdx));
+          const song = window._seCurrentSong || { id };
+          const fakeIdx = currentSongIdx >= 0 ? currentSongIdx : 0;
+          el.innerHTML = buildInlineToolbarAudio(song, fakeIdx);
         } else {
           el.innerHTML = '';
         }
@@ -7816,14 +7818,16 @@ function renderSETab() {
         })();
       });
     }
-    // async audio inject if not cached
+    // async audio inject — populate seAudioInline when loaded
     if (id && !window._audioCache?.[`audio_${id}`]) {
       loadAudioHybrid(id).then(entry => {
         if (!entry) return;
-        const playerHtml = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
-        const wrap = document.createElement('div');
-        wrap.innerHTML = playerHtml;
-        body.insertBefore(wrap.firstChild, body.firstChild);
+        document.querySelectorAll('#seAudioInline').forEach(el => {
+          if (el.isConnected) {
+            const song = window._seCurrentSong || { id };
+            el.innerHTML = buildInlineToolbarAudio(song, Math.max(0, currentSongIdx));
+          }
+        });
       });
     }
   } else if (seTab === 'mynotes') {
@@ -7870,14 +7874,16 @@ function renderSETab() {
         </div>
         <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);line-height:1;" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
     }
-    // async audio inject if not cached
+    // async audio inject — populate seAudioInline when loaded
     if (id && !window._audioCache?.[`audio_${id}`]) {
       loadAudioHybrid(id).then(entry => {
         if (!entry) return;
-        const playerHtml = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
-        const wrap = document.createElement('div');
-        wrap.innerHTML = playerHtml;
-        body.insertBefore(wrap.firstChild, body.firstChild);
+        document.querySelectorAll('#seAudioInline').forEach(el => {
+          if (el.isConnected) {
+            const song = window._seCurrentSong || { id };
+            el.innerHTML = buildInlineToolbarAudio(song, Math.max(0, currentSongIdx));
+          }
+        });
       });
     }
   } else if (seTab === 'media') {
@@ -12271,7 +12277,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.299</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.300</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
