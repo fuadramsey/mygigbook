@@ -1823,7 +1823,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.304</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.305</span>
       </div>
 
     </div>
@@ -4700,7 +4700,8 @@ function buildInlineToolbarAudio(s, idx, activeKey) {
         style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);padding:1px 4px;max-width:90px;font-family:'DM Mono',monospace;cursor:pointer;">
         ${audioKeys.map((k2,i) => {
           const e2 = window._audioCache[k2];
-          return `<option value="${k2}">${esc(e2?.name || `Track ${i+1}`)}</option>`;
+          const selected = k2 === key ? 'selected' : '';
+          return `<option value="${k2}" ${selected}>${esc(e2?.name || `Track ${i+1}`)}</option>`;
         }).join('')}
       </select>` : `<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px;">${esc(entry.name)}</span>`;
 
@@ -4775,13 +4776,7 @@ function switchToolbarAudio(newKey, idx) {
   if (!entry) return;
   // Re-render the whole inline player with newKey as the active track
   const target = panel || container;
-  const html = buildInlineToolbarAudio(s, idx >= 0 ? idx : 0, newKey);
-  target.outerHTML = html;
-  // Select the chosen track in the dropdown
-  requestAnimationFrame(() => {
-    const sel = document.getElementById('toolbarAudioSelect');
-    if (sel) sel.value = newKey;
-  });
+  target.outerHTML = buildInlineToolbarAudio(s, idx >= 0 ? idx : 0, newKey);
 }
 
 function buildFullAudioPlayer(audioKey, idx) {
@@ -12300,7 +12295,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.304</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.305</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
