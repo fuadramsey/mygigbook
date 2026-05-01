@@ -1199,6 +1199,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
             <div style="flex:1;display:flex;">
               <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" >Lyrics</button>
               <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
+              <button class="note-tab" id="se-tab-all" onclick="switchSETab('all')" style="display:none;">All Notes</button>
               <button class="note-tab" id="se-tab-media" onclick="switchSETab('media')" >Media</button>
               <button class="note-tab" id="se-tab-charts" onclick="switchSETab('charts')" >Charts</button>
             </div>
@@ -1823,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.306</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.309</span>
       </div>
 
     </div>
@@ -7678,7 +7679,7 @@ function sePersistCurrentTab() {
   }
 }
 
-function renderSETab() {
+async function renderSETab() {
   // use whichever tab body is currently visible (pg-song-edit on mobile, DB panel on desktop)
   const body = (() => {
     const sepBody = document.getElementById('sepTabBody');
@@ -7695,6 +7696,12 @@ function renderSETab() {
   // show scroll toolbar only on text tabs in read-only mode
   // Use querySelectorAll because the toolbar ID exists in both the DB panel and pg-song-edit
   const showScroll = (seTab === 'details' || seTab === 'mynotes');
+  // Show All Notes tab only for songs that belong to a group
+  const allNotesTab = document.getElementById('se-tab-all');
+  if (allNotesTab) {
+    const hasGroups = (window._seCurrentSong?.groupIds?.length > 0);
+    allNotesTab.style.display = hasGroups ? '' : 'none';
+  }
   const dbZoom = parseFloat(localStorage.getItem('mgb_zoom_db_details') || '1');
   // Populate inline audio player in DB panel toolbar
   document.querySelectorAll('#seAudioInline').forEach(el => {
@@ -7903,6 +7910,37 @@ function renderSETab() {
           }
         });
       });
+    }
+  } else if (seTab === 'all') {
+    body.innerHTML = '<div style="color:var(--text3);font-style:italic;font-size:14px;">Loading notes…</div>';
+    if (id && s?.groupIds?.length) {
+      // Check if current user is a member of at least one of the song's groups
+      const groups = await Promise.all(s.groupIds.map(gid => dbGet('groups', gid)));
+      const validGroups = groups.filter(Boolean);
+      const isMember = validGroups.some(g =>
+        g.createdBy === currentUser ||
+        (g.members || []).some(m => (m.uid || m) === currentUser)
+      );
+      if (!isMember) {
+        body.innerHTML = '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">You are not a member of this song\'s group.</div>';
+      } else {
+        const allNotes = await dbAll('notes');
+        const songNotes = allNotes.filter(n => n.id && n.id.endsWith('_' + id));
+        if (songNotes.length === 0) {
+          body.innerHTML = '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No notes from group members yet.</div>';
+        } else {
+          body.innerHTML = songNotes.map(n => {
+            const author = n.id.replace('_' + id, '').replace(/^default_/, 'Lyrics') || 'Unknown';
+            const content = n.content || n.text || '';
+            return `<div style="margin-bottom:20px;">
+              <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:6px;">${esc(author)}</div>
+              <div class="note-display" style="line-height:1.6;">${content || '<em style="color:var(--text3);">No notes</em>'}</div>
+            </div>`;
+          }).join('<hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">');
+        }
+      }
+    } else {
+      body.innerHTML = '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">All Notes is only available for group songs.</div>';
     }
   } else if (seTab === 'media') {
     body.innerHTML = `
@@ -12302,7 +12340,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.306</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.309</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
