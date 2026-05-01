@@ -1823,7 +1823,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.301</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.303</span>
       </div>
 
     </div>
@@ -4746,20 +4746,42 @@ function buildInlineToolbarAudio(s, idx) {
         </div>
       </div>
     </div>
+    <!-- Download -->
+    <button onclick="downloadAudio('${key}')" title="Download"
+      style="background:none;border:none;cursor:pointer;color:var(--accent);padding:2px;flex-shrink:0;display:flex;align-items:center;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 4v10m0 0l-3-3m3 3l3-3"/><path d="M4 18h16"/></svg>
+    </button>
   </div>`;
 }
 
 function switchToolbarAudio(newKey, idx) {
-  // Stop current audio, switch to new key
+  // Stop current audio
   if (_audioKey && _audioKey !== newKey) stopAudio();
-  // Re-render to update IDs — just reload audio section
-  const panel = document.getElementById('toolbarAudioInline');
-  if (!panel) return;
-  const s = currentSetSongs[idx];
+  // Determine the song object — works in both setlist and DB context
+  const s = (idx >= 0 && currentSetSongs[idx]) ? currentSetSongs[idx] : window._seCurrentSong;
   if (!s) return;
-  panel.outerHTML = buildInlineToolbarAudio(s, idx);
-  const sel = document.getElementById('toolbarAudioSelect');
-  if (sel) sel.value = newKey;
+  // Find the container — could be toolbarAudioInline (setlist) or seAudioInline (DB)
+  const panel = document.getElementById('toolbarAudioInline') || document.querySelector('#seAudioInline [id="toolbarAudioInline"]');
+  const container = panel || document.querySelector('#seAudioInline');
+  if (!container) return;
+  // Re-render with newKey as the active/first key by reordering the keys array
+  const allKeys = Object.keys(window._audioCache || {})
+    .filter(k => k === `audio_${s.id}` || k.startsWith(`audio_${s.id}_`))
+    .sort();
+  // Build player HTML with newKey first so it becomes the active track
+  const orderedKeys = [newKey, ...allKeys.filter(k => k !== newKey)];
+  const safeKey = newKey.replace(/[^a-zA-Z0-9_]/g, '_');
+  const entry = window._audioCache[newKey];
+  if (!entry) return;
+  // Re-render the whole inline player
+  const target = panel || container;
+  const html = buildInlineToolbarAudio(s, idx >= 0 ? idx : 0);
+  target.outerHTML = html;
+  // Select the chosen track in the dropdown
+  requestAnimationFrame(() => {
+    const sel = document.getElementById('toolbarAudioSelect');
+    if (sel) sel.value = newKey;
+  });
 }
 
 function buildFullAudioPlayer(audioKey, idx) {
@@ -12278,7 +12300,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.301</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.303</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
