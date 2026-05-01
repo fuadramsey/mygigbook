@@ -1823,7 +1823,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.305</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.306</span>
       </div>
 
     </div>
@@ -8627,16 +8627,23 @@ let pendingDeleteSongId = null;
 async function deleteSong(id) {
   const song = await dbGet('songs', id);
   if (!song) return;
-  // if song belongs to any groups, only group creators can delete it
+  const songOwner = song.createdBy || song.owner;
+  const isOwner = !songOwner || songOwner === currentUser;
+
   if (song.groupIds?.length) {
+    // Song is in a group — only the song owner OR a group creator can delete it
     const groups = await Promise.all(song.groupIds.map(gid => dbGet('groups', gid)));
-    const validGroups = groups.filter(Boolean);
-    const isCreatorOfAny = validGroups.some(g => g.createdBy === currentUser);
-    if (!isCreatorOfAny) {
-      showToast('Only the group creator can delete this song', 'err');
+    const isGroupCreator = groups.filter(Boolean).some(g => g.createdBy === currentUser);
+    if (!isOwner && !isGroupCreator) {
+      showToast('Only the song owner or group creator can delete this song', 'err');
       return;
     }
+  } else if (!isOwner) {
+    // Song not in a group — only owner can delete
+    showToast('Only the song owner can delete this song', 'err');
+    return;
   }
+
   pendingDeleteSongId = id;
   document.getElementById('confirmDeleteSongName').textContent = song.title;
   document.getElementById('confirmDeleteSongModal').classList.remove('hidden');
@@ -12295,7 +12302,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.305</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.306</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
