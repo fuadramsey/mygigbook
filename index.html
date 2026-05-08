@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.313</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.314</span>
       </div>
 
     </div>
@@ -4870,10 +4870,12 @@ function toggleAudioKeyed(audioKey, safeKey, idx) {
   const icon = document.getElementById('api_' + safeKey);
   if (audio.paused) {
     audio.play().catch(() => showToast('Could not play audio', 'err'));
-    if (icon) icon.innerHTML = '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>';
+    const pauseSvg = '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>';
+    document.querySelectorAll('#api_' + safeKey).forEach(el => el.innerHTML = pauseSvg);
   } else {
     audio.pause();
-    if (icon) icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    const playSvg = '<path d="M8 5v14l11-7z"/>';
+    document.querySelectorAll('#api_' + safeKey).forEach(el => el.innerHTML = playSvg);
   }
 }
 
@@ -6878,11 +6880,9 @@ function updateAudioUIKeyed(audioKey) {
   const dur = _audioEl.duration || 0;
   const pct = dur ? (cur / dur * 100).toFixed(1) + '%' : '0%';
   const timeStr = `${fmtAudioTime(cur)} / ${fmtAudioTime(dur)}`;
-  // keyed elements (compact player)
-  const ft = document.getElementById('apt_' + safeKey);
-  const fp = document.getElementById('apf_' + safeKey);
-  if (ft) ft.textContent = timeStr;
-  if (fp) fp.style.width = pct;
+  // Update ALL matching elements (handles duplicate IDs across setlist + DB panels)
+  document.querySelectorAll('#apt_' + safeKey).forEach(el => el.textContent = timeStr);
+  document.querySelectorAll('#apf_' + safeKey).forEach(el => el.style.width = pct);
   // legacy single-player elements (fallback)
   const ft2 = document.getElementById('audioTime');
   const fp2 = document.getElementById('audioProgressFill');
@@ -12352,7 +12352,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.313</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.314</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
