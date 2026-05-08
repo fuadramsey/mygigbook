@@ -982,24 +982,23 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   <div class="page active" id="pg-setlists">
     <div class="topbar">
       <span class="topbar-logo">MyGigBook</span>
-      <button id="groupFilterChip" onclick="openGroupFilter()" style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:none;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:0.5px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">
+      <button id="groupFilterChip" onclick="openGroupFilter()" style="display:flex;align-items:center;gap:5px;padding:4px 8px;background:none;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:0.5px;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>
         <span id="groupFilterLabel">All</span>
       </button>
-      <span style="flex:1"></span>
-      <button class="top-action" id="syncBtn" onclick="manualSync()" title="Sync with cloud" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px;min-width:0;max-width:52px;overflow:hidden;flex-shrink:0;">
+      <button class="top-action" id="syncBtn" onclick="manualSync()" title="Sync with cloud" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px;min-width:0;max-width:52px;overflow:hidden;flex-shrink:0;margin-left:auto;">
         <div style="display:flex;align-items:center;gap:4px;">
           <div class="sync-pip" id="syncPip"></div>
           <svg id="syncIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--text2);"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
         </div>
         <span id="syncBtnLabel" style="color:var(--text3);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46px;">Sync</span>
       </button>
-      <button class="top-action" onclick="promptUserName()" title="Set your name" style="display:flex;align-items:center;gap:6px;position:relative;">
+      <button class="top-action" onclick="promptUserName()" title="Set your name" style="display:flex;align-items:center;gap:4px;position:relative;flex-shrink:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:20px;height:20px;flex-shrink:0"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        <span id="topbarNameLabel" style="font-size:13px;font-family:'DM Mono',monospace;letter-spacing:0.5px;color:var(--text2);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:1;"></span>
+        <span id="topbarNameLabel" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text2);max-width:55px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none;"></span>
         <span id="bugIndicator" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--surface);"></span>
       </button>
-      <button class="top-action" id="editSetsBtn" onclick="toggleEditSets()" title="Edit setlists">
+      <button class="top-action" id="editSetsBtn" onclick="toggleEditSets()" title="Edit setlists" style="flex-shrink:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
     </div>
@@ -1824,7 +1823,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.309</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.310</span>
       </div>
 
     </div>
@@ -12340,7 +12339,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.309</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.310</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
