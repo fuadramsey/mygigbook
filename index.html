@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.323</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.324</span>
       </div>
 
     </div>
@@ -3570,31 +3570,7 @@ function openNoteFullscreen(idx) {
             el.id = 'pdfCanvasContainer_fs_' + pdfKey;
             if (window._pdfCache?.[pdfKey]) {
               // Render directly into this element
-              (async () => {
-                el.innerHTML = '<div style="padding:20px;text-align:center;color:#ccc;font-size:13px;">Loading PDF…</div>';
-                try {
-                  if (typeof pdfjsLib === 'undefined') return;
-                  const entry = window._pdfCache[pdfKey];
-                  const pdfDoc = await pdfjsLib.getDocument(entry.blobUrl).promise;
-                  el.innerHTML = '';
-                  for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-                    const page = await pdfDoc.getPage(pageNum);
-                    const scale = Math.min(2, (el.clientWidth || window.innerWidth) / page.getViewport({scale:1}).width);
-                    const viewport = page.getViewport({ scale: scale || 1.5 });
-                    const wrap = document.createElement('div');
-                    wrap.style.cssText = `width:${viewport.width}px;max-width:100%;margin:0 auto 8px;position:relative;`;
-                    const canvas = document.createElement('canvas');
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-                    canvas.style.cssText = 'width:100%;height:auto;display:block;';
-                    wrap.appendChild(canvas);
-                    el.appendChild(wrap);
-                    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                  }
-                } catch(e) {
-                  el.innerHTML = '<div style="padding:20px;text-align:center;color:#aaa;">Could not render PDF.</div>';
-                }
-              })();
+              renderPdfIntoElement(el, pdfKey);
             }
           });
         });
@@ -11091,8 +11067,47 @@ async function saveMarkup(pdfKey) {
 }
 
 // trigger PDF load after note area renders
+async function renderPdfIntoElement(el, pdfKey) {
+  const entry = window._pdfCache?.[pdfKey];
+  if (!el || !entry) return;
+  el.innerHTML = '<div style="padding:20px;text-align:center;color:#ccc;font-size:13px;">Loading PDF…</div>';
+  try {
+    if (typeof pdfjsLib === 'undefined') {
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:#aaa;">PDF.js not loaded.</div>';
+      return;
+    }
+    const pdfDoc = await pdfjsLib.getDocument(entry.blobUrl).promise;
+    el.innerHTML = '';
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+      const page = await pdfDoc.getPage(pageNum);
+      const scale = Math.min(2, (el.clientWidth || window.innerWidth) / page.getViewport({scale:1}).width);
+      const viewport = page.getViewport({ scale: scale || 1.5 });
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `width:${viewport.width}px;max-width:100%;margin:0 auto 8px;position:relative;`;
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.cssText = 'width:100%;height:auto;display:block;';
+      wrap.appendChild(canvas);
+      el.appendChild(wrap);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    }
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#aaa;">Could not render PDF.</div>';
+  }
+}
+
 function triggerPdfLoad(pdfKey) {
-  requestAnimationFrame(() => loadPdfViewer(pdfKey));
+  // Use querySelectorAll to find ALL matching containers and render into each
+  requestAnimationFrame(() => {
+    document.querySelectorAll(`#pdfCanvasContainer_${pdfKey}`).forEach(el => {
+      renderPdfIntoElement(el, pdfKey);
+    });
+    // Also check loadPdfViewer for legacy paths
+    if (document.querySelectorAll(`#pdfCanvasContainer_${pdfKey}`).length === 0) {
+      loadPdfViewer(pdfKey);
+    }
+  });
 }
 
 // ── CSV BACKUP / RESTORE ──
@@ -12265,7 +12280,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.323</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.324</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
