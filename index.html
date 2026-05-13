@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.317</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.318</span>
       </div>
 
     </div>
@@ -4424,12 +4424,28 @@ async function renderChartsTab(songId, setIdx) {
     return url;
   };
 
-  const renderFileRow = (entry, removeCall) => `
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;margin-bottom:6px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px;flex-shrink:0;color:var(--red);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
-      <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="${removeCall}">Remove</button>
+  const renderFileRow = (entry, pdfKey, removeCall) => {
+    const blobUrl = window._pdfCache?.[pdfKey]?.blobUrl || null;
+    let pdfViewer = '';
+    if (!blobUrl && entry.data) {
+      // Build blob URL from IDB entry
+      const blob = new Blob([entry.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      if (!window._pdfCache) window._pdfCache = {};
+      window._pdfCache[pdfKey] = { blobUrl: url, name: entry.name };
+      pdfViewer = `<iframe src="${url}" class="pdf-viewer" style="min-height:600px;width:100%;border:none;border-radius:var(--radius);margin-top:8px;display:block;"></iframe>`;
+    } else if (blobUrl) {
+      pdfViewer = `<iframe src="${blobUrl}" class="pdf-viewer" style="min-height:600px;width:100%;border:none;border-radius:var(--radius);margin-top:8px;display:block;"></iframe>`;
+    }
+    return `<div style="margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px;flex-shrink:0;color:var(--red);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
+        <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="${removeCall}">Remove</button>
+      </div>
+      ${pdfViewer}
     </div>`;
+  };
 
   const renderImgItem = (entry, removeCall) => `
     <div style="position:relative;margin-bottom:8px;">
@@ -4452,7 +4468,7 @@ async function renderChartsTab(songId, setIdx) {
         Group Chart
       </div>
       <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Shared with all group members. Uploading replaces the previous file.</p>
-      ${effectiveSharedPdf ? renderFileRow(effectiveSharedPdf, `chartsRemoveSharedPdf('${songId}',${setIdx})`) : ''}
+      ${effectiveSharedPdf ? renderFileRow(effectiveSharedPdf, sharedPdf ? sharedPdfKey : defaultPdfKey, `chartsRemoveSharedPdf('${songId}',${setIdx})`) : ''}
       ${sharedImgs.map(e => renderImgItem(e, `chartsRemoveImg('${e.id}','${songId}',true,${setIdx})`)).join('')}
       ${!effectiveSharedPdf && !sharedImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No group chart uploaded yet.</p>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px;">
@@ -4476,7 +4492,7 @@ async function renderChartsTab(songId, setIdx) {
         My Part
       </div>
       <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Only visible to you.</p>
-      ${effectivePersonalPdf ? renderFileRow(effectivePersonalPdf, `chartsRemovePersonalPdf('${songId}',${setIdx})`) : ''}
+      ${effectivePersonalPdf ? renderFileRow(effectivePersonalPdf, personalPdf ? personalPdfKey : personalStdPdfKey, `chartsRemovePersonalPdf('${songId}',${setIdx})`) : ''}
       ${personalImgs.map(e => renderImgItem(e, `chartsRemoveImg('${e.id}','${songId}',false,${setIdx})`)).join('')}
       ${!effectivePersonalPdf && !personalImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No personal part uploaded yet.</p>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px;">
@@ -6854,7 +6870,6 @@ function swipeTo(idx, direction, skipAnimation) {
     window._fsNavigateTo(idx, direction);
     return;
   }
-  clearAllGhosts(); // remove any lingering ghost previews
   stopScroll();
   stopTuningFork();
   stopAudio();
@@ -12230,7 +12245,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.317</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.318</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
