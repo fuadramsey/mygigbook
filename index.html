@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.320</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.321</span>
       </div>
 
     </div>
@@ -4412,7 +4412,9 @@ async function renderChartsTab(songId, setIdx) {
         <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="${removeCall}">Remove</button>
       </div>
       <div id="pdfViewerWrap_${pdfKey}" style="position:relative;margin-top:4px;">
-        <div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Loading PDF…</div>
+        <div id="pdfCanvasContainer_${pdfKey}" style="width:100%;overflow-y:auto;background:#525659;border-radius:var(--radius);cursor:pointer;position:relative;touch-action:manipulation;" onclick="openFullscreenPdf('${pdfKey}')">
+          <div style="padding:20px;text-align:center;color:#ccc;font-size:13px;">Loading PDF…</div>
+        </div>
       </div>
     </div>`;
   };
@@ -12225,7 +12227,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.320</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.321</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
