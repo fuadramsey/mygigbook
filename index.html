@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.318</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.319</span>
       </div>
 
     </div>
@@ -4425,17 +4425,12 @@ async function renderChartsTab(songId, setIdx) {
   };
 
   const renderFileRow = (entry, pdfKey, removeCall) => {
-    const blobUrl = window._pdfCache?.[pdfKey]?.blobUrl || null;
-    let pdfViewer = '';
-    if (!blobUrl && entry.data) {
-      // Build blob URL from IDB entry
+    // Load into cache so triggerPdfLoad can find it
+    if (entry.data && !window._pdfCache?.[pdfKey]) {
       const blob = new Blob([entry.data], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       if (!window._pdfCache) window._pdfCache = {};
       window._pdfCache[pdfKey] = { blobUrl: url, name: entry.name };
-      pdfViewer = `<iframe src="${url}" class="pdf-viewer" style="min-height:600px;width:100%;border:none;border-radius:var(--radius);margin-top:8px;display:block;"></iframe>`;
-    } else if (blobUrl) {
-      pdfViewer = `<iframe src="${blobUrl}" class="pdf-viewer" style="min-height:600px;width:100%;border:none;border-radius:var(--radius);margin-top:8px;display:block;"></iframe>`;
     }
     return `<div style="margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
@@ -4443,7 +4438,9 @@ async function renderChartsTab(songId, setIdx) {
         <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</span>
         <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="${removeCall}">Remove</button>
       </div>
-      ${pdfViewer}
+      <div id="pdfViewerWrap_${pdfKey}" style="position:relative;margin-top:4px;">
+        <div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Loading PDF…</div>
+      </div>
     </div>`;
   };
 
@@ -4512,6 +4509,16 @@ async function renderChartsTab(songId, setIdx) {
   // load markup overlays
   const allChartsImgs = [...sharedImgs, ...personalImgs];
   if (allChartsImgs.length) loadImageMarkupOverlays(allChartsImgs.map(e => [e.id, { blobUrl: imgBlobUrl(e), name: e.name }]));
+
+  // Trigger PDF.js rendering for any PDFs shown
+  if (effectiveSharedPdf) {
+    const key = sharedPdf ? sharedPdfKey : defaultPdfKey;
+    requestAnimationFrame(() => triggerPdfLoad(key));
+  }
+  if (effectivePersonalPdf) {
+    const key = personalPdf ? personalPdfKey : personalStdPdfKey;
+    requestAnimationFrame(() => triggerPdfLoad(key));
+  }
 }
 
 async function chartsHandlePdf(e, songId, isShared, setIdx) {
@@ -12245,7 +12252,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.318</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.319</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
