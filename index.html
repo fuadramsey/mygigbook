@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.321</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.322</span>
       </div>
 
     </div>
@@ -3561,6 +3561,15 @@ function openNoteFullscreen(idx) {
       // Remove audio player from fullscreen view
       tmp.querySelectorAll('.audio-player, .audio-upload-zone, #audioPlayer, [id^="ap_"]').forEach(el => el.remove());
       scrollInner.innerHTML = tmp.innerHTML;
+      // Re-trigger PDF loading if on Charts tab (canvas elements don't survive innerHTML copy)
+      if (noteTab === 'charts') {
+        requestAnimationFrame(() => {
+          scrollInner.querySelectorAll('[id^="pdfCanvasContainer_"]').forEach(el => {
+            const pdfKey = el.id.replace('pdfCanvasContainer_', '');
+            if (window._pdfCache?.[pdfKey]) triggerPdfLoad(pdfKey);
+          });
+        });
+      }
     } else {
       scrollInner.innerHTML = '';
     }
@@ -12227,7 +12236,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.321</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.322</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
