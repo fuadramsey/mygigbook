@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.314</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.316</span>
       </div>
 
     </div>
@@ -3806,27 +3806,11 @@ function openNoteFullscreen(idx) {
       scrollInner.style.transition = '';
     };
     if (goLeft || goRight) {
-      // Snap commit animation
-      overlay.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
-      overlay.style.transform = `translateX(${goLeft ? -W : W}px)`;
-      if (overlay._adjSnap) {
-        overlay._adjSnap.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
-        overlay._adjSnap.style.transform = 'translateX(0)';
-      }
-      setTimeout(() => {
-        removeFsAdj();
-        fsNavigateTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
-      }, 180);
+      removeFsAdj();
+      fsNavigateTo(goLeft ? idx + 1 : idx - 1, goLeft ? 'left' : 'right');
     } else {
-      // Snap back
-      overlay.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
-      overlay.style.transform = 'translateX(0)';
-      if (overlay._adjSnap) {
-        const origin = fsDx < 0 ? W : -W;
-        overlay._adjSnap.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
-        overlay._adjSnap.style.transform = `translateX(${origin}px)`;
-      }
-      setTimeout(removeFsAdj, 230);
+      // Snap back instantly
+      removeFsAdj();
       setTimeout(() => { removeGhost(); }, 50);
     }
   }, { passive: true });
@@ -4447,13 +4431,21 @@ async function renderChartsTab(songId, setIdx) {
   const sharedImgPrefix = `charts_img_shared_${songId}`;
   const personalPdfKey = `charts_${user}_${songId}`;
   const personalImgPrefix = `charts_img_${user}_${songId}`;
+  // Also check standard PDF keys (uploaded via Add PDF button)
+  const defaultPdfKey = `default_${songId}`;
+  const personalStdPdfKey = `${user}_${songId}`;
 
   // load files from IndexedDB
-  const [sharedPdf, personalPdf, allImgs] = await Promise.all([
+  const [sharedPdf, personalPdf, defaultPdf, personalStdPdf, allImgs] = await Promise.all([
     dbGet('pdfs', sharedPdfKey),
     dbGet('pdfs', personalPdfKey),
+    dbGet('pdfs', defaultPdfKey),
+    dbGet('pdfs', personalStdPdfKey),
     dbAll('images')
   ]);
+  // Merge: charts-specific PDF takes priority, fall back to standard PDF
+  const effectiveSharedPdf = sharedPdf || defaultPdf || null;
+  const effectivePersonalPdf = personalPdf || personalStdPdf || null;
   const sharedImgs = allImgs.filter(e => e.id.startsWith(sharedImgPrefix + '_'));
   const personalImgs = allImgs.filter(e => e.id.startsWith(personalImgPrefix + '_'));
 
@@ -4495,9 +4487,9 @@ async function renderChartsTab(songId, setIdx) {
         Group Chart
       </div>
       <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Shared with all group members. Uploading replaces the previous file.</p>
-      ${sharedPdf ? renderFileRow(sharedPdf, `chartsRemoveSharedPdf('${songId}',${setIdx})`) : ''}
+      ${effectiveSharedPdf ? renderFileRow(effectiveSharedPdf, `chartsRemoveSharedPdf('${songId}',${setIdx})`) : ''}
       ${sharedImgs.map(e => renderImgItem(e, `chartsRemoveImg('${e.id}','${songId}',true,${setIdx})`)).join('')}
-      ${!sharedPdf && !sharedImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No group chart uploaded yet.</p>` : ''}
+      ${!effectiveSharedPdf && !sharedImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No group chart uploaded yet.</p>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px;">
         <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('chartsPdfShared_${songId}').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -4519,9 +4511,9 @@ async function renderChartsTab(songId, setIdx) {
         My Part
       </div>
       <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Only visible to you.</p>
-      ${personalPdf ? renderFileRow(personalPdf, `chartsRemovePersonalPdf('${songId}',${setIdx})`) : ''}
+      ${effectivePersonalPdf ? renderFileRow(effectivePersonalPdf, `chartsRemovePersonalPdf('${songId}',${setIdx})`) : ''}
       ${personalImgs.map(e => renderImgItem(e, `chartsRemoveImg('${e.id}','${songId}',false,${setIdx})`)).join('')}
-      ${!personalPdf && !personalImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No personal part uploaded yet.</p>` : ''}
+      ${!effectivePersonalPdf && !personalImgs.length ? `<p style="font-size:13px;color:var(--text3);font-style:italic;margin-bottom:8px;">No personal part uploaded yet.</p>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px;">
         <div class="pdf-upload-zone" style="flex:1;padding:10px 8px;flex-direction:row;gap:6px;" onclick="document.getElementById('chartsPdfPersonal_${songId}').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -7193,38 +7185,20 @@ function setupSwipe(idx) {
 
     if (goLeft || goRight) {
       const targetX = goLeft ? -W : W;
-      if (dragSnap) {
-        dragSnap.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
-        dragSnap.style.transform = `translateX(${targetX}px)`;
-      }
-      if (adjSnap) {
-        adjSnap.style.transition = 'transform 0.18s cubic-bezier(0.4,0,1,1)';
-        adjSnap.style.transform = 'translateX(0)';
-      }
+      if (dragSnap) dragSnap.style.transform = `translateX(${targetX}px)`;
+      if (adjSnap) adjSnap.style.transform = 'translateX(0)';
       const _adj = adjSnap; adjSnap = null;
       const newIdx = goLeft ? idx + 1 : idx - 1;
       dragging = false; _adjPrefetch = null;
-      // Delay render until after commit animation, keeping adjSnap as cover
-      setTimeout(() => {
-        if (dragSnap) { dragSnap.remove(); dragSnap = null; }
-        renderSongPage(newIdx).then(() => {
-          currentSongIdx = newIdx;
-          if (_adj) _adj.remove();
-          if (page) page.style.visibility = '';
-        });
-      }, 185);
+      if (dragSnap) { dragSnap.remove(); dragSnap = null; }
+      renderSongPage(newIdx).then(() => {
+        currentSongIdx = newIdx;
+        if (_adj) _adj.remove();
+        if (page) page.style.visibility = '';
+      });
     } else {
-      // Snap back
-      if (dragSnap) {
-        dragSnap.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
-        dragSnap.style.transform = 'translateX(0)';
-      }
-      if (adjSnap) {
-        const adjOrigin = dx < 0 ? W : -W;
-        adjSnap.style.transition = 'transform 0.22s cubic-bezier(0.2,0,0.4,1)';
-        adjSnap.style.transform = `translateX(${adjOrigin}px)`;
-      }
-      setTimeout(cancelDrag, 230);
+      // Snap back instantly
+      cancelDrag();
     }
 
     if (dragging || wasPinch) {
@@ -12352,7 +12326,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.314</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.316</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
