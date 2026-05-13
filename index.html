@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.319</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.320</span>
       </div>
 
     </div>
@@ -3728,31 +3728,6 @@ function openNoteFullscreen(idx) {
     if (!fsDragging && Math.abs(fsDx) > 8) {
       if (absDy > Math.abs(fsDx)) return; // vertical — ignore
       fsDragging = true;
-      const canNext2 = idx < currentSetSongs.length - 1;
-      const canPrev2 = idx > 0;
-      // Build fixed adjSnap for the incoming song
-      if (fsDx < 0 && canNext2 && !overlay._adjSnap) {
-        overlay._adjSnap = buildFsAdjSnap(idx + 1, 'right');
-      } else if (fsDx > 0 && canPrev2 && !overlay._adjSnap) {
-        overlay._adjSnap = buildFsAdjSnap(idx - 1, 'left');
-      }
-      // Also slide the current overlay content with the finger
-      scrollInner.style.transition = 'none';
-    }
-    if (fsDragging) {
-      const canNext = idx < currentSetSongs.length - 1;
-      const canPrev = idx > 0;
-      let clamped = fsDx;
-      if (fsDx < 0 && !canNext) clamped = fsDx * 0.2;
-      if (fsDx > 0 && !canPrev) clamped = fsDx * 0.2;
-      const fsW = overlay.offsetWidth || window.innerWidth;
-      // Slide current content out with finger
-      overlay.style.transform = `translateX(${clamped * 0.92}px)`;
-      // Slide incoming content in from opposite side
-      if (overlay._adjSnap) {
-        const startX = fsDx < 0 ? fsW : -fsW;
-        overlay._adjSnap.style.transform = `translateX(${startX + clamped * 0.92}px)`;
-      }
     }
   }, { passive: true });
 
@@ -3766,9 +3741,7 @@ function openNoteFullscreen(idx) {
     const goLeft  = fsDx < 0 && idx < currentSetSongs.length - 1 && committed;
     const goRight = fsDx > 0 && idx > 0 && committed;
     const removeFsAdj = () => {
-      if (overlay._adjSnap) { overlay._adjSnap.remove(); overlay._adjSnap = null; }
-      overlay.style.transition = ''; overlay.style.transform = '';
-      scrollInner.style.transition = '';
+      overlay.style.transform = '';
     };
     if (goLeft || goRight) {
       removeFsAdj();
@@ -12252,7 +12225,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.319</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.320</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
