@@ -232,7 +232,7 @@
       </button>
 
       <!-- Centered nav group — max-width keeps it compact on wide screens -->
-      <div id="songTopNav" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:0 48px 0 48px;">
+      <div id="songTopNav" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:0 40px 0 44px;">
 
       <!-- Prev nav button — chevron left, song name centered -->
       <button id="songNavPrev" onclick="swipeTo(currentSongIdx-1,'right')" title="Previous song"
@@ -246,7 +246,7 @@
       </button>
 
       <!-- Center: set name (clickable dropdown) + counter -->
-      <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden;min-width:0;max-width:130px;">
+      <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden;min-width:0;max-width:90px;">
         <button id="songPageSetName" onclick="openSetlistDropdown()" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(17px,2.5vw,22px);letter-spacing:1.5px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.1;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:6px;display:flex;align-items:center;gap:4px;">
           <span id="songPageSetNameText"></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;flex-shrink:0;color:var(--accent);"><path d="M6 9l6 6 6-6"/></svg>
@@ -1006,7 +1006,7 @@
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.341</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.342</span>
       </div>
 
     </div>
@@ -1089,7 +1089,7 @@ function buildListenContent(e){const t=e.spotifyUrl,n=e.youtubeUrl,o=encodeURICo
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.341</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.342</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
