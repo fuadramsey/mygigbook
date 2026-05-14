@@ -232,14 +232,14 @@
       </button>
 
       <!-- Centered nav group — max-width keeps it compact on wide screens -->
-      <div id="songTopNav" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:0 40px 0 44px;">
+      <div id="songTopNav" style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;padding:0 44px 0 44px;">
 
       <!-- Prev nav button — chevron left, song name centered -->
       <button id="songNavPrev" onclick="swipeTo(currentSongIdx-1,'right')" title="Previous song"
         style="display:flex;align-items:center;justify-content:space-between;gap:4px;
                background:var(--surface2);border:1px solid var(--border);border-radius:8px;
-               padding:clamp(5px,1.2vw,10px) clamp(8px,1.5vw,16px);flex:1;min-width:0;cursor:pointer;color:var(--text);
-               transition:background 0.15s;height:clamp(44px,6vw,64px);">
+               padding:6px 10px;width:clamp(80px,28vw,160px);flex-shrink:0;cursor:pointer;color:var(--text);
+               transition:background 0.15s;height:44px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:clamp(16px,2.5vw,24px);height:clamp(16px,2.5vw,24px);flex-shrink:0;"><path d="M15 18l-6-6 6-6"/></svg>
         <span id="songNavPrevLabel" style="font-size:clamp(13px,2.5vw,22px);font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1;"></span>
         <span style="width:clamp(16px,2.5vw,24px);flex-shrink:0;"></span>
@@ -258,8 +258,8 @@
       <button id="songNavNext" onclick="swipeTo(currentSongIdx+1,'left')" title="Next song"
         style="display:flex;align-items:center;justify-content:space-between;gap:4px;
                background:var(--surface2);border:1px solid var(--border);border-radius:8px;
-               padding:clamp(5px,1.2vw,10px) clamp(8px,1.5vw,16px);flex:1;min-width:0;cursor:pointer;color:var(--text);
-               transition:background 0.15s;height:clamp(44px,6vw,64px);">
+               padding:6px 10px;width:clamp(80px,28vw,160px);flex-shrink:0;cursor:pointer;color:var(--text);
+               transition:background 0.15s;height:44px;">
         <span style="width:clamp(16px,2.5vw,24px);flex-shrink:0;"></span>
         <span id="songNavNextLabel" style="font-size:clamp(13px,2.5vw,22px);font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1;"></span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:clamp(16px,2.5vw,24px);height:clamp(16px,2.5vw,24px);flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
@@ -1006,7 +1006,7 @@
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.342</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.343</span>
       </div>
 
     </div>
@@ -1089,7 +1089,7 @@ function buildListenContent(e){const t=e.spotifyUrl,n=e.youtubeUrl,o=encodeURICo
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.342</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.343</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
