@@ -1824,7 +1824,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.325</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β.326</span>
       </div>
 
     </div>
@@ -2293,12 +2293,12 @@ async function loadAudioHybrid(songId) {
 async function loadAllAudioForSong(songId) {
   // Load ALL audio entries for a song into _audioCache, return array of keys
   const all = await dbAll('audio');
-  const keys = all
+  const localKeys = all
     .filter(e => e.id === `audio_${songId}` || e.id.startsWith(`audio_${songId}_`))
     .sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0))
     .map(e => e.id);
   window._audioCache = window._audioCache || {};
-  for (const key of keys) {
+  for (const key of localKeys) {
     if (window._audioCache[key]?.blobUrl) continue;
     const entry = await dbGet('audio', key);
     if (entry?.data) {
@@ -2306,7 +2306,23 @@ async function loadAllAudioForSong(songId) {
       window._audioCache[key] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true };
     }
   }
-  return keys.filter(k => window._audioCache[k]?.blobUrl);
+  // Also check Firebase Storage for audio files not in local IDB
+  if (fbReady && online && window._fb?.getDocs) {
+    try {
+      const fb = window._fb;
+      const snap = await fb.getDocs(fb.collection(fb.db, 'files'));
+      for (const d of snap.docs) {
+        const m = d.data();
+        if (m.songId !== songId || m.type !== 'audio' || !m.downloadUrl) continue;
+        const key = m.fileId || `audio_${songId}_${m.uploadedAt || Date.now()}`;
+        if (window._audioCache[key]?.blobUrl) continue;
+        // Add cloud entry to cache with downloadUrl as blobUrl
+        window._audioCache[key] = { name: m.name || 'audio', blobUrl: m.downloadUrl, mimeType: m.mimeType || 'audio/mpeg', cloud: true };
+        if (!localKeys.includes(key)) localKeys.push(key);
+      }
+    } catch(e) {}
+  }
+  return localKeys.filter(k => window._audioCache[k]?.blobUrl);
 }
 
 // Check if audio exists in cloud (Firestore files collection)
@@ -12281,7 +12297,7 @@ init().catch(console.error);
     <button class="btn primary" onclick="doRegister()" style="width:100%;padding:12px;">Create Account</button>
     <div class="login-link" onclick="showPanel('signin')">← Back to sign in</div>
   </div>
-  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.325</div>
+  <div style="position:fixed;bottom:12px;right:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;pointer-events:none;">β.326</div>
 </div>
 
 <!-- ── ADMIN PANEL MODAL ── -->
