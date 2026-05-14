@@ -19,8 +19,8 @@ const largest = scriptMatches.reduce((a, b) => b[1].length > a[1].length ? b : a
 const rawJS = largest[1];
 fs.writeFileSync('/tmp/mgb.js', rawJS);
 
-// ── Minify JS — compress only, NO mangling ──
-// Mangling renames functions but HTML onclick handlers use original names
+// ── Minify JS — compress only, NO name mangling ──
+// Mangling renames functions but HTML onclick= handlers use original names
 execSync([
   'terser /tmp/mgb.js',
   '--compress',
