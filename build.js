@@ -1,10 +1,6 @@
-// MyGigBook build script update
-// Extracts JS and CSS from index.html, minifies each, reassembles
-// Run: node build.js
-
+// MyGigBook build script
 const fs = require('fs');
 const { execSync } = require('child_process');
-const path = require('path');
 
 const src = fs.readFileSync('index.html', 'utf8');
 
@@ -17,18 +13,21 @@ execSync('cleancss -o /tmp/mgb.min.css /tmp/mgb.css');
 const minCSS = fs.readFileSync('/tmp/mgb.min.css', 'utf8');
 console.log(`CSS: ${rawCSS.length} → ${minCSS.length} bytes (${Math.round((1-minCSS.length/rawCSS.length)*100)}% reduction)`);
 
-// ── Extract and minify main app JS (largest <script> without type="module") ──
-// Find the largest plain <script> block
+// ── Extract largest <script> block ──
 const scriptMatches = [...src.matchAll(/<script(?! type)(?![^>]*type)[^>]*>([\s\S]*?)<\/script>/g)];
 const largest = scriptMatches.reduce((a, b) => b[1].length > a[1].length ? b : a);
 const rawJS = largest[1];
 fs.writeFileSync('/tmp/mgb.js', rawJS);
+
+// ── Minify JS — compress only, NO mangling ──
+// Mangling renames functions but HTML onclick handlers use original names
 execSync([
   'terser /tmp/mgb.js',
   '--compress',
-  '--mangle',
+  '--no-rename',
   '--output /tmp/mgb.min.js'
 ].join(' '));
+
 const minJS = fs.readFileSync('/tmp/mgb.min.js', 'utf8');
 console.log(`JS:  ${rawJS.length} → ${minJS.length} bytes (${Math.round((1-minJS.length/rawJS.length)*100)}% reduction)`);
 
@@ -41,12 +40,8 @@ out = out.replace(largest[0], `<script>${minJS}</script>`);
 fs.mkdirSync('dist', { recursive: true });
 fs.writeFileSync('dist/index.html', out);
 
-// Copy static assets
 ['sw.js', 'manifest.json', 'icon192.png', 'icon512.png'].forEach(f => {
-  if (fs.existsSync(f)) {
-    fs.copyFileSync(f, `dist/${f}`);
-    console.log(`Copied: ${f}`);
-  }
+  if (fs.existsSync(f)) { fs.copyFileSync(f, `dist/${f}`); console.log(`Copied: ${f}`); }
 });
 
 const original = src.length;
