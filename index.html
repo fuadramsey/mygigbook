@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.56</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.57</span>
       </div>
 
     </div>
@@ -2871,21 +2871,33 @@ function setMyNotesSpacing(val) {
     b.style.color = v === parseFloat(val) ? '#000' : '';
     b.style.fontWeight = v === parseFloat(val) ? '700' : '';
   });
-  _applyMyNotesSpacing(val);
+  _applyMyNotesSpacingToSelection(val);
 }
-function _applyMyNotesSpacing(val) {
-  const v = parseFloat(val);
-  // line-height values: 0=compact, 0.5=medium, 1=loose
-  const lhMap = {'0': '1.8', '0.5': '3.2', '1': '5'};
-  const lh = lhMap[String(v)] || '1.8';
-  // inject/update a dedicated style tag so it beats all CSS specificity
-  let styleTag = document.getElementById('mnSpacingStyle');
-  if (!styleTag) {
-    styleTag = document.createElement('style');
-    styleTag.id = 'mnSpacingStyle';
-    document.head.appendChild(styleTag);
+function _applyMyNotesSpacingToSelection(val) {
+  const lhMap = {'0': '1', '0.5': '1.8', '1': '3'};
+  const lh = lhMap[String(parseFloat(val))] || '1';
+  const editor = document.getElementById('seMyNotes');
+  if (!editor) return;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  // Wrap the selected content in a span with line-height
+  // Use execCommand fontSize trick to preserve selection, then wrap
+  const span = document.createElement('span');
+  span.style.lineHeight = lh;
+  try {
+    range.surroundContents(span);
+  } catch(e) {
+    // selection spans multiple nodes — extract and wrap
+    const frag = range.extractContents();
+    span.appendChild(frag);
+    range.insertNode(span);
   }
-  styleTag.textContent = `#seMyNotes { line-height: ${lh} !important; } #myNotesNote { line-height: ${lh} !important; }`;
+  // restore selection around the new span
+  const newRange = document.createRange();
+  newRange.selectNodeContents(span);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
 }
 
 // ── DOUBLE-TAP FULLSCREEN for note area ──
@@ -5810,7 +5822,7 @@ function renderSETab() {
             </div>
             <div class="note-display" id="myNotesNote" style="white-space:pre-wrap;min-height:80px;font-size:${Math.round(20*myNotesZoom)}px;line-height:${1.9*myNotesZoom};">${myNoteHtml}</div>`
           : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
-      if (myNoteHtml) _applyMyNotesSpacing(myNotesSpacing);
+      // spacing is stored inline in the HTML spans — no extra apply needed
     } else {
       // EDIT view
       body.innerHTML = `
@@ -5840,7 +5852,7 @@ function renderSETab() {
           <button id="mnSp1" class="scroll-speed-btn mn-spacing-btn${(window._seMyNotesSpacing||0)===1?' active':''}" onclick="setMyNotesSpacing(1)" style="width:30px;height:22px;font-size:11px;">1</button>
         </div>
         <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
-      _applyMyNotesSpacing(window._seMyNotesSpacing || 0);
+      // spacing is stored inline in the HTML spans — no extra apply needed
     }
     // async audio inject if not cached
     if (id && !window._audioCache?.[`audio_${id}`]) {
