@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.52</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.53</span>
       </div>
 
     </div>
@@ -2861,12 +2861,16 @@ function setMyNotesSpacing(val) {
   document.querySelectorAll('.mn-spacing-btn').forEach(b => {
     b.classList.toggle('active', parseFloat(b.dataset.val) === parseFloat(val));
   });
+  _applyMyNotesSpacing(val);
 }
 function _applyMyNotesSpacing(val) {
   let st = document.getElementById('myNotesSpacingStyle');
   if (!st) { st = document.createElement('style'); st.id = 'myNotesSpacingStyle'; document.head.appendChild(st); }
   const em = parseFloat(val) + 'em';
-  st.textContent = parseFloat(val) > 0 ? `#myNotesNote p, #myNotesNote div { margin-bottom: ${em}; }` : '';
+  // targets both edit (#seMyNotes) and read-only (#myNotesNote) elements
+  st.textContent = parseFloat(val) > 0
+    ? `#seMyNotes p, #seMyNotes div, #myNotesNote p, #myNotesNote div { margin-bottom: ${em}; }`
+    : '#seMyNotes p, #seMyNotes div, #myNotesNote p, #myNotesNote div { margin-bottom: 0; }';
 }
 
 // ── DOUBLE-TAP FULLSCREEN for note area ──
@@ -5821,6 +5825,7 @@ function renderSETab() {
           <button class="scroll-speed-btn mn-spacing-btn${(window._seMyNotesSpacing||0)===1?' active':''}" data-val="1" onclick="setMyNotesSpacing(1)" title="Full-line paragraph spacing" style="width:30px;height:22px;font-size:11px;">1</button>
         </div>
         <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
+      _applyMyNotesSpacing(window._seMyNotesSpacing || 0);
     }
     // async audio inject if not cached
     if (id && !window._audioCache?.[`audio_${id}`]) {
