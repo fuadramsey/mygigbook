@@ -1069,10 +1069,9 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <div id="dbDetailTabBar" style="display:none;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
           <div style="display:flex;align-items:center;">
             <div style="flex:1;display:flex;">
-              <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" >Details</button>
+              <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" >Lyrics</button>
               <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
-              <button class="note-tab" id="se-tab-links" onclick="switchSETab('links')" >Links</button>
-              <button class="note-tab" id="se-tab-attachments" onclick="switchSETab('attachments')" >Attachments</button>
+              <button class="note-tab" id="se-tab-media" onclick="switchSETab('media')" >Media</button>
               <button class="note-tab" id="se-tab-charts" onclick="switchSETab('charts')" >Charts</button>
             </div>
             <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
@@ -1140,10 +1139,9 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
   <!-- Tab bar -->
   <div class="note-tab-bar" style="display:flex;align-items:center;flex-shrink:0;">
     <div style="flex:1;display:flex;">
-      <button class="note-tab active" id="sep-tab-details" onclick="switchSETab('details')" >Details</button>
+      <button class="note-tab active" id="sep-tab-details" onclick="switchSETab('details')" >Lyrics</button>
       <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
-      <button class="note-tab" id="sep-tab-links" onclick="switchSETab('links')" >Links</button>
-      <button class="note-tab" id="sep-tab-attachments" onclick="switchSETab('attachments')" >Attachments</button>
+      <button class="note-tab" id="sep-tab-media" onclick="switchSETab('media')" >Media</button>
       <button class="note-tab" id="sep-tab-charts" onclick="switchSETab('charts')" >Charts</button>
     </div>
     <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
@@ -1571,7 +1569,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.47</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.49</span>
       </div>
 
     </div>
@@ -3345,13 +3343,15 @@ async function renderSongPage(idx) {
   document.getElementById('songPageBody').innerHTML = `
     <div class="song-page-fixed">
       <div class="song-page-header">
-        <div style="text-align:center;min-width:0;">
-          <div class="song-page-title" style="font-size:clamp(33px,7.5vw,60px);">${esc(s.title)}</div>
-          ${s.artist?`<div class="song-page-artist" style="margin-bottom:6px;">${esc(s.artist)}</div>`:''}
-          <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
-            ${s.key?`<span class="chip accent">${esc(s.key)}</span>`:''}
-            ${s.duration?`<span class="chip">${esc(s.duration)}</span>`:''}
-            ${s.bpm?`<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo">
+        <div style="display:flex;align-items:center;width:100%;min-width:0;gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <div class="song-page-title" style="font-size:clamp(33px,7.5vw,60px);">${esc(s.title)}</div>
+            ${s.artist?`<div class="song-page-artist" style="margin-bottom:4px;">${esc(s.artist)}</div>`:''}
+            ${s.duration?`<span class="chip" style="font-size:12px;">${esc(s.duration)}</span>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+            ${s.key?`<span class="chip accent" style="font-size:14px;padding:4px 12px;">${esc(s.key)}</span>`:''}
+            ${s.bpm?`<span class="chip bpm-chip" id="bpmChip" onclick="startBpmFlash(${s.bpm})" title="Tap to flash tempo" style="font-size:12px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
               ${s.bpm} BPM<span class="bpm-hint">▶</span>
             </span>`:''}
@@ -3375,18 +3375,7 @@ async function renderSongPage(idx) {
           <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:18px;width:32px;height:32px;">+</button>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <div class="scroll-toolbar" id="scrollToolbar" style="display:flex;">
-            <button class="scroll-play-btn" id="scrollPlayBtn" onclick="toggleScroll()" title="Auto-scroll">
-              ${scrollPlaying
-                ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`}
-            </button>
-            <div style="width:8px;flex-shrink:0;"></div>
-            <button class="scroll-speed-btn" onclick="changeSpeed(-1)" title="Slower">−</button>
-            <span class="scroll-speed-label" id="scrollSpeedLabel">×${scrollSpeed}</span>
-            <button class="scroll-speed-btn" onclick="changeSpeed(1)" title="Faster">+</button>
-          </div>
-          <button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
+<button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
             style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
           </button>
@@ -3672,46 +3661,20 @@ function buildListenContent(s) {
 function buildFullAudioPlayer(audioKey, idx) {
   const entry = window._audioCache?.[audioKey];
   if (!entry) return '';
-  return `<div class="audio-player" id="audioPlayer">
-    <div class="audio-player-top">
-      <button class="audio-play-btn" id="audioPlayBtn" onclick="toggleAudio('${audioKey}',${idx})">
-        <svg viewBox="0 0 24 24" id="audioPlayIcon"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-      <div class="audio-info">
-        <div class="audio-name">${esc(entry.name)}</div>
-        <div class="audio-time" id="audioTime">0:00 / 0:00</div>
+  return `<div class="audio-player-compact" id="audioPlayer" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;">
+    <button class="audio-play-btn" id="audioPlayBtn" onclick="toggleAudio('${audioKey}',${idx})" style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg viewBox="0 0 24 24" id="audioPlayIcon" fill="#000" style="width:14px;height:14px;"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:12px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</div>
+      <div style="margin-top:4px;height:3px;background:var(--border2);border-radius:2px;cursor:pointer;" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
+        <div id="audioProgressFill" style="height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width 0.1s linear;"></div>
       </div>
-      <button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="removeAudio('${audioKey}',${idx})" title="Remove audio">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace;" id="audioTime">0:00 / 0:00</div>
     </div>
-    <div class="audio-progress-wrap" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
-      <div class="audio-progress-fill" id="audioProgressFill"></div>
-      <div class="audio-loop-region" id="audioLoopRegion" style="display:none;left:0%;width:0%;"></div>
-      <div class="audio-loop-marker start" id="audioLoopMarkerStart" style="display:none;left:0%;"></div>
-      <div class="audio-loop-marker end" id="audioLoopMarkerEnd" style="display:none;left:0%;"></div>
-    </div>
-    <div class="loop-controls">
-      <button class="loop-btn set-start" onclick="setLoopStart()" title="Set loop start">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><line x1="5" y1="4" x2="5" y2="20"/><polyline points="5,4 15,12 5,20"/></svg>
-        Set Start
-      </button>
-      <span class="loop-time-label" id="loopStartLabel">—</span>
-      <button class="loop-btn set-end" onclick="setLoopEnd()" title="Set loop end" style="border-color:rgba(255,153,0,0.4);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;color:#ff9900;"><line x1="19" y1="4" x2="19" y2="20"/><polyline points="19,4 9,12 19,20"/></svg>
-        Set End
-      </button>
-      <span class="loop-time-label" id="loopEndLabel">—</span>
-      <div style="flex:1;"></div>
-      <button class="loop-btn" id="loopToggleBtn" onclick="toggleLoop()" title="Toggle loop">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-        Loop
-      </button>
-      <button class="loop-btn" onclick="clearLoop()" title="Clear loop markers" style="color:var(--red);border-color:rgba(255,68,68,0.3);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0;"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        Clear
-      </button>
-    </div>
+    <button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3);flex-shrink:0;" onclick="removeAudio('${audioKey}',${idx})" title="Remove audio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
   </div>`;
 }
 
@@ -5763,7 +5726,7 @@ function switchSETab(tab) {
   sePersistCurrentTab();
   seTab = tab;
   // update both DB panel tabs and pg-song-edit tabs
-  ['details','mynotes','links','attachments','charts'].forEach(t => {
+  ['details','mynotes','media','charts'].forEach(t => {
     const btn1 = document.getElementById(`se-tab-${t}`);
     const btn2 = document.getElementById(`sep-tab-${t}`);
     if (btn1) btn1.classList.toggle('active', t === tab);
@@ -5793,7 +5756,7 @@ function sePersistCurrentTab() {
     if (titleEl && s.title) titleEl.textContent = s.title;
   } else if (seTab === 'mynotes') {
     window._seMyNotesHtml = document.getElementById('seMyNotes')?.innerHTML || window._seMyNotesHtml || '';
-  } else if (seTab === 'links') {
+  } else if (seTab === 'media') {
     s.spotifyUrl = document.getElementById('fSpotify')?.value.trim() || null;
     s.youtubeUrl = document.getElementById('fYoutube')?.value.trim() || null;
   }
@@ -6005,8 +5968,9 @@ function renderSETab() {
         body.insertBefore(wrap.firstChild, body.firstChild);
       });
     }
-  } else if (seTab === 'links') {
+  } else if (seTab === 'media') {
     body.innerHTML = `
+      <div class="settings-section-label" style="margin-bottom:8px;">Links</div>
       <div class="form-group" style="margin-bottom:14px;">
         <label class="form-label" style="display:flex;align-items:center;gap:8px;">
           <div style="width:18px;height:18px;background:#1DB954;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 01.207.857zm1.223-2.722a.778.778 0 01-1.07.257c-2.687-1.652-6.785-2.131-9.965-1.166a.778.778 0 01-.966-.519.779.779 0 01.519-.966c3.632-1.102 8.147-.568 11.224 1.324a.778.778 0 01.258 1.07zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.532-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.955 1.609z"/></svg></div>
@@ -6015,16 +5979,14 @@ function renderSETab() {
         </label>
         <input class="form-input" id="fSpotify" placeholder="Paste Spotify URL here…" type="url" value="${esc(s.spotifyUrl||'')}">
       </div>
-      <div class="form-group">
+      <div class="form-group" style="margin-bottom:20px;">
         <label class="form-label" style="display:flex;align-items:center;gap:8px;">
           <div style="width:18px;height:18px;background:#FF0000;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="white" style="width:11px;height:11px;"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>
           YouTube URL
           <button type="button" onclick="openModalPlatformSearch('youtube')" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Search</button>
         </label>
         <input class="form-input" id="fYoutube" placeholder="Paste YouTube URL here…" type="url" value="${esc(s.youtubeUrl||'')}">
-      </div>`;
-  } else if (seTab === 'attachments') {
-    body.innerHTML = `
+      </div>
       <div class="settings-section-label" style="margin-bottom:8px;">Audio</div>
       <div id="fAudioStatus" style="margin-bottom:8px;"></div>
       <button type="button" class="edit-note-btn" onclick="modalAttachAudio()" style="margin-top:0;">
@@ -6230,7 +6192,7 @@ async function openSongModal(id) {
   if (dCancelBtn) dCancelBtn.style.display = 'none';
 
   document.getElementById('editSongId').value = id || '';
-  ['details','mynotes','links','attachments','charts'].forEach(t => {
+  ['details','mynotes','media','charts'].forEach(t => {
     const btn1 = document.getElementById(`se-tab-${t}`);
     const btn2 = document.getElementById(`sep-tab-${t}`);
     if (btn1) btn1.classList.toggle('active', t === seTab);
@@ -6333,7 +6295,7 @@ async function loadSongIntoSEPage(id) {
   if (dCancelBtn) dCancelBtn.style.display = 'none';
 
   document.getElementById('editSongId').value = id || '';
-  ['details','mynotes','links','attachments','charts'].forEach(t => {
+  ['details','mynotes','media','charts'].forEach(t => {
     const b1 = document.getElementById(`se-tab-${t}`);
     const b2 = document.getElementById(`sep-tab-${t}`);
     if (b1) b1.classList.toggle('active', t === seTab);
@@ -6399,7 +6361,7 @@ async function handleModalPdfFile(e) {
     <button class="btn ghost" style="padding:3px 8px;font-size:11px;" onclick="modalRemovePdf('${songId}')">Remove</button>
   </div>`;
   showToast('PDF attached', 'ok');
-  if (document.getElementById('editSongId').value) switchSETab('attachments');
+  if (document.getElementById('editSongId').value) switchSETab('media');
 }
 
 async function modalRemovePdf(songId) {
@@ -6431,7 +6393,7 @@ async function handleModalImgFile(e) {
   const imgs = (await dbAll('images')).filter(e => e.id.startsWith(`img_default_${songId}_`));
   refreshModalImgGrid(songId, imgs);
   showToast('Image attached', 'ok');
-  if (document.getElementById('editSongId').value) switchSETab('attachments');
+  if (document.getElementById('editSongId').value) switchSETab('media');
 }
 
 async function modalRemoveImg(imageId, songId) {
@@ -6469,7 +6431,7 @@ async function handleModalAudioFile(e) {
       const blob = new Blob([ab], { type: f.type || 'audio/mpeg' });
       window._audioCache = window._audioCache || {};
       window._audioCache[audioKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType: f.type };
-      switchSETab('attachments');
+      switchSETab('media');
       showToast('Audio saved', 'ok');
     } else {
       // new song — queue for save
@@ -7992,8 +7954,7 @@ async function updateGroupFilterChips() {
 
 function renderGroupMembersStrip(group) {
   const strips = [
-    { stripId: 'groupMembersStrip', innerId: 'groupMembersInner' },
-    { stripId: 'groupMembersStripDb', innerId: 'groupMembersInnerDb' }
+    { stripId: 'groupMembersStrip', innerId: 'groupMembersInner' }
   ];
   for (const { stripId, innerId } of strips) {
     const strip = document.getElementById(stripId);
