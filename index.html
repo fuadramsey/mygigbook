@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.58</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.59</span>
       </div>
 
     </div>
@@ -2880,12 +2880,21 @@ function _applyMyNotesSpacingToSelection(val) {
   if (!editor) return;
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-  // Use execCommand('fontSize') as a selection marker — it wraps selected
-  // text in <font size="X"> tags even across <br> nodes, then we replace them.
-  const MARKER = '7'; // size 7 is rarely used, serves as our unique marker
+  // Use execCommand('fontSize') as a selection marker — browser handles
+  // cross-node wrapping, producing <font size="7"> around exactly the selection.
+  const MARKER = '7';
   document.execCommand('fontSize', false, MARKER);
-  // Now find all <font size="7"> elements inside the editor and replace with styled spans
+  // Replace every <font size="7"> with a styled span.
+  // Also unwrap any existing line-height spans INSIDE the new font tag
+  // so re-applying to the same text always takes effect.
   editor.querySelectorAll(`font[size="${MARKER}"]`).forEach(font => {
+    // flatten nested line-height spans inside this font tag
+    font.querySelectorAll('span[style*="line-height"]').forEach(inner => {
+      // replace inner span with just its children
+      const parent = inner.parentNode;
+      while (inner.firstChild) parent.insertBefore(inner.firstChild, inner);
+      parent.removeChild(inner);
+    });
     const span = document.createElement('span');
     span.style.lineHeight = lh;
     span.innerHTML = font.innerHTML;
