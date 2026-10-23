@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.57</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.58</span>
       </div>
 
     </div>
@@ -2880,24 +2880,17 @@ function _applyMyNotesSpacingToSelection(val) {
   if (!editor) return;
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-  const range = sel.getRangeAt(0);
-  // Wrap the selected content in a span with line-height
-  // Use execCommand fontSize trick to preserve selection, then wrap
-  const span = document.createElement('span');
-  span.style.lineHeight = lh;
-  try {
-    range.surroundContents(span);
-  } catch(e) {
-    // selection spans multiple nodes — extract and wrap
-    const frag = range.extractContents();
-    span.appendChild(frag);
-    range.insertNode(span);
-  }
-  // restore selection around the new span
-  const newRange = document.createRange();
-  newRange.selectNodeContents(span);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
+  // Use execCommand('fontSize') as a selection marker — it wraps selected
+  // text in <font size="X"> tags even across <br> nodes, then we replace them.
+  const MARKER = '7'; // size 7 is rarely used, serves as our unique marker
+  document.execCommand('fontSize', false, MARKER);
+  // Now find all <font size="7"> elements inside the editor and replace with styled spans
+  editor.querySelectorAll(`font[size="${MARKER}"]`).forEach(font => {
+    const span = document.createElement('span');
+    span.style.lineHeight = lh;
+    span.innerHTML = font.innerHTML;
+    font.parentNode.replaceChild(span, font);
+  });
 }
 
 // ── DOUBLE-TAP FULLSCREEN for note area ──
