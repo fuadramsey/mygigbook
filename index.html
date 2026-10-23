@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.53</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.54</span>
       </div>
 
     </div>
@@ -2855,22 +2855,20 @@ function changeMyNotesZoom(delta, key) {
   if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
 }
 
+const MY_NOTES_SPACING_LH = { 0: 1.8, 0.5: 2.6, 1: 3.5 };
 function setMyNotesSpacing(val) {
   window._seMyNotesSpacing = parseFloat(val);
-  // update button active states
   document.querySelectorAll('.mn-spacing-btn').forEach(b => {
     b.classList.toggle('active', parseFloat(b.dataset.val) === parseFloat(val));
   });
   _applyMyNotesSpacing(val);
 }
 function _applyMyNotesSpacing(val) {
-  let st = document.getElementById('myNotesSpacingStyle');
-  if (!st) { st = document.createElement('style'); st.id = 'myNotesSpacingStyle'; document.head.appendChild(st); }
-  const em = parseFloat(val) + 'em';
-  // targets both edit (#seMyNotes) and read-only (#myNotesNote) elements
-  st.textContent = parseFloat(val) > 0
-    ? `#seMyNotes p, #seMyNotes div, #myNotesNote p, #myNotesNote div { margin-bottom: ${em}; }`
-    : '#seMyNotes p, #seMyNotes div, #myNotesNote p, #myNotesNote div { margin-bottom: 0; }';
+  const lh = MY_NOTES_SPACING_LH[parseFloat(val)] ?? 1.8;
+  const edit = document.getElementById('seMyNotes');
+  if (edit) edit.style.lineHeight = lh;
+  const view = document.getElementById('myNotesNote');
+  if (view) view.style.lineHeight = lh;
 }
 
 // ── DOUBLE-TAP FULLSCREEN for note area ──
@@ -5795,7 +5793,7 @@ function renderSETab() {
             </div>
             <div class="note-display" id="myNotesNote" style="white-space:pre-wrap;min-height:80px;font-size:${Math.round(20*myNotesZoom)}px;line-height:${1.9*myNotesZoom};">${myNoteHtml}</div>`
           : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
-      if (myNoteHtml && myNotesSpacing > 0) _applyMyNotesSpacing(myNotesSpacing);
+      if (myNoteHtml) _applyMyNotesSpacing(myNotesSpacing);
     } else {
       // EDIT view
       body.innerHTML = `
