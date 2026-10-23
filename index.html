@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.50</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.52</span>
       </div>
 
     </div>
@@ -2853,6 +2853,20 @@ function changeMyNotesZoom(delta, key) {
   if (label) label.textContent = Math.round(newZoom * 100) + '%';
   const note = document.getElementById('myNotesNote');
   if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
+}
+
+function setMyNotesSpacing(val) {
+  window._seMyNotesSpacing = parseFloat(val);
+  // update button active states
+  document.querySelectorAll('.mn-spacing-btn').forEach(b => {
+    b.classList.toggle('active', parseFloat(b.dataset.val) === parseFloat(val));
+  });
+}
+function _applyMyNotesSpacing(val) {
+  let st = document.getElementById('myNotesSpacingStyle');
+  if (!st) { st = document.createElement('style'); st.id = 'myNotesSpacingStyle'; document.head.appendChild(st); }
+  const em = parseFloat(val) + 'em';
+  st.textContent = parseFloat(val) > 0 ? `#myNotesNote p, #myNotesNote div { margin-bottom: ${em}; }` : '';
 }
 
 // ── DOUBLE-TAP FULLSCREEN for note area ──
@@ -5534,6 +5548,7 @@ function cancelSEEdit() {
       window._seCurrentSong = s || {};
       dbGet('notes', `${currentUser||'me'}_${id}`).then(n => {
         window._seMyNotesHtml = n?.text || '';
+        window._seMyNotesSpacing = n?.spacing || 0;
         renderSETab();
       });
     });
@@ -5765,6 +5780,7 @@ function renderSETab() {
       // READ-ONLY view
       const myNotesZoomKey = 'mgb_zoom_db_mynotes';
       const myNotesZoom = parseFloat(localStorage.getItem(myNotesZoomKey) || '1');
+      const myNotesSpacing = window._seMyNotesSpacing || 0;
       body.innerHTML = `
         ${sePlayer}
         ${myNoteHtml
@@ -5775,6 +5791,7 @@ function renderSETab() {
             </div>
             <div class="note-display" id="myNotesNote" style="white-space:pre-wrap;min-height:80px;font-size:${Math.round(20*myNotesZoom)}px;line-height:${1.9*myNotesZoom};">${myNoteHtml}</div>`
           : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
+      if (myNoteHtml && myNotesSpacing > 0) _applyMyNotesSpacing(myNotesSpacing);
     } else {
       // EDIT view
       body.innerHTML = `
@@ -5797,6 +5814,11 @@ function renderSETab() {
           <div class="rte-divider"></div>
           <button class="rte-btn" onclick="rteCmd3('insertUnorderedList')" title="Bullets" style="font-size:16px;">≡</button>
           <button class="rte-btn" onclick="rteClearFormat3()" title="Clear" style="font-size:11px;">Aa</button>
+          <div class="rte-divider"></div>
+          <span style="font-size:10px;color:var(--text3);margin-right:1px;">¶</span>
+          <button class="scroll-speed-btn mn-spacing-btn${(window._seMyNotesSpacing||0)===0?' active':''}" data-val="0" onclick="setMyNotesSpacing(0)" title="No paragraph spacing" style="width:30px;height:22px;font-size:11px;">0</button>
+          <button class="scroll-speed-btn mn-spacing-btn${(window._seMyNotesSpacing||0)===0.5?' active':''}" data-val="0.5" onclick="setMyNotesSpacing(0.5)" title="Half-line paragraph spacing" style="width:30px;height:22px;font-size:11px;">½</button>
+          <button class="scroll-speed-btn mn-spacing-btn${(window._seMyNotesSpacing||0)===1?' active':''}" data-val="1" onclick="setMyNotesSpacing(1)" title="Full-line paragraph spacing" style="width:30px;height:22px;font-size:11px;">1</button>
         </div>
         <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
     }
@@ -6017,6 +6039,7 @@ async function openSongModal(id) {
   window._seCurrentSong = null;
   window._modalPendingAudio = null;
   window._seMyNotesHtml = '';
+  window._seMyNotesSpacing = 0;
 
   // Reset button state for both inline and page modes
   ['seEditBtn','seCancelBtn','seSaveBtn'].forEach(bid => {
@@ -6067,6 +6090,7 @@ async function openSongModal(id) {
     ]);
     window._seCurrentSong = s || {};
     window._seMyNotesHtml = noteEntry?.text || '';
+    window._seMyNotesSpacing = noteEntry?.spacing || 0;
     window._seTagsEdit = [...(s?.tags || [])]; // initialize tag edit state
     await loadAudioHybrid(id);
     // Update title display
@@ -6329,7 +6353,8 @@ async function saveSong() {
   const myNotesHtml = window._seMyNotesHtml || document.getElementById('seMyNotes')?.innerHTML || '';
   if (myNotesHtml.trim() && myNotesHtml.trim() !== '<br>') {
     const noteKey = `${currentUser||'me'}_${id}`;
-    await dbPut('notes', { id: noteKey, text: myNotesHtml, updatedAt: Date.now() });
+    const myNotesSpacing = window._seMyNotesSpacing || 0;
+    await dbPut('notes', { id: noteKey, text: myNotesHtml, spacing: myNotesSpacing, updatedAt: Date.now() });
   }
   // save pending audio if any
   if (window._modalPendingAudio) {
