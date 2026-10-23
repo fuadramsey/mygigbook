@@ -375,7 +375,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .note-edit-area { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; resize: none; min-height: 200px; }
 .note-edit-area:focus { outline: none; border-color: rgba(220,38,38,0.4); }
 /* ── RICH TEXT EDITOR ── */
-.rte-toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border2); border-bottom: none; border-radius: var(--radius) var(--radius) 0 0; }
+.rte-toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border2); border-bottom: none; border-radius: var(--radius) var(--radius) 0 0; position: sticky; top: 0; z-index: 10; }
 .rte-btn { width: 30px; height: 28px; border: 1px solid transparent; border-radius: 6px; background: none; cursor: pointer; color: var(--text2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-family: inherit; transition: all 0.12s; flex-shrink: 0; }
 .rte-btn:hover { background: var(--surface3); color: var(--text); }
 .rte-btn.active { background: rgba(220,38,38,0.15); border-color: rgba(220,38,38,0.3); color: var(--accent); }
@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.60</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.61</span>
       </div>
 
     </div>
@@ -2861,16 +2861,31 @@ function changeMyNotesZoom(delta, key) {
   if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
 }
 
+// Strip all line-height spans from an HTML string (used on load to reset stored spacing)
+function stripLineHeightSpans(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  tmp.querySelectorAll('span[style*="line-height"]').forEach(s => {
+    const p = s.parentNode;
+    while (s.firstChild) p.insertBefore(s.firstChild, s);
+    p.removeChild(s);
+  });
+  return tmp.innerHTML;
+}
+
+// Clear all spacing in the editor (whole note)
+function mnClearAllSpacing() {
+  const editor = document.getElementById('seMyNotes');
+  if (!editor) return;
+  editor.querySelectorAll('span[style*="line-height"]').forEach(s => {
+    const p = s.parentNode;
+    while (s.firstChild) p.insertBefore(s.firstChild, s);
+    p.removeChild(s);
+  });
+}
+
 function setMyNotesSpacing(val) {
   window._seMyNotesSpacing = parseFloat(val);
-  // highlight active button
-  [['mnSp0',0],['mnSpH',0.5],['mnSp1',1]].forEach(([id,v]) => {
-    const b = document.getElementById(id);
-    if (!b) return;
-    b.style.background = v === parseFloat(val) ? 'var(--accent)' : '';
-    b.style.color = v === parseFloat(val) ? '#000' : '';
-    b.style.fontWeight = v === parseFloat(val) ? '700' : '';
-  });
   _applyMyNotesSpacingToSelection(val);
 }
 function _applyMyNotesSpacingToSelection(val) {
@@ -5617,8 +5632,8 @@ function cancelSEEdit() {
     dbGet('songs', id).then(s => {
       window._seCurrentSong = s || {};
       dbGet('notes', `${currentUser||'me'}_${id}`).then(n => {
-        window._seMyNotesHtml = n?.text || '';
-        window._seMyNotesSpacing = n?.spacing || 0;
+        window._seMyNotesHtml = stripLineHeightSpans(n?.text || '');
+        window._seMyNotesSpacing = 0;
         renderSETab();
       });
     });
@@ -5886,9 +5901,10 @@ function renderSETab() {
           <button class="rte-btn" onclick="rteClearFormat3()" title="Clear" style="font-size:11px;">Aa</button>
           <div class="rte-divider"></div>
           <span style="font-size:10px;color:var(--text3);margin-right:1px;">¶</span>
-          <button id="mnSp0" class="scroll-speed-btn mn-spacing-btn${(window._seMyNotesSpacing||0)===0?' active':''}" onclick="setMyNotesSpacing(0)" style="width:30px;height:22px;font-size:11px;">0</button>
-          <button id="mnSpH" class="scroll-speed-btn mn-spacing-btn${(window._seMyNotesSpacing||0)===0.5?' active':''}" onclick="setMyNotesSpacing(0.5)" style="width:30px;height:22px;font-size:11px;">½</button>
-          <button id="mnSp1" class="scroll-speed-btn mn-spacing-btn${(window._seMyNotesSpacing||0)===1?' active':''}" onclick="setMyNotesSpacing(1)" style="width:30px;height:22px;font-size:11px;">1</button>
+          <button id="mnSp0" class="scroll-speed-btn mn-spacing-btn" onclick="setMyNotesSpacing(0)" style="width:30px;height:22px;font-size:11px;" title="No spacing">0</button>
+          <button id="mnSpH" class="scroll-speed-btn mn-spacing-btn" onclick="setMyNotesSpacing(0.5)" style="width:30px;height:22px;font-size:11px;" title="Half spacing">½</button>
+          <button id="mnSp1" class="scroll-speed-btn mn-spacing-btn" onclick="setMyNotesSpacing(1)" style="width:30px;height:22px;font-size:11px;" title="Full spacing">1</button>
+          <button class="rte-btn" onclick="mnClearAllSpacing()" title="Clear all spacing" style="font-size:10px;width:auto;padding:0 6px;">¶✕</button>
         </div>
         <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
       // spacing is stored inline in the HTML spans — no extra apply needed
@@ -6160,8 +6176,8 @@ async function openSongModal(id) {
       dbGet('notes', `${currentUser||'me'}_${id}`)
     ]);
     window._seCurrentSong = s || {};
-    window._seMyNotesHtml = noteEntry?.text || '';
-    window._seMyNotesSpacing = noteEntry?.spacing || 0;
+    window._seMyNotesHtml = stripLineHeightSpans(noteEntry?.text || '');
+    window._seMyNotesSpacing = 0;
     window._seTagsEdit = [...(s?.tags || [])]; // initialize tag edit state
     await loadAudioHybrid(id);
     // Update title display
@@ -6244,7 +6260,7 @@ async function loadSongIntoSEPage(id) {
     dbGet('notes', `${currentUser||'me'}_${id}`)
   ]);
   window._seCurrentSong = s || {};
-  window._seMyNotesHtml = noteEntry?.text || '';
+  window._seMyNotesHtml = stripLineHeightSpans(noteEntry?.text || '');
   await loadAudioHybrid(id);
   const titleEl = document.getElementById('sePageTitle');
   if (titleEl) titleEl.textContent = s?.title || '';
