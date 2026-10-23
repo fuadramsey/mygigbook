@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.61</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.62</span>
       </div>
 
     </div>
@@ -2890,68 +2890,8 @@ function setMyNotesSpacing(val) {
 }
 function _applyMyNotesSpacingToSelection(val) {
   const lhMap = {'0.5': '1.8', '1': '3'};
-  const lh = lhMap[String(parseFloat(val))] || null; // null = remove spacing
-  const editor = document.getElementById('seMyNotes');
-  if (!editor) return;
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-
-  // Use execCommand('fontSize') to mark the exact selection (handles cross-node ranges)
-  const MARKER = '7';
-  document.execCommand('fontSize', false, MARKER);
-
-  editor.querySelectorAll(`font[size="${MARKER}"]`).forEach(font => {
-    // Unwrap ALL nested line-height spans (both inside and the font itself may be
-    // inside one — we'll handle the ancestor case after)
-    const unwrap = el => {
-      el.querySelectorAll('span[style*="line-height"]').forEach(s => {
-        const p = s.parentNode;
-        while (s.firstChild) p.insertBefore(s.firstChild, s);
-        p.removeChild(s);
-      });
-    };
-    unwrap(font);
-
-    // Also check if any ancestor within the editor is a line-height span
-    // and if so, split it around our font tag so we can replace just this portion
-    let ancestor = font.parentNode;
-    while (ancestor && ancestor !== editor) {
-      if (ancestor.nodeName === 'SPAN' && ancestor.style.lineHeight) {
-        // Split the ancestor span: clone it for the parts before and after our font
-        const before = document.createDocumentFragment();
-        const after = document.createDocumentFragment();
-        let seenFont = false;
-        for (const child of [...ancestor.childNodes]) {
-          if (child === font) { seenFont = true; continue; }
-          if (!seenFont) {
-            const s = ancestor.cloneNode(false); s.appendChild(child.cloneNode(true)); before.appendChild(s);
-          } else {
-            const s = ancestor.cloneNode(false); s.appendChild(child.cloneNode(true)); after.appendChild(s);
-          }
-        }
-        const parent = ancestor.parentNode;
-        parent.insertBefore(before, ancestor);
-        parent.insertBefore(font, ancestor); // re-insert the font tag in place
-        parent.insertBefore(after, ancestor);
-        parent.removeChild(ancestor);
-        break;
-      }
-      ancestor = ancestor.parentNode;
-    }
-
-    // Now replace the font tag with either a new styled span or just its contents
-    if (lh) {
-      const span = document.createElement('span');
-      span.style.lineHeight = lh;
-      span.innerHTML = font.innerHTML;
-      font.parentNode.replaceChild(span, font);
-    } else {
-      // val=0: just unwrap — insert children in place of font tag
-      const p = font.parentNode;
-      while (font.firstChild) p.insertBefore(font.firstChild, font);
-      p.removeChild(font);
-    }
-  });
+  const lh = lhMap[String(parseFloat(val))] || null; // null = remove spacing (val=0)
+  _rteWrapSelection3('lineHeight', lh);
 }
 
 // ── DOUBLE-TAP FULLSCREEN for note area ──
@@ -4139,13 +4079,59 @@ function rteHighlight3(color) {
   if (color === 'none') document.execCommand('removeFormat', false, null);
   else document.execCommand('hiliteColor', false, color);
 }
-function rteFontSize3(size) {
-  document.getElementById('seMyNotes')?.focus();
+// Wrap selected content using the execCommand fontSize marker trick,
+// which handles cross-<br> selections that surroundContents can't.
+// Strips any existing spans with the same CSS property first so re-applying works.
+function _rteWrapSelection3(styleProp, styleVal) {
+  const editor = document.getElementById('seMyNotes');
+  if (!editor) return;
+  editor.focus();
   const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || sel.getRangeAt(0).collapsed) return;
-  const span = document.createElement('span');
-  span.style.fontSize = size;
-  try { sel.getRangeAt(0).surroundContents(span); } catch(e) {}
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+  const MARKER = '7';
+  document.execCommand('fontSize', false, MARKER);
+  editor.querySelectorAll(`font[size="${MARKER}"]`).forEach(font => {
+    // unwrap any existing same-property spans inside
+    font.querySelectorAll(`span[style*="${styleProp}"]`).forEach(s => {
+      const p = s.parentNode; while (s.firstChild) p.insertBefore(s.firstChild, s); p.removeChild(s);
+    });
+    // split any ancestor same-property span around this font tag
+    let anc = font.parentNode;
+    while (anc && anc !== editor) {
+      if (anc.nodeName === 'SPAN' && anc.style[styleProp]) {
+        const before = document.createDocumentFragment();
+        const after  = document.createDocumentFragment();
+        let seen = false;
+        [...anc.childNodes].forEach(ch => {
+          if (ch === font) { seen = true; return; }
+          const cl = anc.cloneNode(false);
+          cl.appendChild(ch.cloneNode(true));
+          (seen ? after : before).appendChild(cl);
+        });
+        const par = anc.parentNode;
+        par.insertBefore(before, anc);
+        par.insertBefore(font, anc);
+        par.insertBefore(after, anc);
+        par.removeChild(anc);
+        break;
+      }
+      anc = anc.parentNode;
+    }
+    // replace font tag with styled span (or just unwrap if styleVal is null)
+    if (styleVal) {
+      const span = document.createElement('span');
+      span.style[styleProp] = styleVal;
+      span.innerHTML = font.innerHTML;
+      font.parentNode.replaceChild(span, font);
+    } else {
+      const p = font.parentNode;
+      while (font.firstChild) p.insertBefore(font.firstChild, font);
+      p.removeChild(font);
+    }
+  });
+}
+function rteFontSize3(size) {
+  _rteWrapSelection3('fontSize', size);
 }
 function rteClearFormat3() {
   document.getElementById('seMyNotes')?.focus();
