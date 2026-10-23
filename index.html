@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.55</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.56</span>
       </div>
 
     </div>
@@ -2458,8 +2458,14 @@ async function executeBulkDelete() {
         const isCreator = groups.filter(Boolean).some(g => g.createdBy === currentUser);
         if (!isCreator) { blocked++; continue; }
       }
+      // Soft-delete in Firestore so other devices pick up the deletion
+      if (fbReady && online) {
+        const fb = window._fb;
+        if (fb) {
+          try { await fb.setDoc(fb.doc(fb.collection(fb.db,'songs'), id), { id, _deleted: true, updatedAt: Date.now() }); } catch(e) {}
+        }
+      }
       await dbDel('songs', id);
-      await fbDeleteDoc('songs', id);
     }
     selectedSongIds.clear();
     await syncOut();
@@ -2860,17 +2866,26 @@ function setMyNotesSpacing(val) {
   // highlight active button
   [['mnSp0',0],['mnSpH',0.5],['mnSp1',1]].forEach(([id,v]) => {
     const b = document.getElementById(id);
-    if (b) b.style.background = v === parseFloat(val) ? 'var(--accent)' : '';
+    if (!b) return;
+    b.style.background = v === parseFloat(val) ? 'var(--accent)' : '';
+    b.style.color = v === parseFloat(val) ? '#000' : '';
+    b.style.fontWeight = v === parseFloat(val) ? '700' : '';
   });
   _applyMyNotesSpacing(val);
 }
 function _applyMyNotesSpacing(val) {
-  const lhMap = {0: '1.8', 0.5: '2.8', 1: '4'};
-  const lh = lhMap[parseFloat(val)] ?? '1.8';
-  const edit = document.getElementById('seMyNotes');
-  if (edit) edit.style.setProperty('line-height', lh, 'important');
-  const view = document.getElementById('myNotesNote');
-  if (view) view.style.setProperty('line-height', lh, 'important');
+  const v = parseFloat(val);
+  // line-height values: 0=compact, 0.5=medium, 1=loose
+  const lhMap = {'0': '1.8', '0.5': '3.2', '1': '5'};
+  const lh = lhMap[String(v)] || '1.8';
+  // inject/update a dedicated style tag so it beats all CSS specificity
+  let styleTag = document.getElementById('mnSpacingStyle');
+  if (!styleTag) {
+    styleTag = document.createElement('style');
+    styleTag.id = 'mnSpacingStyle';
+    document.head.appendChild(styleTag);
+  }
+  styleTag.textContent = `#seMyNotes { line-height: ${lh} !important; } #myNotesNote { line-height: ${lh} !important; }`;
 }
 
 // ── DOUBLE-TAP FULLSCREEN for note area ──
@@ -6429,8 +6444,16 @@ async function confirmDeleteSong() {
   if (!pendingDeleteSongId) return;
   const id = pendingDeleteSongId;
   closeConfirmDeleteSong();
+  // Soft-delete in Firestore first (marks _deleted so other devices remove it on next pull)
+  if (fbReady && online) {
+    const fb = window._fb;
+    if (fb) {
+      try {
+        await fb.setDoc(fb.doc(fb.collection(fb.db,'songs'), id), { id, _deleted: true, updatedAt: Date.now() });
+      } catch(e) { console.warn('Soft-delete Firestore error:', e); }
+    }
+  }
   await dbDel('songs', id);
-  await fbDeleteDoc('songs', id);
   // remove from all setlists — filter both string entries and note objects (leave notes intact)
   const sets = await dbAll('setlists');
   for (const s of sets) {
