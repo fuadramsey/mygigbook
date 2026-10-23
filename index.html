@@ -625,22 +625,6 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 }
 .bpm-hint { font-size: 10px; letter-spacing: 0px; opacity: 0.6; margin-left: 2px; font-style: normal; }
 
-/* Auto-scroll controls — compact, inline with tabs */
-.scroll-toolbar {
-  display: flex; align-items: center; gap: 5px;
-  padding: 0 8px 0 0;
-  flex-shrink: 0;
-}
-.scroll-play-btn {
-  width: 26px; height: 26px; border-radius: 50%;
-  background: #0ea5e9; color: #fff; border: none;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0;
-  transition: transform 0.15s, opacity 0.15s;
-}
-.scroll-play-btn:hover { transform: scale(1.08); opacity: 0.85; }
-.scroll-play-btn:active { transform: scale(0.92); }
-.scroll-play-btn svg { width: 12px; height: 12px; }
 .scroll-speed-btn {
   width: 22px; height: 22px; border-radius: 6px;
   border: 1px solid var(--border); background: var(--surface2);
@@ -1074,15 +1058,6 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
               <button class="note-tab" id="se-tab-media" onclick="switchSETab('media')" >Media</button>
               <button class="note-tab" id="se-tab-charts" onclick="switchSETab('charts')" >Charts</button>
             </div>
-            <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
-              <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
-              </button>
-              <div style="width:12px;"></div>
-              <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
-              <span class="scroll-speed-label" id="seScrollSpeedLabel">×3</span>
-              <button class="scroll-speed-btn" onclick="changeSESpeed(1)">+</button>
-            </div>
           </div>
         </div>
         <!-- detail body -->
@@ -1143,15 +1118,6 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
       <button class="note-tab" id="sep-tab-media" onclick="switchSETab('media')" >Media</button>
       <button class="note-tab" id="sep-tab-charts" onclick="switchSETab('charts')" >Charts</button>
-    </div>
-    <div id="seScrollToolbar" style="display:none;align-items:center;gap:2px;padding-right:8px;flex-shrink:0;">
-      <button class="scroll-play-btn" id="seScrollPlayBtn" onclick="toggleSEScroll()" title="Auto-scroll">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
-      </button>
-      <div style="width:12px;"></div>
-      <button class="scroll-speed-btn" onclick="changeSESpeed(-1)">−</button>
-      <span class="scroll-speed-label" id="seScrollSpeedLabel">×${scrollSpeed}</span>
-      <button class="scroll-speed-btn" onclick="changeSESpeed(1)">+</button>
     </div>
   </div>
   <div class="note-area" id="sepTabBody" style="padding:16px;overflow-y:auto;"></div>
@@ -1569,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.49</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.50</span>
       </div>
 
     </div>
@@ -2258,8 +2224,6 @@ document.addEventListener('visibilitychange', () => {
 
 function goBack() {
   if (pageStack.length <= 1) return;
-  stopScroll();
-  stopSEScroll();
   stopTuningFork();
   stopAudio();
   if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
@@ -2841,11 +2805,7 @@ async function touchDragEnd(e, startIdx) {
 }
 // ── SONG NOTE PAGE ──
 let currentSongIdx = 0;
-let scrollTimer = null;
-let scrollSpeed = 2;
-let scrollPlaying = false;
 let bpmTimer = null;
-const songScrollSpeeds = {}; // remembers speed per song id
 
 // Note zoom — per-song per-tab, saved to localStorage
 const NOTE_ZOOM_KEY = 'mgb_zoom_'; // + songId + '_' + tab
@@ -2882,6 +2842,16 @@ function changeDBZoom(delta, key) {
   const label = document.getElementById('dbZoomLabel');
   if (label) label.textContent = Math.round(newZoom * 100) + '%';
   const note = document.getElementById('dbDetailsNote');
+  if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
+}
+
+function changeMyNotesZoom(delta, key) {
+  const cur = parseFloat(localStorage.getItem(key) || '1');
+  const newZoom = Math.round(Math.max(0.5, Math.min(3, cur + delta)) * 10) / 10;
+  localStorage.setItem(key, newZoom);
+  const label = document.getElementById('myNotesZoomLabel');
+  if (label) label.textContent = Math.round(newZoom * 100) + '%';
+  const note = document.getElementById('myNotesNote');
   if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
 }
 
@@ -2953,14 +2923,7 @@ function openNoteFullscreen(idx) {
       <span class="fs-zoom-label note-zoom-label" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:38px;text-align:center;">${Math.round(noteZoom*100)}%</span>
       <button id="fsZoomPlus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">+</button>
     </div>
-    <div style="display:flex;align-items:center;gap:4px;" id="fsScrollControls">
-      <button id="fsScrollBtn" class="scroll-play-btn" title="Auto-scroll">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>
-      </button>
-      <button id="fsSpeedMinus" class="scroll-speed-btn">−</button>
-      <span id="fsSpeedLabel" class="scroll-speed-label">×${scrollSpeed}</span>
-      <button id="fsSpeedPlus" class="scroll-speed-btn">+</button>
-    </div>`;
+    `;
 
   // ── CONTENT ──
   const scrollArea = document.createElement('div');
@@ -2984,8 +2947,6 @@ function openNoteFullscreen(idx) {
   }
 
   function loadTabContent() {
-    const showScroll = activeTab !== 'listen' && activeTab !== 'charts';
-    toolbar.querySelector('#fsScrollControls').style.display = showScroll ? 'flex' : 'none';
     if (activeTab === noteTab) {
       const noteArea = document.getElementById('noteArea');
       scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
@@ -3009,15 +2970,7 @@ function openNoteFullscreen(idx) {
     if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
   });
 
-  let fsScrollTimer = null;
-  toolbar.querySelector('#fsScrollBtn').addEventListener('click', () => {
-    if (fsScrollTimer) { clearInterval(fsScrollTimer); fsScrollTimer = null; toolbar.querySelector('#fsScrollBtn').style.background = '#0ea5e9'; }
-    else { toolbar.querySelector('#fsScrollBtn').style.background = '#0284c7'; fsScrollTimer = setInterval(() => { scrollArea.scrollTop += scrollSpeed; }, 50); }
-  });
-  toolbar.querySelector('#fsSpeedMinus').addEventListener('click', () => { scrollSpeed = Math.max(1, scrollSpeed - 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
-  toolbar.querySelector('#fsSpeedPlus').addEventListener('click', () => { scrollSpeed = Math.min(10, scrollSpeed + 1); toolbar.querySelector('#fsSpeedLabel').textContent = `x${scrollSpeed}`; });
-
-  const close = () => { if (fsScrollTimer) clearInterval(fsScrollTimer); overlay.remove(); };
+  const close = () => { overlay.remove(); };
   overlay._close = close;
   titleBar.querySelector('#fsDismissBtn').addEventListener('click', close);
 
@@ -3171,7 +3124,6 @@ function updateTuningUI() {
 
 async function openSongPage(idx) {
   noteTab='mine'; editingNote=false;
-  stopScroll();
   currentSongIdx = idx;
   await renderSongPage(idx);
   showPage('pg-song');
@@ -3245,8 +3197,6 @@ async function renderSongPage(idx) {
     return;
   }
 
-  // restore this song's remembered speed (or keep current default)
-  if (songScrollSpeeds[s.id] !== undefined) scrollSpeed = songScrollSpeeds[s.id];
   // restore per-song zoom from localStorage
   loadSongZoom(s.id);
 
@@ -3770,112 +3720,6 @@ function startBpmFlash(bpm) {
   }, interval * 16 + 200);
 }
 
-// ── AUTO SCROLL ──
-function toggleScroll() {
-  scrollPlaying ? stopScroll() : startScroll();
-}
-
-// Song editor / DB scroll (scrolls seTabBody)
-let seScrollPlaying = false;
-let seScrollTimer = null;
-
-function toggleSEScroll() {
-  seScrollPlaying ? stopSEScroll() : startSEScroll();
-}
-function startSEScroll() {
-  if (seScrollPlaying) return;
-  seScrollPlaying = true;
-  updateSEScrollUI();
-  let last = null;
-  let accumulated = 0;
-  function step(ts) {
-    if (!seScrollPlaying) return;
-    if (last !== null) {
-      const pxPerSec = scrollSpeed * 5;
-      accumulated += (pxPerSec * (ts - last)) / 1000;
-      if (accumulated >= 1) {
-        const area = document.getElementById('seTabBody') || document.getElementById('sepTabBody');
-        if (!area) { stopSEScroll(); return; }
-        const move = Math.floor(accumulated);
-        accumulated -= move;
-        area.scrollTop += move;
-        if (area.scrollTop + area.clientHeight >= area.scrollHeight - 2) {
-          stopSEScroll(); return;
-        }
-      }
-    }
-    last = ts;
-    seScrollTimer = requestAnimationFrame(step);
-  }
-  seScrollTimer = requestAnimationFrame(step);
-}
-function stopSEScroll() {
-  seScrollPlaying = false;
-  if (seScrollTimer) { cancelAnimationFrame(seScrollTimer); seScrollTimer = null; }
-  updateSEScrollUI();
-}
-function updateSEScrollUI() {
-  const btn = document.getElementById('seScrollPlayBtn');
-  if (!btn) return;
-  btn.innerHTML = seScrollPlaying
-    ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`;
-}
-function changeSESpeed(delta) {
-  scrollSpeed = Math.max(1, Math.min(10, scrollSpeed + delta));
-  const lbl = document.getElementById('seScrollSpeedLabel');
-  if (lbl) lbl.textContent = `×${scrollSpeed}`;
-}
-
-function startScroll() {
-  if (scrollPlaying) return;
-  scrollPlaying = true;
-  updateScrollUI();
-  let last = null;
-  let accumulated = 0;
-  function step(ts) {
-    if (!scrollPlaying) return;
-    if (last !== null) {
-      const pxPerSec = scrollSpeed * 5;
-      accumulated += (pxPerSec * (ts - last)) / 1000;
-      if (accumulated >= 1) {
-        const area = document.getElementById('noteArea');
-        if (!area) { stopScroll(); return; }
-        const move = Math.floor(accumulated);
-        accumulated -= move;
-        area.scrollTop += move;
-        if (area.scrollTop + area.clientHeight >= area.scrollHeight - 2) {
-          stopScroll(); return;
-        }
-      }
-    }
-    last = ts;
-    scrollTimer = requestAnimationFrame(step);
-  }
-  scrollTimer = requestAnimationFrame(step);
-}
-
-function stopScroll() {
-  scrollPlaying = false;
-  if (scrollTimer) { cancelAnimationFrame(scrollTimer); scrollTimer = null; }
-  updateScrollUI();
-}
-
-function updateScrollUI() {
-  const btn = document.getElementById('scrollPlayBtn');
-  if (!btn) return;
-  btn.innerHTML = scrollPlaying
-    ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><polyline points="17 15 20 18 17 21" fill="none"/></svg>`;
-}
-
-function changeSpeed(delta) {
-  scrollSpeed = Math.max(1, Math.min(10, scrollSpeed + delta));
-  const s = currentSetSongs[currentSongIdx];
-  if (s) songScrollSpeeds[s.id] = scrollSpeed;
-  const label = document.getElementById('scrollSpeedLabel');
-  if (label) label.textContent = `×${scrollSpeed}`;
-}
 
 function changeNoteZoom(delta, idx) {
   const step = 0.1;
@@ -5395,7 +5239,6 @@ document.addEventListener('keydown', (e) => {
 
 function swipeTo(idx) {
   if (idx<0||idx>=currentSetSongs.length) return;
-  stopScroll();
   stopTuningFork();
   stopAudio();
   if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
@@ -5776,14 +5619,6 @@ function renderSETab() {
   const id = document.getElementById('editSongId')?.value || '';
   const s = window._seCurrentSong || {};
 
-  // show scroll toolbar only on text tabs in read-only mode
-  const scrollBar = document.getElementById('seScrollToolbar');
-  const showScroll = !seEditMode && (seTab === 'details' || seTab === 'mynotes');  if (scrollBar) {
-    scrollBar.style.display = showScroll ? 'flex' : 'none';
-    const lbl = document.getElementById('seScrollSpeedLabel');
-    if (lbl) lbl.textContent = `×${scrollSpeed}`;
-  }
-
   if (seTab === 'details') {
     const _audioKey = `audio_${id}`;
     const _hasLocalAudio = id && window._audioCache?.[_audioKey];
@@ -5928,10 +5763,17 @@ function renderSETab() {
     }
     if (!seEditMode) {
       // READ-ONLY view
+      const myNotesZoomKey = 'mgb_zoom_db_mynotes';
+      const myNotesZoom = parseFloat(localStorage.getItem(myNotesZoomKey) || '1');
       body.innerHTML = `
         ${sePlayer}
         ${myNoteHtml
-          ? `<div class="note-display" style="white-space:pre-wrap;min-height:80px;">${myNoteHtml}</div>`
+          ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:8px;">
+              <button onclick="changeMyNotesZoom(-0.1,'${myNotesZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
+              <span id="myNotesZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(myNotesZoom*100)}%</span>
+              <button onclick="changeMyNotesZoom(0.1,'${myNotesZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
+            </div>
+            <div class="note-display" id="myNotesNote" style="white-space:pre-wrap;min-height:80px;font-size:${Math.round(20*myNotesZoom)}px;line-height:${1.9*myNotesZoom};">${myNoteHtml}</div>`
           : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
     } else {
       // EDIT view
@@ -7617,11 +7459,18 @@ async function postLoginInit() {
   await syncIn();
   await deduplicateLocalDB();
   await seed();
-  // reset page stack to setlists
+  // reset page stack to songs DB
   pageStack.length = 0;
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active','behind'); p.style.transform=''; });
-  document.getElementById('pg-setlists').classList.add('active');
-  pageStack.push('pg-setlists');
+  document.getElementById('pg-db').classList.add('active');
+  pageStack.push('pg-db');
+  // activate nav/sidebar/rail for db
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const _nb = document.getElementById('nav-db'); if (_nb) _nb.classList.add('active');
+  document.querySelectorAll('.tab-sidebar-btn').forEach(b=>b.classList.remove('active'));
+  const _sb = document.getElementById('sb-db'); if (_sb) _sb.classList.add('active');
+  document.querySelectorAll('.rail-btn').forEach(b=>b.classList.remove('active'));
+  const _rb = document.getElementById('rail-db'); if (_rb) _rb.classList.add('active');
   acquireWakeLock(); // keep screen on from the start
   // update UI with logged-in user
   updateSidebarName();
