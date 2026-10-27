@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.64</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.65</span>
       </div>
 
     </div>
@@ -2856,7 +2856,10 @@ function changeDBZoom(delta, key) {
   const label = document.getElementById('dbZoomLabel');
   if (label) label.textContent = Math.round(newZoom * 100) + '%';
   const note = document.getElementById('dbDetailsNote');
-  if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
+  if (note) {
+    note.style.setProperty('font-size', `${Math.round(20*newZoom)}px`, 'important');
+    note.style.lineHeight = `${1.9*newZoom}`;
+  }
 }
 
 function changeMyNotesZoom(delta, key) {
@@ -2866,7 +2869,10 @@ function changeMyNotesZoom(delta, key) {
   const label = document.getElementById('myNotesZoomLabel');
   if (label) label.textContent = Math.round(newZoom * 100) + '%';
   const note = document.getElementById('myNotesNote');
-  if (note) { note.style.fontSize = `${Math.round(20*newZoom)}px`; note.style.lineHeight = `${1.9*newZoom}`; }
+  if (note) {
+    note.style.setProperty('font-size', `${Math.round(20*newZoom)}px`, 'important');
+    note.style.lineHeight = `${1.9*newZoom}`;
+  }
 }
 
 // Strip all line-height spans from an HTML string (used on load to reset stored spacing)
@@ -2989,7 +2995,10 @@ function openNoteFullscreen(idx) {
     const basePx = 20;
     const fs = `${Math.round(basePx * noteZoom)}px`;
     const lh = `${1.9 * noteZoom}`;
-    scrollArea.querySelectorAll('.note-display, .rte-body').forEach(el => { el.style.fontSize = fs; el.style.lineHeight = lh; });
+    scrollArea.querySelectorAll('.note-display, .rte-body').forEach(el => {
+      el.style.setProperty('font-size', fs, 'important');
+      el.style.lineHeight = lh;
+    });
     toolbar.querySelectorAll('.fs-zoom-label').forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
   }
 
@@ -3791,21 +3800,21 @@ function applyNoteZoom() {
   const fs = `${Math.round(basePx * noteZoom)}px`;
   const lh = `${1.9 * noteZoom}`;
 
+  // Helper: set font-size with !important so body fs-large/fs-xl class rules can't override
+  const setZoom = el => {
+    el.style.setProperty('font-size', fs, 'important');
+    el.style.lineHeight = lh;
+  };
+
   // note area (regular song notes)
   const area = document.getElementById('noteArea');
   if (area) {
-    area.querySelectorAll('.note-display, .rte-body, .note-edit-area').forEach(el => {
-      el.style.fontSize = fs;
-      el.style.lineHeight = lh;
-    });
+    area.querySelectorAll('.note-display, .rte-body, .note-edit-area').forEach(setZoom);
   }
 
   // inline note card (type=note items in a set)
   const inline = document.getElementById('inlineNoteDisplay');
-  if (inline) {
-    inline.style.fontSize = fs;
-    inline.style.lineHeight = lh;
-  }
+  if (inline) setZoom(inline);
 
   // update zoom label
   document.querySelectorAll('.note-zoom-label').forEach(el => {
