@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.63</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.64</span>
       </div>
 
     </div>
@@ -5344,9 +5344,17 @@ function setupSwipe(idx) {
   const body = document.getElementById('songPageBody');
   let sx=0, sy=0, ignore=false;
   const ts = e => {
-    // ignore swipes that start on the tab bar area
+    // ignore swipes that start on interactive elements or the tab bar
     const target = e.target;
-    ignore = !!(target.closest('.note-tab-bar') || target.closest('.note-tabs') || target.closest('.note-tab'));
+    ignore = !!(
+      target.closest('.note-tab-bar') ||
+      target.closest('.note-tabs') ||
+      target.closest('.note-tab') ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('select') ||
+      target.closest('[contenteditable]')
+    );
     sx=e.touches[0].clientX; sy=e.touches[0].clientY;
   };
   const te = e => {
