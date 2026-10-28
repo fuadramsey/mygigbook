@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.67</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.68</span>
       </div>
 
     </div>
@@ -4820,13 +4820,38 @@ function openFullscreenPdf(pdfKey) {
     <span id="fsPdfZoomLabel" style="font-size:12px;font-family:'DM Mono',monospace;color:rgba(255,255,255,0.6);min-width:40px;text-align:center;">100%</span>
     <button id="fsPdfZoomIn" style="width:34px;height:34px;background:rgba(255,255,255,0.12);border:none;color:#fff;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>`;
 
-  // Placeholder for symmetry
-  const spacer = document.createElement('div');
-  spacer.style.width = '40px';
+  // Markup edit toggle button (right side)
+  const editMarkupBtn = document.createElement('button');
+  editMarkupBtn.id = 'fsEditMarkupBtn_' + pdfKey;
+  editMarkupBtn.style.cssText = 'background:rgba(255,255,255,0.12);border:none;color:#fff;height:36px;padding:0 14px;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap;';
+  editMarkupBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Markup';
 
   topBar.appendChild(closeBtn);
   topBar.appendChild(zoomBar);
-  topBar.appendChild(spacer);
+  topBar.appendChild(editMarkupBtn);
+
+  // ── MARKUP TOOLBAR (hidden until edit mode) ──
+  const markupBar = document.createElement('div');
+  markupBar.id = 'fsMarkupToolbar_' + pdfKey;
+  markupBar.style.cssText = 'display:none;align-items:center;gap:6px;padding:8px 14px;background:rgba(0,0,0,0.85);flex-shrink:0;flex-wrap:wrap;';
+  markupBar.innerHTML = `
+    <div style="display:flex;gap:4px;">
+      <button id="fsmt_pen_${pdfKey}" class="btn ghost active" title="Pen" onclick="fsSetMarkupTool('pen','${pdfKey}')" style="padding:5px 10px;font-size:12px;color:#fff;border-color:rgba(255,255,255,0.3);">✏️ Pen</button>
+      <button id="fsmt_highlight_${pdfKey}" class="btn ghost" title="Highlight" onclick="fsSetMarkupTool('highlight','${pdfKey}')" style="padding:5px 10px;font-size:12px;color:#fff;border-color:rgba(255,255,255,0.3);">🖊 Hi-lite</button>
+      <button id="fsmt_arrow_${pdfKey}" class="btn ghost" title="Arrow" onclick="fsSetMarkupTool('arrow','${pdfKey}')" style="padding:5px 10px;font-size:12px;color:#fff;border-color:rgba(255,255,255,0.3);">↗ Arrow</button>
+    </div>
+    <div style="display:flex;gap:5px;align-items:center;">
+      ${['#e8ff47','#ff4d4d','#4daaff','#fff','#000'].map(c=>`<button class="markup-color" onclick="setMarkupColor('${c}','${pdfKey}')" style="width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,0.4);background:${c};cursor:pointer;flex-shrink:0;"></button>`).join('')}
+    </div>
+    <div style="display:flex;gap:4px;align-items:center;">
+      <label style="font-size:11px;color:#aaa;">Size</label>
+      <input type="range" min="1" max="10" value="3" oninput="setMarkupSize(this.value,'${pdfKey}')" style="width:70px;accent-color:#e8ff47;">
+    </div>
+    <div style="display:flex;gap:4px;margin-left:auto;">
+      <button class="btn ghost" onclick="markupUndo('${pdfKey}')" style="padding:5px 10px;font-size:12px;color:#fff;border-color:rgba(255,255,255,0.3);">↩ Undo</button>
+      <button class="btn ghost" onclick="markupReset('${pdfKey}')" style="padding:5px 10px;font-size:12px;color:#f88;border-color:rgba(255,100,100,0.4);">🗑 Clear</button>
+      <button class="btn" onclick="fsExitMarkupMode('${pdfKey}')" style="padding:5px 12px;font-size:12px;background:#4caf50;color:#fff;border:none;">Done</button>
+    </div>`;
 
   // ── SCROLL AREA ──
   const scrollArea = document.createElement('div');
@@ -4840,6 +4865,7 @@ function openFullscreenPdf(pdfKey) {
   scrollArea.appendChild(renderContainer);
 
   overlay.appendChild(topBar);
+  overlay.appendChild(markupBar);
   overlay.appendChild(scrollArea);
   document.body.appendChild(overlay);
 
@@ -4900,6 +4926,68 @@ function openFullscreenPdf(pdfKey) {
     }
   }, { passive: true });
   scrollArea.addEventListener('touchend', () => { pdfLastDist = 0; }, { passive: true });
+
+  // ── FULLSCREEN MARKUP MODE ──
+  function fsEnterMarkupMode() {
+    editMarkupBtn.style.display = 'none';
+    markupBar.style.display = 'flex';
+    const ms = _getMS(pdfKey);
+    ms.editMode = true;
+    ms.markupCanvases.forEach((mc, i) => {
+      mc.style.pointerEvents = 'auto';
+      mc.style.cursor = 'crosshair';
+      attachMarkupEvents(mc, pdfKey, i);
+    });
+    updateFsMarkupUI();
+  }
+
+  window.fsExitMarkupMode = function(key) {
+    if (key !== pdfKey) return;
+    markupBar.style.display = 'none';
+    editMarkupBtn.style.display = 'flex';
+    const ms = _getMS(pdfKey);
+    ms.editMode = false;
+    ms.markupCanvases.forEach(mc => {
+      mc.style.pointerEvents = 'none';
+      mc.style.cursor = 'default';
+    });
+    saveMarkup(pdfKey);
+  };
+
+  window.fsSetMarkupTool = function(tool, key) {
+    if (key !== pdfKey) return;
+    setMarkupTool(tool, pdfKey);
+    updateFsMarkupUI();
+  };
+
+  function updateFsMarkupUI() {
+    const ms = _getMS(pdfKey);
+    ['pen','highlight','arrow'].forEach(t => {
+      const btn = document.getElementById(`fsmt_${t}_${pdfKey}`);
+      if (btn) {
+        btn.classList.toggle('active', ms.tool === t);
+        btn.style.background = ms.tool === t ? 'rgba(255,255,255,0.2)' : '';
+      }
+    });
+    markupBar.querySelectorAll('.markup-color').forEach(el => {
+      const c = el.style.background || el.style.backgroundColor;
+      el.style.borderColor = c === ms.color ? '#fff' : 'rgba(255,255,255,0.4)';
+      el.style.boxShadow = c === ms.color ? '0 0 0 2px rgba(255,255,255,0.6)' : '';
+    });
+  }
+
+  editMarkupBtn.addEventListener('click', fsEnterMarkupMode);
+
+  // Cleanup on close: also exit markup mode
+  const origCloseHandler = closeBtn.onclick;
+  closeBtn.addEventListener('click', () => {
+    const ms = _getMS(pdfKey);
+    if (ms.editMode) {
+      ms.editMode = false;
+      ms.markupCanvases.forEach(mc => { mc.style.pointerEvents = 'none'; });
+      saveMarkup(pdfKey);
+    }
+  });
 }
 
 function setupNotePaste(idx, imgPrefix) {
