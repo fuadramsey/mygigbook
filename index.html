@@ -876,10 +876,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       </button>
     </div>
     <div class="page-body">
-      <!-- Group members strip - shown when a group filter is active -->
-      <div id="groupMembersStrip" style="display:none;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <div id="groupMembersInner" style="display:flex;gap:12px;align-items:center;min-width:max-content;"></div>
-      </div>
+
       <div class="empty-view" id="setsEmpty" style="display:none">
         <div class="big">♩</div>
         <h3>No setlists yet</h3>
@@ -1535,7 +1532,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.68</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.69</span>
       </div>
 
     </div>
@@ -8066,33 +8063,8 @@ async function updateGroupFilterChips() {
   renderGroupMembersStrip(group);
 }
 
-function renderGroupMembersStrip(group) {
-  const strips = [
-    { stripId: 'groupMembersStrip', innerId: 'groupMembersInner' }
-  ];
-  for (const { stripId, innerId } of strips) {
-    const strip = document.getElementById(stripId);
-    const inner = document.getElementById(innerId);
-    if (!strip || !inner) continue;
-    if (!group || !group.members?.length) {
-      strip.style.display = 'none';
-      inner.innerHTML = '';
-      continue;
-    }
-    strip.style.display = 'block';
-    inner.innerHTML = `
-      <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0;margin-right:4px;">Members</span>
-      ${group.members.map(m => {
-        const isMe = m === currentUser;
-        return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
-          <div style="width:32px;height:32px;border-radius:50%;background:${isMe?'var(--accent)':'var(--surface3)'};border:2px solid ${isMe?'var(--accent)':'var(--border2)'};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:${isMe?'#000':'var(--text2)'};">${m[0].toUpperCase()}</div>
-          <span style="font-size:10px;color:${isMe?'var(--accent)':'var(--text3)'};font-family:'DM Mono',monospace;max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(isMe?'you':m)}</span>
-        </div>`;
-      }).join('')}
-
-    `;
-  }
-}
+// Members strip removed — members shown in My Groups popup instead
+function renderGroupMembersStrip(group) {}
 
 // ── GROUPS ──
 let currentGroupId = null;
