@@ -1535,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.66</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.67</span>
       </div>
 
     </div>
@@ -4805,7 +4805,11 @@ function openFullscreenPdf(pdfKey) {
   const closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
   closeBtn.textContent = '✕';
-  closeBtn.addEventListener('click', () => overlay.remove());
+  closeBtn.addEventListener('click', () => {
+    const origEl = document.getElementById(`pdfCanvasContainer_${pdfKey}_bg`);
+    if (origEl) origEl.id = `pdfCanvasContainer_${pdfKey}`;
+    overlay.remove();
+  });
 
   // Zoom controls
   let pdfScale = 1.0;
@@ -4828,20 +4832,38 @@ function openFullscreenPdf(pdfKey) {
   const scrollArea = document.createElement('div');
   scrollArea.style.cssText = 'flex:1;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;padding:12px 0;';
 
-  const clone = src.cloneNode(true);
-  clone.style.cssText = 'background:#525659;cursor:default;transform-origin:top center;transition:transform 0.15s;';
-  clone.removeAttribute('onclick');
-  clone.removeAttribute('id');
-  scrollArea.appendChild(clone);
+  // Fresh render container — canvas content can't be cloned, must re-render
+  const renderContainer = document.createElement('div');
+  renderContainer.id = 'fsPdfCanvasContainer_' + pdfKey;
+  renderContainer.style.cssText = 'width:100%;max-width:900px;background:#525659;cursor:default;transform-origin:top center;transition:transform 0.15s;';
+  renderContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#ccc;font-size:13px;">Loading PDF…</div>';
+  scrollArea.appendChild(renderContainer);
 
   overlay.appendChild(topBar);
   overlay.appendChild(scrollArea);
   document.body.appendChild(overlay);
 
+  // Re-render PDF into the fullscreen container using cached blob URL
+  requestAnimationFrame(() => {
+    const entry = window._pdfCache?.[pdfKey];
+    if (entry) {
+      // Temporarily swap the container id so loadPdfViewer targets this one
+      const origId = `pdfCanvasContainer_${pdfKey}`;
+      const origEl = document.getElementById(origId);
+      renderContainer.id = origId;
+      if (origEl) origEl.id = origId + '_bg';
+      loadPdfViewer(pdfKey).finally(() => {
+        // Restore ids
+        renderContainer.id = 'fsPdfCanvasContainer_' + pdfKey;
+        if (origEl) origEl.id = origId;
+      });
+    }
+  });
+
   // Zoom handlers
   function applyPdfZoom() {
-    clone.style.transform = `scale(${pdfScale})`;
-    clone.style.marginBottom = pdfScale > 1 ? `${(pdfScale - 1) * clone.scrollHeight}px` : '0';
+    renderContainer.style.transform = `scale(${pdfScale})`;
+    renderContainer.style.marginBottom = pdfScale > 1 ? `${(pdfScale - 1) * renderContainer.scrollHeight}px` : '0';
     overlay.querySelector('#fsPdfZoomLabel').textContent = Math.round(pdfScale * 100) + '%';
   }
 
