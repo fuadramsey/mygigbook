@@ -1128,11 +1128,14 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span class="modal-title">Add songs to set</span>
       <div class="modal-close" onclick="closePicker()">✕</div>
     </div>
-    <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;gap:8px;align-items:center;">
-      <div class="search-wrap" style="flex:1;">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <div class="search-wrap" style="flex:1;min-width:140px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6"/><path d="M16 16l4 4"/></svg>
         <input class="search-input" id="pickerSearch" placeholder="Search…" oninput="renderPicker()">
       </div>
+      <select id="pickerGroupFilter" class="filter-sel" onchange="renderPicker()" style="max-width:130px;flex-shrink:0;">
+        <option value="">All groups</option>
+      </select>
       <select id="pickerArtistFilter" class="filter-sel" onchange="renderPicker()" style="max-width:120px;flex-shrink:0;">
         <option value="">All artists</option>
       </select>
@@ -1532,7 +1535,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.69</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.70</span>
       </div>
 
     </div>
@@ -5514,6 +5517,12 @@ function setupSwipe(idx) {
 async function openPicker() {
   document.getElementById('pickerSearch').value = '';
   document.getElementById('pickerModal').classList.remove('hidden');
+  // populate group filter and pre-select current group
+  const allGroups = await dbAll('groups');
+  const userGroups = allGroups.filter(g => g.createdBy === currentUser || (g.members||[]).includes(currentUser));
+  const groupSel = document.getElementById('pickerGroupFilter');
+  groupSel.innerHTML = '<option value="">All groups</option>' +
+    userGroups.map(g => `<option value="${g.id}"${g.id === activeGroupFilter ? ' selected' : ''}>${esc(g.name)}</option>`).join('');
   // populate artist filter
   const songs = await dbAll('songs');
   const artists = [...new Set(songs.map(s => s.artist).filter(Boolean))].sort();
@@ -5542,8 +5551,19 @@ async function renderPicker() {
     }
   });
   let songs=await dbAll('songs');
+  // visibility: own songs + songs in user's groups
+  const userGroups2 = (await dbAll('groups')).filter(g => g.createdBy === currentUser || (g.members||[]).includes(currentUser));
+  const userGroupIds2 = new Set(userGroups2.map(g => g.id));
+  songs = songs.filter(s => {
+    if (currentIsAdmin) return true;
+    if (!s.createdBy || s.createdBy === currentUser) return true;
+    if (s.groupIds?.length) return s.groupIds.some(gid => userGroupIds2.has(gid));
+    return false;
+  });
   const q=document.getElementById('pickerSearch').value.toLowerCase();
   const artistFilter=document.getElementById('pickerArtistFilter')?.value || '';
+  const groupFilter=document.getElementById('pickerGroupFilter')?.value || '';
+  if(groupFilter) songs=songs.filter(s=>(s.groupIds||[]).includes(groupFilter));
   if(q) songs=songs.filter(s=>(s.title+' '+(s.artist||'')).toLowerCase().includes(q));
   if(artistFilter) songs=songs.filter(s=>s.artist===artistFilter);
   songs.sort((a,b)=>a.title.localeCompare(b.title));
