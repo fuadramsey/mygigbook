@@ -1543,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.88</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.89</span>
       </div>
 
     </div>
@@ -3315,20 +3315,6 @@ async function renderSongPage(idx) {
 
   const audioKey = `audio_${s.id}`;
 
-  // check if audio exists in cloud but not locally (for download button)
-  if (!window._audioCache?.[audioKey] && online && fbReady) {
-    window._cloudAudioMap = window._cloudAudioMap || {};
-    if (!window._cloudAudioMap[s.id]) {
-      checkAudioInCloud(s.id).then(meta => {
-        if (meta) {
-          window._cloudAudioMap[s.id] = meta;
-          // re-render this page to show download button
-          if (currentSongIdx === idx) renderSongPage(idx);
-        }
-      });
-    }
-  }
-
   const userKey = `${currentUser||'me'}_${s.id}`;
   const myNote = await dbGet('notes', userKey);
 
@@ -3385,6 +3371,19 @@ async function renderSongPage(idx) {
   const audioEntry = window._audioCache?.[audioKey] || null;
   // update topbar play button now that we know if audio exists
   updateTopNav(idx);
+
+  // only check cloud if audio isn't local — for showing the download button
+  if (!audioEntry && online && fbReady) {
+    window._cloudAudioMap = window._cloudAudioMap || {};
+    if (!window._cloudAudioMap[s.id]) {
+      checkAudioInCloud(s.id).then(meta => {
+        if (meta) {
+          window._cloudAudioMap[s.id] = meta;
+          if (currentSongIdx === idx) renderSongPage(idx);
+        }
+      });
+    }
+  }
 
   // load note images for this song/tab
   window._imageCache = window._imageCache || {};
