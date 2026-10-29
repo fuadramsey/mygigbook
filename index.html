@@ -1543,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.75</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.76</span>
       </div>
 
     </div>
@@ -5664,6 +5664,15 @@ function setSort(field) {
   renderDB();
 }
 
+function progressStage(p) {
+  if (p == null || p === 0) return 'Demo';
+  if (p <= 25) return 'Demo';
+  if (p <= 50) return 'Learning';
+  if (p <= 75) return 'Rehearsing';
+  if (p < 100) return 'Almost There';
+  return 'Gig Ready';
+}
+
 function durationToSecs(d) {
   if (!d) return 9999;
   const p = d.split(':');
@@ -5747,7 +5756,7 @@ async function renderDB() {
           ${(s.tags||[]).map(t=>`<span style="background:var(--surface3);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--text3);">${esc(t)}</span>`).join('')}
           ${s.createdBy && s.createdBy !== currentUser ? `<span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}
         </div>
-        ${(s.progress != null && s.progress > 0) ? `<div class="song-progress-bar"><div class="song-progress-fill" style="width:${s.progress}%;background:${s.progress>=100?'var(--green)':s.progress>=60?'var(--accent)':'#f97316'};"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace;">${s.progress}% ready</div>` : ''}
+        ${(s.progress != null && s.progress > 0) ? `<div class="song-progress-bar"><div class="song-progress-fill" style="width:${s.progress}%;background:${s.progress>=100?'var(--green)':s.progress>=60?'var(--accent)':'#f97316'};"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace;">${progressStage(s.progress)}</div>` : ''}
         <div id="songGroupBadges_${s.id}" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
       </div>
       ${!editingSongs ? `<div class="db-song-actions">
@@ -5970,7 +5979,7 @@ function renderSETab() {
           ${(s.progress != null) ? `<div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
               <span style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;">Rehearsal Progress</span>
-              <span style="font-size:12px;font-family:'DM Mono',monospace;font-weight:600;color:${(s.progress||0)>=100?'var(--green)':(s.progress||0)>=60?'var(--accent)':'#f97316'};">${s.progress||0}%</span>
+              <span style="font-size:12px;font-family:'DM Mono',monospace;font-weight:600;color:${(s.progress||0)>=100?'var(--green)':(s.progress||0)>=60?'var(--accent)':'#f97316'};">${progressStage(s.progress||0)}</span>
             </div>
             <div class="song-progress-bar" style="height:6px;">
               <div class="song-progress-fill" style="width:${s.progress||0}%;background:${(s.progress||0)>=100?'var(--green)':(s.progress||0)>=60?'var(--accent)':'#f97316'};"></div>
@@ -6023,13 +6032,13 @@ function renderSETab() {
         <div class="form-group">
           <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
             Rehearsal Progress
-            <span id="progressValLabel" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);">${s.progress||0}%</span>
+            <span id="progressValLabel" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);">${progressStage(s.progress||0)}</span>
           </label>
           <input type="range" id="fProgress" min="0" max="100" step="5" value="${s.progress||0}"
             style="width:100%;accent-color:var(--green);cursor:pointer;margin-top:4px;"
-            oninput="document.getElementById('progressValLabel').textContent=this.value+'%'">
+            oninput="document.getElementById('progressValLabel').textContent=progressStage(parseInt(this.value))">
           <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;">
-            <span>Not started</span><span>In progress</span><span>Set-ready</span>
+            <span>Demo</span><span>Learning</span><span>Rehearsing</span><span>Almost There</span><span>Gig Ready</span>
           </div>
         </div>
         <div class="form-label" style="margin-bottom:6px;">Lyrics</div>
