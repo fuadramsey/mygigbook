@@ -464,6 +464,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .sort-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text3); font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .sort-btn:hover { background: var(--surface3); color: var(--text); }
 .sort-btn.active { background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.35); color: var(--accent); }
+.sort-btn.active.sort-rev { background: rgba(220,38,38,0.2); }
+.song-progress-bar { height:3px;border-radius:2px;background:var(--surface3);margin-top:5px;overflow:hidden; }
+.song-progress-fill { height:100%;border-radius:2px;background:var(--green);transition:width 0.3s; }
 .db-song-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .db-song-card:active { background: var(--surface2); }
 .db-song-card.db-song-selected { background: var(--surface2); border-left: 2px solid var(--accent); }
@@ -993,6 +996,8 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
           <button class="sort-btn" id="sort-bpm" onclick="setSort('bpm')">BPM</button>
           <button class="sort-btn" id="sort-duration" onclick="setSort('duration')">Time</button>
           <button class="sort-btn" id="sort-tag" onclick="setSort('tag')">Tag</button>
+          <button class="sort-btn" id="sort-progress" onclick="setSort('progress')" title="Sort by rehearsal progress">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;display:inline-block;vertical-align:middle;margin-right:3px;"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="12" height="4" rx="1"/><rect x="3" y="17" width="7" height="4" rx="1"/></svg>Progress</button>
           <span style="flex:1;"></span>
           <button id="dbPinBtn" onclick="dbTogglePin()" title="Pin list"
             style="display:flex;align-items:center;gap:4px;padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);cursor:pointer;white-space:nowrap;">
@@ -1538,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.74</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.75</span>
       </div>
 
     </div>
@@ -2611,6 +2616,7 @@ async function renderSetDetail() {
             ${item.key?`<span class="key-pill">${esc(item.key)}</span>`:''}
             ${item.bpm?`<span>${item.bpm} BPM</span>`:''}
           </div>
+          ${(item.progress != null && item.progress > 0) ? `<div class="song-progress-bar" style="margin-top:5px;"><div class="song-progress-fill" style="width:${item.progress}%;background:${item.progress>=100?'var(--green)':item.progress>=60?'var(--accent)':'#f97316'};"></div></div>` : ''}
         </div>
         <div style="display:flex;gap:4px">
           <div class="sm-btn add-note-btn" title="Add note after this song" onclick="event.stopPropagation();addNoteAfter(${i})">
@@ -5638,12 +5644,23 @@ async function pickerRemove(songId, idx) {
 
 // ── SONG DB ──
 let dbSortField = 'title';
+let dbSortReverse = false;
 
 function setSort(field) {
-  dbSortField = field;
-  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  if (dbSortField === field) {
+    dbSortReverse = !dbSortReverse;
+  } else {
+    dbSortField = field;
+    dbSortReverse = false;
+  }
+  document.querySelectorAll('.sort-btn').forEach(b => {
+    b.classList.remove('active', 'sort-rev');
+  });
   const btn = document.getElementById('sort-' + field);
-  if (btn) btn.classList.add('active');
+  if (btn) {
+    btn.classList.add('active');
+    if (dbSortReverse) btn.classList.add('sort-rev');
+  }
   renderDB();
 }
 
@@ -5697,12 +5714,14 @@ async function renderDB() {
   }
 
   songs.sort((a, b) => {
-    if (dbSortField === 'title') return a.title.localeCompare(b.title);
-    if (dbSortField === 'key')   return (a.key||'zzz').localeCompare(b.key||'zzz') || a.title.localeCompare(b.title);
-    if (dbSortField === 'bpm')   return (a.bpm||0) - (b.bpm||0);
-    if (dbSortField === 'duration') return durationToSecs(a.duration) - durationToSecs(b.duration);
-    if (dbSortField === 'tag') return ((a.tags||[])[0]||'zzz').localeCompare((b.tags||[])[0]||'zzz') || a.title.localeCompare(b.title);
-    return 0;
+    let cmp = 0;
+    if (dbSortField === 'title') cmp = a.title.localeCompare(b.title);
+    else if (dbSortField === 'key')   cmp = (a.key||'zzz').localeCompare(b.key||'zzz') || a.title.localeCompare(b.title);
+    else if (dbSortField === 'bpm')   cmp = (a.bpm||0) - (b.bpm||0);
+    else if (dbSortField === 'duration') cmp = durationToSecs(a.duration) - durationToSecs(b.duration);
+    else if (dbSortField === 'tag') cmp = ((a.tags||[])[0]||'zzz').localeCompare((b.tags||[])[0]||'zzz') || a.title.localeCompare(b.title);
+    else if (dbSortField === 'progress') cmp = (a.progress||0) - (b.progress||0) || a.title.localeCompare(b.title);
+    return dbSortReverse ? -cmp : cmp;
   });
 
   const el = document.getElementById('dbList');
@@ -5728,6 +5747,7 @@ async function renderDB() {
           ${(s.tags||[]).map(t=>`<span style="background:var(--surface3);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--text3);">${esc(t)}</span>`).join('')}
           ${s.createdBy && s.createdBy !== currentUser ? `<span style="color:var(--accent);opacity:0.8">${esc(s.createdBy)}</span>` : ''}
         </div>
+        ${(s.progress != null && s.progress > 0) ? `<div class="song-progress-bar"><div class="song-progress-fill" style="width:${s.progress}%;background:${s.progress>=100?'var(--green)':s.progress>=60?'var(--accent)':'#f97316'};"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace;">${s.progress}% ready</div>` : ''}
         <div id="songGroupBadges_${s.id}" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
       </div>
       ${!editingSongs ? `<div class="db-song-actions">
@@ -5874,6 +5894,8 @@ function sePersistCurrentTab() {
     s.bpm      = document.getElementById('fBpm')?.value || s.bpm;
     s.duration = document.getElementById('fDuration')?.value.trim() || s.duration;
     s.notes    = document.getElementById('fNotes')?.innerHTML || s.notes;
+    const progEl = document.getElementById('fProgress');
+    if (progEl) s.progress = parseInt(progEl.value) || 0;
     const titleEl = document.getElementById('sePageTitle');
     if (titleEl && s.title) titleEl.textContent = s.title;
   } else if (seTab === 'mynotes') {
@@ -5945,6 +5967,15 @@ function renderSETab() {
           </div>
           ${(s.tags||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;">${(s.tags).map(t=>`<span style="background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--text2);">${esc(t)}</span>`).join('')}</div>` : ''}
           ${s.artist ? `<div style="font-size:15px;color:var(--text2);">${esc(s.artist)}</div>` : ''}
+          ${(s.progress != null) ? `<div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+              <span style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;">Rehearsal Progress</span>
+              <span style="font-size:12px;font-family:'DM Mono',monospace;font-weight:600;color:${(s.progress||0)>=100?'var(--green)':(s.progress||0)>=60?'var(--accent)':'#f97316'};">${s.progress||0}%</span>
+            </div>
+            <div class="song-progress-bar" style="height:6px;">
+              <div class="song-progress-fill" style="width:${s.progress||0}%;background:${(s.progress||0)>=100?'var(--green)':(s.progress||0)>=60?'var(--accent)':'#f97316'};"></div>
+            </div>
+          </div>` : ''}
           ${s.notes ? `<div style="margin-top:8px;"><div class="form-label" style="margin-bottom:6px;">Lyrics</div><div class="note-display" id="dbDetailsNote" style="white-space:pre-wrap;font-size:${Math.round(20*dbZoom)}px;line-height:${1.9*dbZoom};">${s.notes}</div></div>` : '<div style="color:var(--text3);font-style:italic;font-size:14px;">No lyrics added.</div>'}
         </div>`;
     } else {
@@ -5987,6 +6018,18 @@ function renderSETab() {
               <option>Vocal</option>
               <option>Cover</option>
             </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+            Rehearsal Progress
+            <span id="progressValLabel" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);">${s.progress||0}%</span>
+          </label>
+          <input type="range" id="fProgress" min="0" max="100" step="5" value="${s.progress||0}"
+            style="width:100%;accent-color:var(--green);cursor:pointer;margin-top:4px;"
+            oninput="document.getElementById('progressValLabel').textContent=this.value+'%'">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;">
+            <span>Not started</span><span>In progress</span><span>Set-ready</span>
           </div>
         </div>
         <div class="form-label" style="margin-bottom:6px;">Lyrics</div>
@@ -6618,7 +6661,8 @@ async function saveSong() {
   const duration = (s.duration || document.getElementById('fDuration')?.value || '').trim();
   const artist = (s.artist || document.getElementById('fArtist')?.value || '').trim();
   const tags = window._seTagsEdit || s.tags || [];
-  await dbPut('songs',{id,title,artist,key,bpm,duration,notes,spotifyUrl,youtubeUrl,createdBy,groupIds,tags,updatedAt:Date.now()});
+  const progress = s.progress != null ? s.progress : (parseInt(document.getElementById('fProgress')?.value) || 0);
+  await dbPut('songs',{id,title,artist,key,bpm,duration,notes,spotifyUrl,youtubeUrl,createdBy,groupIds,tags,progress,updatedAt:Date.now()});
   window._seTagsEdit = null; // clear after save
   // save My Notes if any content
   const myNotesHtml = window._seMyNotesHtml || document.getElementById('seMyNotes')?.innerHTML || '';
