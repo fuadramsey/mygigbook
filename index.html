@@ -1543,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.86</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.87</span>
       </div>
 
     </div>
@@ -1710,15 +1710,17 @@ async function fbDeleteDoc(collName, id) {
 async function canAccessSong(song) {
   if (!song) return false;
   if (currentIsAdmin) return true;
+  if (!currentUser) return true; // not yet logged in — allow (sync shouldn't run anyway)
+  const cu = currentUser.toLowerCase();
   // song belongs to a group — check if user is a member
   if (song.groupIds?.length) {
     const groups = await Promise.all(song.groupIds.map(id => dbGet('groups', id)));
     return groups.filter(Boolean).some(g =>
-      g.createdBy === currentUser || (g.members||[]).includes(currentUser)
+      (g.createdBy||'').toLowerCase() === cu || (g.members||[]).some(m => m.toLowerCase() === cu)
     );
   }
   // no group — only creator can access
-  return song.createdBy === currentUser;
+  return (song.createdBy||'').toLowerCase() === cu;
 }
 
 // Storage path helpers
@@ -1835,7 +1837,9 @@ async function syncFilesFromStorage() {
     function canAccessSongFast(song) {
       if (!song) return false;
       if (currentIsAdmin) return true;
-      if (song.createdBy === currentUser) return true;
+      if (!currentUser) return true;
+      const cu = currentUser.toLowerCase();
+      if ((song.createdBy||'').toLowerCase() === cu) return true;
       if (song.groupIds?.length) return song.groupIds.some(gid => userGroupIds.has(gid));
       return false;
     }
@@ -7104,7 +7108,9 @@ async function downloadAudioNow(silent = false) {
       const { fileId, downloadUrl, songId } = meta;
       if (!downloadUrl || !fileId || !songId) continue;
       const song = songMap[songId];
-      if (!song || !await canAccessSong(song)) continue;
+      if (!song) continue;
+      // skip access check if currentUser not yet set (race condition on load)
+      if (currentUser && !currentIsAdmin && !await canAccessSong(song)) continue;
       const audioKey = `audio_${songId}`;
       const existing = await dbGet('audio', audioKey);
       if (existing?.data) continue;
