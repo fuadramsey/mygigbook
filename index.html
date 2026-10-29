@@ -1030,7 +1030,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <!-- detail topbar: song title + pin + edit buttons -->
         <div id="dbDetailBar" style="display:none;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
           <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-          <button id="dbDetailEditBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;" onclick="enterSEEditMode()">Edit</button>
+          <button id="dbDetailEditBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;" onclick="enterSEEditMode()">Edit</button>
           <button id="dbDetailSaveBtn" class="btn primary" style="padding:4px 12px;font-size:12px;display:none;" onclick="saveSong()">Save</button>
           <button id="dbDetailCancelBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;color:var(--text2);" onclick="cancelSEEdit()">Cancel</button>
         </div>
@@ -1089,7 +1089,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <div style="flex:1;min-width:0;">
       <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text)">New Song</div>
     </div>
-    <button id="seEditBtn" class="btn ghost" style="padding:6px 14px;font-size:13px;flex-shrink:0;display:flex;align-items:center;gap:6px;" onclick="enterSEEditMode()">
+    <button id="seEditBtn" class="btn ghost" style="padding:6px 14px;font-size:13px;flex-shrink:0;display:none;align-items:center;gap:6px;" onclick="enterSEEditMode()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Edit
     </button>
@@ -2933,6 +2933,44 @@ function setupNoteFullscreen(idx) {
     if (tag === 'img' || tag === 'canvas' || tag === 'button' || tag === 'a') return;
     openNoteFullscreen(idx);
   });
+}
+
+function openSEMyNotesFullscreen() {
+  const existing = document.getElementById('seMyNotesFullscreenOverlay');
+  if (existing) { existing._close(); return; }
+  const s = window._seCurrentSong || {};
+  const html = window._seMyNotesHtml || '';
+  if (!html) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'seMyNotesFullscreenOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:8000;display:flex;flex-direction:column;touch-action:pan-y;';
+  const zoomKey = 'mgb_zoom_db_mynotes';
+  let zoom = parseFloat(localStorage.getItem(zoomKey) || '1');
+  overlay.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 14px;background:var(--surface2);border-bottom:1px solid var(--border2);flex-shrink:0;min-height:44px;gap:8px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${esc(s.title||'')}</div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <button id="fsMyNotesZoomOut" style="width:28px;height:28px;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
+        <span id="fsMyNotesZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(zoom*100)}%</span>
+        <button id="fsMyNotesZoomIn" style="width:28px;height:28px;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
+      </div>
+      <button id="fsMyNotesDismiss" style="background:none;border:none;color:var(--text3);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 18px;-webkit-overflow-scrolling:touch;">
+      <div id="fsMyNotesContent" class="note-display" style="white-space:pre-wrap;font-size:${Math.round(20*zoom)}px;line-height:${1.9*zoom};">${html}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  function updateZoom() {
+    localStorage.setItem(zoomKey, zoom);
+    const lbl = document.getElementById('fsMyNotesZoomLabel');
+    const content = document.getElementById('fsMyNotesContent');
+    if (lbl) lbl.textContent = Math.round(zoom*100)+'%';
+    if (content) { content.style.fontSize = Math.round(20*zoom)+'px'; content.style.lineHeight = (1.9*zoom)+''; }
+  }
+  overlay._close = () => { overlay.remove(); };
+  document.getElementById('fsMyNotesDismiss').onclick = overlay._close;
+  document.getElementById('fsMyNotesZoomOut').onclick = () => { zoom = Math.max(0.5, Math.round((zoom-0.1)*10)/10); updateZoom(); };
+  document.getElementById('fsMyNotesZoomIn').onclick = () => { zoom = Math.min(3, Math.round((zoom+0.1)*10)/10); updateZoom(); };
 }
 
 function openNoteFullscreen(idx) {
@@ -5756,14 +5794,14 @@ function cancelSEEdit() {
   const editBtn = document.getElementById('seEditBtn');
   const cancelBtn = document.getElementById('seCancelBtn');
   const saveBtn = document.getElementById('seSaveBtn');
-  if (editBtn) editBtn.style.display = 'flex';
+  if (editBtn) editBtn.style.display = 'none';
   if (cancelBtn) cancelBtn.style.display = 'none';
   if (saveBtn) saveBtn.style.display = 'none';
   // DB inline buttons
   const dEditBtn = document.getElementById('dbDetailEditBtn');
   const dSaveBtn = document.getElementById('dbDetailSaveBtn');
   const dCancelBtn = document.getElementById('dbDetailCancelBtn');
-  if (dEditBtn) dEditBtn.style.display = '';
+  if (dEditBtn) dEditBtn.style.display = 'none';
   if (dSaveBtn) dSaveBtn.style.display = 'none';
   if (dCancelBtn) dCancelBtn.style.display = 'none';
   // reload original song data to discard in-memory changes
@@ -5886,10 +5924,17 @@ function renderSETab() {
       const dbZoom = parseFloat(localStorage.getItem(dbZoomKey) || '1');
       body.innerHTML = `
         ${sePlayer}
-        <div style="display:flex;align-items:center;gap:4px;margin-bottom:10px;">
-          <button onclick="changeDBZoom(-0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
-          <span id="dbZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(dbZoom*100)}%</span>
-          <button onclick="changeDBZoom(0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <button onclick="changeDBZoom(-0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
+            <span id="dbZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(dbZoom*100)}%</span>
+            <button onclick="changeDBZoom(0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
+          </div>
+          <button onclick="enterSEEditMode()" title="Edit Song"
+            style="height:30px;padding:0 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </button>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -6009,13 +6054,34 @@ function renderSETab() {
       body.innerHTML = `
         ${sePlayer}
         ${myNoteHtml
-          ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:8px;">
-              <button onclick="changeMyNotesZoom(-0.1,'${myNotesZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
-              <span id="myNotesZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(myNotesZoom*100)}%</span>
-              <button onclick="changeMyNotesZoom(0.1,'${myNotesZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
+          ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:4px;">
+                <button onclick="changeMyNotesZoom(-0.1,'${myNotesZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
+                <span id="myNotesZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(myNotesZoom*100)}%</span>
+                <button onclick="changeMyNotesZoom(0.1,'${myNotesZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <button onclick="enterSEEditMode()" title="Edit Notes"
+                  style="height:30px;padding:0 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Edit
+                </button>
+                <button onclick="openSEMyNotesFullscreen()" title="Fullscreen"
+                  style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
+                </button>
+              </div>
             </div>
             <div class="note-display" id="myNotesNote" style="white-space:pre-wrap;min-height:80px;font-size:${Math.round(20*myNotesZoom)}px;line-height:${1.9*myNotesZoom};">${myNoteHtml}</div>`
-          : '<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>'}`;
+          : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span></span>
+              <button onclick="enterSEEditMode()" title="Edit Notes"
+                style="height:30px;padding:0 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit
+              </button>
+            </div>
+            <div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No personal notes yet.</div>`}`;
       // spacing is stored inline in the HTML spans — no extra apply needed
     } else {
       // EDIT view
@@ -6272,14 +6338,14 @@ async function openSongModal(id) {
   ['seEditBtn','seCancelBtn','seSaveBtn'].forEach(bid => {
     const b = document.getElementById(bid);
     if (!b) return;
-    if (bid === 'seEditBtn') b.style.display = 'flex';
+    if (bid === 'seEditBtn') b.style.display = 'none';
     else b.style.display = 'none';
   });
   // Also reset DB inline buttons
   const dEditBtn = document.getElementById('dbDetailEditBtn');
   const dSaveBtn = document.getElementById('dbDetailSaveBtn');
   const dCancelBtn = document.getElementById('dbDetailCancelBtn');
-  if (dEditBtn) dEditBtn.style.display = '';
+  if (dEditBtn) dEditBtn.style.display = 'none';
   if (dSaveBtn) dSaveBtn.style.display = 'none';
   if (dCancelBtn) dCancelBtn.style.display = 'none';
 
@@ -6360,7 +6426,7 @@ async function loadSongIntoSEPage(id) {
   const dEditBtn = document.getElementById('dbDetailEditBtn');
   const dSaveBtn = document.getElementById('dbDetailSaveBtn');
   const dCancelBtn = document.getElementById('dbDetailCancelBtn');
-  if (dEditBtn) dEditBtn.style.display = '';
+  if (dEditBtn) dEditBtn.style.display = 'none';
   if (dSaveBtn) dSaveBtn.style.display = 'none';
   if (dCancelBtn) dCancelBtn.style.display = 'none';
 
@@ -6577,13 +6643,13 @@ async function saveSong() {
   const _editBtn = document.getElementById('seEditBtn');
   const _cancelBtn = document.getElementById('seCancelBtn');
   const _saveBtn = document.getElementById('seSaveBtn');
-  if (_editBtn) _editBtn.style.display = 'flex';
+  if (_editBtn) _editBtn.style.display = 'none';
   if (_cancelBtn) _cancelBtn.style.display = 'none';
   if (_saveBtn) _saveBtn.style.display = 'none';
   const dEditBtn = document.getElementById('dbDetailEditBtn');
   const dSaveBtn = document.getElementById('dbDetailSaveBtn');
   const dCancelBtn = document.getElementById('dbDetailCancelBtn');
-  if (dEditBtn) dEditBtn.style.display = '';
+  if (dEditBtn) dEditBtn.style.display = 'none';
   if (dSaveBtn) dSaveBtn.style.display = 'none';
   if (dCancelBtn) dCancelBtn.style.display = 'none';
 
