@@ -1543,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.87</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.88</span>
       </div>
 
     </div>
@@ -2056,7 +2056,9 @@ async function manualSync() {
     await cleanFirestoreDupes(deletedIds);    // soft-delete Firestore dupes
     await fbPushAll(deletedIds);              // push clean local state (skip deleted IDs)
     await syncFilesFromStorage();            // download missing PDFs/images
+    console.log('[Sync] autoDownloadFiles:', autoDownloadFiles, '| AUTO_DOWNLOAD_KEY:', localStorage.getItem(AUTO_DOWNLOAD_KEY), '| PROMPTED_KEY:', localStorage.getItem(AUTO_DOWNLOAD_PROMPTED_KEY));
     if (autoDownloadFiles) await downloadAudioNow(true); // silent audio sync
+    else console.log('[Sync] skipping audio download — autoDownloadFiles is false');
     await renderAll();
     lastSyncTime = Date.now();
     localStorage.setItem('mgb_last_sync', lastSyncTime);
@@ -7068,6 +7070,7 @@ function audioDownloadPromptAnswer(val) {
 }
 
 async function downloadAudioNow(silent = false) {
+  console.log('[AudioDL] start — online:', online, 'fbReady:', fbReady, 'autoDownloadFiles:', autoDownloadFiles, 'currentUser:', currentUser);
   if (!online) { if (!silent) showToast('No internet connection', 'err'); return; }
   if (!fbReady) { if (!silent) showToast('Not connected to cloud', 'err'); return; }
   const fb = window._fb;
@@ -7091,61 +7094,86 @@ async function downloadAudioNow(silent = false) {
     const snap = await fb.getDocs(fb.collection(fb.db, 'files'));
     const allFiles = snap.docs.map(d => d.data());
     const audioFiles = allFiles.filter(m => m.type === 'audio');
+    console.log('[AudioDL] files in cloud:', allFiles.length, '— audio files:', audioFiles.length);
 
     if (!audioFiles.length) {
       if (!silent && modal) modal.classList.add('hidden');
       if (!silent) showToast('No audio files found in cloud', 'err');
+      console.log('[AudioDL] no audio files in Firestore — nothing to download');
       return;
     }
 
     const allSongs = await dbAll('songs');
     const songMap = {};
     allSongs.forEach(s => songMap[s.id] = s);
+    console.log('[AudioDL] local songs:', allSongs.length);
 
     // filter to only files this user can access and doesn't already have
     const toDownload = [];
     for (const meta of audioFiles) {
-      const { fileId, downloadUrl, songId } = meta;
-      if (!downloadUrl || !fileId || !songId) continue;
+      const { fileId, downloadUrl, songId, path: storedPath } = meta;
+      if (!downloadUrl || !fileId || !songId) {
+        console.log('[AudioDL] skip — missing field:', { fileId, downloadUrl: !!downloadUrl, songId });
+        continue;
+      }
       const song = songMap[songId];
-      if (!song) continue;
+      if (!song) {
+        console.log('[AudioDL] skip — song not in local DB:', songId);
+        continue;
+      }
       // skip access check if currentUser not yet set (race condition on load)
-      if (currentUser && !currentIsAdmin && !await canAccessSong(song)) continue;
+      if (currentUser && !currentIsAdmin && !await canAccessSong(song)) {
+        console.log('[AudioDL] skip — no access:', songId);
+        continue;
+      }
       const audioKey = `audio_${songId}`;
       const existing = await dbGet('audio', audioKey);
-      if (existing?.data) continue;
+      if (existing?.data) {
+        console.log('[AudioDL] skip — already have:', audioKey);
+        continue;
+      }
+      console.log('[AudioDL] queued to download:', audioKey, 'fileId:', fileId, 'path:', storedPath || '(none stored)');
       toDownload.push(meta);
     }
 
+    console.log('[AudioDL] toDownload count:', toDownload.length);
     if (!toDownload.length) {
       if (!silent && modal) modal.classList.add('hidden');
       if (!silent) showToast('All audio already on this device', 'ok');
+      // in silent mode, only log — don't show toast for "nothing to do"
+      console.log('[AudioDL] nothing queued — all already downloaded or filtered out');
       return;
     }
 
     let downloaded = 0, failed = 0;
     for (let i = 0; i < toDownload.length; i++) {
-      const { fileId, name, mimeType, downloadUrl, songId } = toDownload[i];
+      const { fileId, name, mimeType, downloadUrl, songId, path: storedPath } = toDownload[i];
       const pct = 10 + Math.round(((i) / toDownload.length) * 88);
       setProgress(pct, `Downloading ${i + 1} of ${toDownload.length}…`, name);
       const audioKey = `audio_${songId}`;
+      // prefer the stored Storage path, fall back to reconstructed path
+      const storagePath = storedPath || `songs/${songId}/audio/${fileId}`;
+      console.log('[AudioDL] downloading:', audioKey, 'from path:', storagePath);
       try {
-        const ab = await fetchFromStorage(`songs/${songId}/audio/${fileId}`, downloadUrl);
+        const ab = await fetchFromStorage(storagePath, downloadUrl);
         await dbPut('audio', { id: audioKey, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
         if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
         const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
         window._audioCache = window._audioCache || {};
         window._audioCache[audioKey] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: true };
         downloaded++;
+        console.log('[AudioDL] ✓ downloaded:', audioKey);
       } catch(e) {
-        console.warn('[Audio Sync] Download error:', fileId, e);
+        console.warn('[AudioDL] ✗ download error:', audioKey, storagePath, e.message);
         failed++;
       }
     }
 
     setProgress(100, 'Done!', `${downloaded} downloaded${failed ? `, ${failed} failed` : ''}`);
+    console.log('[AudioDL] done — downloaded:', downloaded, 'failed:', failed);
     if (silent) {
       if (downloaded > 0) showToast(`Auto-downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`, 'ok');
+      if (failed > 0) showToast(`${failed} audio file${failed > 1 ? 's' : ''} failed to download`, 'err');
     } else {
       setTimeout(() => {
         if (modal) modal.classList.add('hidden');
@@ -7155,8 +7183,9 @@ async function downloadAudioNow(silent = false) {
 
   } catch(e) {
     if (!silent && modal) modal.classList.add('hidden');
-    console.error('[Audio Sync] Error:', e);
+    console.error('[AudioDL] Error:', e);
     if (!silent) showToast('Error: ' + (e?.message || e), 'err');
+    else showToast('Audio sync error: ' + (e?.message || e), 'err');
   }
 }
 
