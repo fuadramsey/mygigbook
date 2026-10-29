@@ -947,18 +947,6 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <span id="songNavNextLabel" style="font-size:11px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;text-align:center;display:block;"></span>
       </button>
 
-      <!-- Tuning fork only — audio player is in the note area -->
-      <button class="song-nav-btn" id="tuningForkBtn" onclick="toggleTuningFork()" title="Concert A — 440 Hz" style="position:relative;flex-shrink:0;">
-        <svg id="tuningForkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
-          <path d="M12 13 Q8 13 8 8 L8 3"/>
-          <path d="M12 13 Q16 13 16 8 L16 3"/>
-          <path d="M8 3 Q8 1.5 9 1.5 Q10 1.5 10 3"/>
-          <path d="M14 3 Q14 1.5 15 1.5 Q16 1.5 16 3"/>
-          <line x1="12" y1="13" x2="12" y2="20.5"/>
-          <circle cx="12" cy="21.5" r="1.2" fill="currentColor" stroke="none"/>
-        </svg>
-        <span id="tuningForkLabel" style="display:none;position:absolute;inset:0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;align-items:center;justify-content:center;">A</span>
-      </button>
     </div>
     <div class="page-body no-nav" id="songPageBody" style="display:flex;flex-direction:column;padding:0;"></div>
   </div>
@@ -1462,6 +1450,21 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
       </button>
 
+      <div class="settings-section-label" style="margin-top:8px">Tuner</div>
+      <button class="settings-row" id="settingsTunerBtn" onclick="toggleTuningFork(); updateSettingsTunerBtn();">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+            <path d="M12 13 Q8 13 8 8 L8 3"/><path d="M12 13 Q16 13 16 8 L16 3"/>
+            <path d="M8 3 Q8 1.5 9 1.5 Q10 1.5 10 3"/><path d="M14 3 Q14 1.5 15 1.5 Q16 1.5 16 3"/>
+            <line x1="12" y1="13" x2="12" y2="20.5"/><circle cx="12" cy="21.5" r="1.2" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <span class="settings-row-label" id="settingsTunerLabel">Concert A — 440 Hz
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Tap to play / stop reference tone</span>
+        </span>
+        <span id="settingsTunerStatus" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);flex-shrink:0;">Off</span>
+      </button>
+
       <div class="settings-section-label" style="margin-top:8px">Account</div>
 
       <div class="settings-row" style="cursor:default;">
@@ -1535,7 +1538,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.71</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.72</span>
       </div>
 
     </div>
@@ -3035,6 +3038,21 @@ function openNoteFullscreen(idx) {
 
 function toggleTuningFork() {
   tuningPlaying ? stopTuningFork() : startTuningFork();
+  updateSettingsTunerBtn();
+}
+function updateSettingsTunerBtn() {
+  const btn = document.getElementById('settingsTunerBtn');
+  const status = document.getElementById('settingsTunerStatus');
+  if (!btn) return;
+  if (tuningPlaying) {
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#fff';
+    if (status) status.textContent = 'On';
+  } else {
+    btn.style.background = '';
+    btn.style.color = '';
+    if (status) status.textContent = 'Off';
+  }
 }
 
 let _tapTimes = [];
@@ -3369,7 +3387,12 @@ async function renderSongPage(idx) {
           <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:18px;width:32px;height:32px;">+</button>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-<button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
+          <button onclick="startEditNote(${idx})" title="Edit Notes"
+            style="height:30px;padding:0 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </button>
+          <button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
             style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
           </button>
@@ -3386,9 +3409,6 @@ async function renderSongPage(idx) {
         ? `<div id="chartsContent" style="padding:16px;">Loading…</div>`
         : buildNoteContent(activeNote, idx, true)}
     </div>
-    ${(noteTab === 'default' || noteTab === 'mine') && !editingNote
-      ? buildUploadBar(activeNote, idx)
-      : ''}
     `;
 
   setupSwipe(idx);
