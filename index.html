@@ -1538,7 +1538,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.72</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.73</span>
       </div>
 
     </div>
@@ -1844,15 +1844,15 @@ async function syncFilesFromStorage() {
       // audio — only download if auto-download is enabled
       if (type === 'audio') {
         if (!autoDownloadFiles) continue;
-        const audioKey = `audio_${songId}`;
-        const existing = await dbGet('audio', audioKey);
-        if (existing?.data) continue; // already local
         const song = songMap[songId];
         if (!song) continue;
         if (!currentIsAdmin && !canAccessSongFast(song)) continue;
+        const audioKey = `audio_${songId}`;
+        const existingAudio = await dbGet('audio', audioKey);
+        if (existingAudio?.data) continue; // already local
         tasks.push((async () => {
           try {
-            const ab = await fetchFromStorage(`songs/${songId}/audio/${fileId}`, downloadUrl);
+            const ab = await fetchFromStorage(meta.path || `songs/${songId}/audio/${fileId}`, downloadUrl);
             if (!ab) return;
             await dbPut('audio', { id: audioKey, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: meta.updatedAt || Date.now() });
             if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
