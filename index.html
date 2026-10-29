@@ -1538,7 +1538,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.73</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.74</span>
       </div>
 
     </div>
@@ -1841,28 +1841,8 @@ async function syncFilesFromStorage() {
       const { type, fileId, name, mimeType, downloadUrl, songId } = meta;
       if (!downloadUrl || !fileId || !songId) continue;
 
-      // audio — only download if auto-download is enabled
-      if (type === 'audio') {
-        if (!autoDownloadFiles) continue;
-        const song = songMap[songId];
-        if (!song) continue;
-        if (!currentIsAdmin && !canAccessSongFast(song)) continue;
-        const audioKey = `audio_${songId}`;
-        const existingAudio = await dbGet('audio', audioKey);
-        if (existingAudio?.data) continue; // already local
-        tasks.push((async () => {
-          try {
-            const ab = await fetchFromStorage(meta.path || `songs/${songId}/audio/${fileId}`, downloadUrl);
-            if (!ab) return;
-            await dbPut('audio', { id: audioKey, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: meta.updatedAt || Date.now() });
-            if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-            const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
-            window._audioCache = window._audioCache || {};
-            window._audioCache[audioKey] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: true };
-          } catch(e) { console.warn('Audio auto-download error:', songId, e); }
-        })());
-        continue;
-      }
+      // audio — handled separately via downloadAudioNow() when autoDownloadFiles is on
+      if (type === 'audio') continue;
 
       // determine which store and check access
       let store = null;
@@ -2066,7 +2046,8 @@ async function manualSync() {
     const deletedIds = await deduplicateLocalDB(); // clean local dupes, get deleted ID set
     await cleanFirestoreDupes(deletedIds);    // soft-delete Firestore dupes
     await fbPushAll(deletedIds);              // push clean local state (skip deleted IDs)
-    await syncFilesFromStorage();   // download missing PDFs/images
+    await syncFilesFromStorage();            // download missing PDFs/images
+    if (autoDownloadFiles) await downloadAudioNow(true); // silent audio sync
     await renderAll();
     lastSyncTime = Date.now();
     localStorage.setItem('mgb_last_sync', lastSyncTime);
@@ -7008,19 +6989,20 @@ function audioDownloadPromptAnswer(val) {
   }
 }
 
-async function downloadAudioNow() {
-  if (!online) { showToast('No internet connection', 'err'); return; }
-  if (!fbReady) { showToast('Not connected to cloud', 'err'); return; }
+async function downloadAudioNow(silent = false) {
+  if (!online) { if (!silent) showToast('No internet connection', 'err'); return; }
+  if (!fbReady) { if (!silent) showToast('Not connected to cloud', 'err'); return; }
   const fb = window._fb;
-  if (!fb?.storage) { showToast('Storage not available', 'err'); return; }
+  if (!fb?.storage) { if (!silent) showToast('Storage not available', 'err'); return; }
 
-  // show progress modal
+  // show progress modal (unless called silently from sync)
   const modal = document.getElementById('audioDownloadProgressModal');
   const label = document.getElementById('audioProgressLabel');
   const bar = document.getElementById('audioProgressBar');
   const count = document.getElementById('audioProgressCount');
-  if (modal) modal.classList.remove('hidden');
+  if (!silent && modal) modal.classList.remove('hidden');
   const setProgress = (pct, msg, detail) => {
+    if (silent) return;
     if (bar) bar.style.width = pct + '%';
     if (label) label.textContent = msg;
     if (count) count.textContent = detail || '';
@@ -7033,8 +7015,8 @@ async function downloadAudioNow() {
     const audioFiles = allFiles.filter(m => m.type === 'audio');
 
     if (!audioFiles.length) {
-      if (modal) modal.classList.add('hidden');
-      showToast('No audio files found in cloud', 'err');
+      if (!silent && modal) modal.classList.add('hidden');
+      if (!silent) showToast('No audio files found in cloud', 'err');
       return;
     }
 
@@ -7055,8 +7037,8 @@ async function downloadAudioNow() {
     }
 
     if (!toDownload.length) {
-      if (modal) modal.classList.add('hidden');
-      showToast('All audio already on this device', 'ok');
+      if (!silent && modal) modal.classList.add('hidden');
+      if (!silent) showToast('All audio already on this device', 'ok');
       return;
     }
 
@@ -7080,15 +7062,19 @@ async function downloadAudioNow() {
     }
 
     setProgress(100, 'Done!', `${downloaded} downloaded${failed ? `, ${failed} failed` : ''}`);
-    setTimeout(() => {
-      if (modal) modal.classList.add('hidden');
-      showToast(downloaded > 0 ? `Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}` : `${failed} file${failed > 1 ? 's' : ''} failed`, downloaded > 0 ? 'ok' : 'err');
-    }, 1000);
+    if (silent) {
+      if (downloaded > 0) showToast(`Auto-downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}`, 'ok');
+    } else {
+      setTimeout(() => {
+        if (modal) modal.classList.add('hidden');
+        showToast(downloaded > 0 ? `Downloaded ${downloaded} audio file${downloaded > 1 ? 's' : ''}` : `${failed} file${failed > 1 ? 's' : ''} failed`, downloaded > 0 ? 'ok' : 'err');
+      }, 1000);
+    }
 
   } catch(e) {
-    if (modal) modal.classList.add('hidden');
+    if (!silent && modal) modal.classList.add('hidden');
     console.error('[Audio Sync] Error:', e);
-    showToast('Error: ' + (e?.message || e), 'err');
+    if (!silent) showToast('Error: ' + (e?.message || e), 'err');
   }
 }
 
