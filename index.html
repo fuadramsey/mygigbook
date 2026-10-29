@@ -1543,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.89</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.90</span>
       </div>
 
     </div>
@@ -1923,6 +1923,7 @@ async function loadAudioHybrid(songId) {
   try {
     const entry = await dbGet('audio', audioKey);
     if (entry?.data) {
+      window._audioCache = window._audioCache || {};
       if (window._audioCache[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
       const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
       window._audioCache[audioKey] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true };
