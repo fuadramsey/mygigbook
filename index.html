@@ -1543,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.80</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.81</span>
       </div>
 
     </div>
@@ -6041,13 +6041,35 @@ function renderSETab() {
         <div class="form-group">
           <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
             Rehearsal Progress
-            <span id="progressValLabel" style="font-family:'DM Mono',monospace;font-size:12px;color:${progressColor(s.progress||5)};">${progressStage(s.progress||5)}</span>
+            <span id="progressValLabel" style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${progressColor(s.progress||5)};">${progressStage(s.progress||5)}</span>
           </label>
-          <input type="range" id="fProgress" min="0" max="100" step="5" value="${s.progress||5}"
-            style="width:100%;accent-color:${progressColor(s.progress||5)};cursor:pointer;margin-top:4px;"
-            oninput="(function(v){var l=document.getElementById('progressValLabel');l.textContent=progressStage(v);l.style.color=progressColor(v);this.style.accentColor=progressColor(v);})(parseInt(this.value))">
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;">
-            <span>Demo</span><span>Learning</span><span>Rehearsing</span><span>Almost There</span><span>Gig Ready</span>
+          <div style="position:relative;margin-top:8px;padding-bottom:18px;">
+            <input type="range" id="fProgress" min="0" max="100" step="1" value="${s.progress||5}"
+              style="width:100%;accent-color:${progressColor(s.progress||5)};cursor:pointer;"
+              oninput="(function(v){var l=document.getElementById('progressValLabel');l.textContent=progressStage(v);l.style.color=progressColor(v);this.style.accentColor=progressColor(v);})(parseInt(this.value))">
+            <!-- tick marks at stage boundaries: 0,25,50,75,100 -->
+            <div style="position:absolute;top:14px;left:0;right:0;display:flex;justify-content:space-between;pointer-events:none;">
+              <div style="display:flex;flex-direction:column;align-items:flex-start;">
+                <div style="width:1px;height:5px;background:#ef4444;margin-left:0;"></div>
+                <span style="font-size:9px;font-family:'DM Mono',monospace;color:#ef4444;margin-top:2px;white-space:nowrap;">Demo</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div style="width:1px;height:5px;background:#f97316;"></div>
+                <span style="font-size:9px;font-family:'DM Mono',monospace;color:#f97316;margin-top:2px;white-space:nowrap;">Learning</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div style="width:1px;height:5px;background:#eab308;"></div>
+                <span style="font-size:9px;font-family:'DM Mono',monospace;color:#eab308;margin-top:2px;white-space:nowrap;">Rehearsing</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div style="width:1px;height:5px;background:#84cc16;"></div>
+                <span style="font-size:9px;font-family:'DM Mono',monospace;color:#84cc16;margin-top:2px;white-space:nowrap;">Almost There</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;">
+                <div style="width:1px;height:5px;background:#22c55e;margin-right:0;"></div>
+                <span style="font-size:9px;font-family:'DM Mono',monospace;color:#22c55e;margin-top:2px;white-space:nowrap;">Gig Ready</span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="form-label" style="margin-bottom:6px;">Lyrics</div>
