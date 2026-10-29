@@ -1543,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.78</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.79</span>
       </div>
 
     </div>
@@ -5984,7 +5984,7 @@ function renderSETab() {
           </div>
           ${(s.tags||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;">${(s.tags).map(t=>`<span style="background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--text2);">${esc(t)}</span>`).join('')}</div>` : ''}
           ${s.artist ? `<div style="font-size:15px;color:var(--text2);">${esc(s.artist)}</div>` : ''}
-          ${(s.progress != null) ? `<div>
+          <div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
               <span style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;">Rehearsal Progress</span>
               <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);">${s.progress||0}%</span>
@@ -5993,7 +5993,7 @@ function renderSETab() {
               <div class="song-progress-fill" style="width:${s.progress||0}%;background:${progressColor(s.progress||0)};"></div>
             </div>
             <div style="text-align:center;margin-top:5px;font-size:12px;font-family:'DM Mono',monospace;font-weight:600;color:${progressColor(s.progress||0)};">${progressStage(s.progress||0)}</div>
-          </div>` : ''}
+          </div>
           ${s.notes ? `<div style="margin-top:8px;"><div class="form-label" style="margin-bottom:6px;">Lyrics</div><div class="note-display" id="dbDetailsNote" style="white-space:pre-wrap;font-size:${Math.round(20*dbZoom)}px;line-height:${1.9*dbZoom};">${s.notes}</div></div>` : '<div style="color:var(--text3);font-style:italic;font-size:14px;">No lyrics added.</div>'}
         </div>`;
     } else {
