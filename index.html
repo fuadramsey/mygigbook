@@ -1543,7 +1543,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.79</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.80</span>
       </div>
 
     </div>
@@ -7090,10 +7090,11 @@ async function downloadAudioNow(silent = false) {
     const toDownload = [];
     for (const meta of audioFiles) {
       const { fileId, downloadUrl, songId } = meta;
-      if (!downloadUrl || !fileId) continue;
+      if (!downloadUrl || !fileId || !songId) continue;
       const song = songMap[songId];
       if (!song || !await canAccessSong(song)) continue;
-      const existing = await dbGet('audio', fileId);
+      const audioKey = `audio_${songId}`;
+      const existing = await dbGet('audio', audioKey);
       if (existing?.data) continue;
       toDownload.push(meta);
     }
@@ -7109,13 +7110,14 @@ async function downloadAudioNow(silent = false) {
       const { fileId, name, mimeType, downloadUrl, songId } = toDownload[i];
       const pct = 10 + Math.round(((i) / toDownload.length) * 88);
       setProgress(pct, `Downloading ${i + 1} of ${toDownload.length}…`, name);
+      const audioKey = `audio_${songId}`;
       try {
         const ab = await fetchFromStorage(`songs/${songId}/audio/${fileId}`, downloadUrl);
-        await dbPut('audio', { id: fileId, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
-        if (window._audioCache?.[fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fileId].blobUrl);
+        await dbPut('audio', { id: audioKey, name, data: ab, mimeType: mimeType || 'audio/mpeg', updatedAt: Date.now() });
+        if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
         const blob = new Blob([ab], { type: mimeType || 'audio/mpeg' });
         window._audioCache = window._audioCache || {};
-        window._audioCache[fileId] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: false };
+        window._audioCache[audioKey] = { name, blobUrl: URL.createObjectURL(blob), mimeType, local: true };
         downloaded++;
       } catch(e) {
         console.warn('[Audio Sync] Download error:', fileId, e);
