@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.14</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.15</span>
     </div>
   </div>
 </aside>
@@ -1550,7 +1550,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.14</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.15</span>
       </div>
 
     </div>
@@ -1903,6 +1903,56 @@ async function syncFilesFromStorage() {
   } catch(e) { console.warn('syncFilesFromStorage error:', e); }
 }
 
+// Sync audio file names from Firestore without re-downloading audio data.
+// Runs on every sync so renames made on another device are applied locally.
+async function syncAudioNames() {
+  if (!fbReady || !online) return;
+  const fb = window._fb;
+  if (!fb) return;
+  try {
+    const snap = await fb.getDocs(fb.collection(fb.db, 'files'));
+    // Build map: songId -> [{fileId, name}] for audio files
+    const cloudBySong = {};
+    for (const d of snap.docs) {
+      const m = d.data();
+      if (m.type !== 'audio' || !m.fileId || !m.songId || !m.name) continue;
+      if (!cloudBySong[m.songId]) cloudBySong[m.songId] = [];
+      cloudBySong[m.songId].push({ fileId: m.fileId, name: m.name });
+    }
+    let changed = 0;
+    for (const [songId, cloudFiles] of Object.entries(cloudBySong)) {
+      const metaKey = `audio_meta_${songId}`;
+      let localMeta = null;
+      try { localMeta = await dbGet('audio', metaKey); } catch(e) {}
+      if (!localMeta?.files) continue;
+      const localFileMap = {};
+      localMeta.files.forEach(f => localFileMap[f.key] = f);
+      let metaDirty = false;
+      for (const { fileId, name } of cloudFiles) {
+        const lf = localFileMap[fileId];
+        if (!lf || lf.name === name) continue;
+        console.log('[SyncNames] patch:', fileId, '"' + lf.name + '" ->', '"' + name + '"');
+        lf.name = name;
+        metaDirty = true;
+        // Update raw audio entry name in IndexedDB
+        try {
+          const entry = await dbGet('audio', fileId);
+          if (entry) { entry.name = name; await dbPut('audio', entry); }
+        } catch(e) {}
+        // Update in-memory cache
+        if (window._audioCache?.[fileId]) window._audioCache[fileId].name = name;
+        changed++;
+      }
+      if (metaDirty) {
+        localMeta.updatedAt = Date.now();
+        try { await dbPut('audio', localMeta); } catch(e) {}
+        if (window._audioCache?.[metaKey]) window._audioCache[metaKey] = localMeta;
+      }
+    }
+    if (changed) console.log('[SyncNames] patched', changed, 'audio file name(s)');
+  } catch(e) { console.warn('syncAudioNames error:', e); }
+}
+
 // Get audio download URL from Firestore file metadata
 async function getAudioDownloadUrl(songId) {
   if (!fbReady || !online) return null;
@@ -2097,8 +2147,9 @@ async function manualSync() {
     await cleanFirestoreDupes(deletedIds);    // soft-delete Firestore dupes
     await fbPushAll(deletedIds);              // push clean local state (skip deleted IDs)
     await syncFilesFromStorage();            // download missing PDFs/images
+    await syncAudioNames();                  // patch renamed audio files (always, even if not auto-downloading)
     console.log('[Sync] autoDownloadFiles:', autoDownloadFiles, '| AUTO_DOWNLOAD_KEY:', localStorage.getItem(AUTO_DOWNLOAD_KEY), '| PROMPTED_KEY:', localStorage.getItem(AUTO_DOWNLOAD_PROMPTED_KEY));
-    if (autoDownloadFiles) await downloadAudioNow(true); // silent audio sync
+    if (autoDownloadFiles) await downloadAudioNow(true); // silent audio sync (downloads missing files)
     else console.log('[Sync] skipping audio download — autoDownloadFiles is false');
     await renderAll();
     lastSyncTime = Date.now();
