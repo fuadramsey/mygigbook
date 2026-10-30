@@ -1547,7 +1547,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.91</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.92</span>
       </div>
 
     </div>
@@ -3840,10 +3840,10 @@ async function removeMediaLink(platform, idx) {
 }
 
 
-function startBpmFlash(bpm) {
+function startBpmFlash(bpm, chipEl) {
   if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; return; }
   const interval = 60000 / bpm;
-  const chip = document.getElementById('bpmChip');
+  const chip = chipEl || document.getElementById('bpmChip');
   if (!chip) return;
   let on = false;
   function flash() {
@@ -3855,8 +3855,7 @@ function startBpmFlash(bpm) {
   // auto-stop after 16 beats
   setTimeout(() => {
     if (bpmTimer) { clearInterval(bpmTimer); bpmTimer=null; }
-    const c = document.getElementById('bpmChip');
-    if (c) c.classList.remove('flash');
+    chip.classList.remove('flash');
   }, interval * 16 + 200);
 }
 
@@ -6417,7 +6416,7 @@ function updateSEHeaderChips(s) {
   if (dbBpm) {
     if (bpm) {
       dbBpm.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${bpm} BPM<span class="bpm-hint">▶</span>`;
-      dbBpm.onclick = () => startBpmFlash(bpm);
+      dbBpm.onclick = function() { startBpmFlash(bpm, this); };
       dbBpm.style.display = '';
     } else { dbBpm.style.display = 'none'; }
   }
@@ -6428,7 +6427,7 @@ function updateSEHeaderChips(s) {
   if (seBpm) {
     if (bpm) {
       seBpm.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${bpm} BPM<span class="bpm-hint">▶</span>`;
-      seBpm.onclick = () => startBpmFlash(bpm);
+      seBpm.onclick = function() { startBpmFlash(bpm, this); };
       seBpm.style.display = '';
     } else { seBpm.style.display = 'none'; }
   }
