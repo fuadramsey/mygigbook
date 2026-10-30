@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β1.97</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β1.99</span>
     </div>
   </div>
 </aside>
@@ -1550,7 +1550,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.97</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.99</span>
       </div>
 
     </div>
@@ -3549,16 +3549,17 @@ async function renderSongPage(idx) {
           <button class="scroll-speed-btn" onclick="changeNoteZoom(-1,${idx})" title="Zoom out" style="font-size:18px;width:32px;height:32px;">−</button>
           <span class="note-zoom-label scroll-speed-label" style="min-width:40px;text-align:center;">${Math.round(noteZoom*100)}%</span>
           <button class="scroll-speed-btn" onclick="changeNoteZoom(1,${idx})" title="Zoom in" style="font-size:18px;width:32px;height:32px;">+</button>
-          <button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
-            style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);margin-left:4px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
-          </button>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;">
+        <div style="display:flex;align-items:center;gap:12px;">
           <button onclick="startEditNote(${idx})" title="Edit Notes"
             style="height:30px;padding:0 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Edit
+          </button>
+          <div style="width:1px;height:20px;background:var(--border2);flex-shrink:0;"></div>
+          <button onclick="openNoteFullscreen(${idx})" title="Fullscreen"
+            style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
           </button>
         </div>
       </div>` : `
@@ -6193,15 +6194,18 @@ function renderSETab() {
             <button onclick="changeDBZoom(-0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">−</button>
             <span id="dbZoomLabel" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:36px;text-align:center;">${Math.round(dbZoom*100)}%</span>
             <button onclick="changeDBZoom(0.1,'${dbZoomKey}')" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--text2);">+</button>
-            <button onclick="openDBLyricsFullscreen()" title="Fullscreen" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);margin-left:4px;">
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button onclick="enterSEEditMode()" title="Edit Song"
+              style="height:30px;padding:0 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit
+            </button>
+            <div style="width:1px;height:20px;background:var(--border2);flex-shrink:0;"></div>
+            <button onclick="openDBLyricsFullscreen()" title="Fullscreen" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
             </button>
           </div>
-          <button onclick="enterSEEditMode()" title="Edit Song"
-            style="height:30px;padding:0 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit
-          </button>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
