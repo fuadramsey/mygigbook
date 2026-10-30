@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.05</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.06</span>
     </div>
   </div>
 </aside>
@@ -1550,7 +1550,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.05</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.06</span>
       </div>
 
     </div>
@@ -3891,7 +3891,16 @@ function buildListenContent(s) {
 
 function buildFullAudioPlayer(audioKey, idx) {
   const entry = window._audioCache?.[audioKey];
-  if (!entry) return '';
+  if (!entry) {
+    // Entry not in cache yet — trigger async load and re-render
+    setTimeout(async () => {
+      try { await loadAudioHybrid(currentSetSongs?.[idx]?.id || audioKey.replace(/^audio_/, '').replace(/_\d+$/, '')); } catch(e) {}
+      if (currentSongIdx === idx && (noteTab === 'default' || noteTab === 'mine')) {
+        await renderSongPage(idx);
+      }
+    }, 0);
+    return '';
+  }
   // Detect which song this audioKey belongs to for multi-file support
   // audioKey may be audio_${songId} (old) or audio_${songId}_${ts} (new)
   const songId = (() => {
@@ -4120,6 +4129,16 @@ function buildNoteContent(text, idx) {
   const audioEntry = defAudioKey ? (window._audioCache?.[defAudioKey] || null) : null;
   const imgPrefix = noteTab === 'default' ? `img_default_${s?.id}` : `img_${currentUser||'me'}_${s?.id}`;
   const imgEntries = s ? Object.entries(window._imageCache || {}).filter(([k]) => k.startsWith(imgPrefix + '_')) : [];
+
+  // If defAudioKey exists but blob isn't in cache yet, schedule async reload and re-render
+  if (defAudioKey && !audioEntry && s) {
+    setTimeout(async () => {
+      try { await loadAudioHybrid(s.id); } catch(e) {}
+      if (currentSongIdx === idx && (noteTab === 'default' || noteTab === 'mine')) {
+        await renderSongPage(idx);
+      }
+    }, 0);
+  }
 
   // compact audio player shown at top of notes when audio is attached
   const audioBar = audioEntry
