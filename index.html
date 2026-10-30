@@ -1034,7 +1034,9 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <div id="dbRightPanel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
         <!-- detail topbar: song title + pin + edit buttons -->
         <div id="dbDetailBar" style="display:none;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-          <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+          <div id="dbDetailTitle" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;"></div>
+          <span id="dbDetailKey" style="display:none;" class="chip accent" style="font-size:13px;flex-shrink:0;"></span>
+          <span id="dbDetailBpm" style="display:none;" class="chip bpm-chip" style="font-size:12px;flex-shrink:0;" title="Tap to flash tempo"></span>
           <button id="dbDetailEditBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;" onclick="enterSEEditMode()">Edit</button>
           <button id="dbDetailSaveBtn" class="btn primary" style="padding:4px 12px;font-size:12px;display:none;" onclick="saveSong()">Save</button>
           <button id="dbDetailCancelBtn" class="btn ghost" style="padding:4px 12px;font-size:12px;display:none;color:var(--text2);" onclick="cancelSEEdit()">Cancel</button>
@@ -1091,8 +1093,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <button class="back-btn" onclick="tryCloseSongPage()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <div style="flex:1;min-width:0;">
-      <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text)">New Song</div>
+    <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;overflow:hidden;">
+      <div id="sePageTitle" style="font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;color:var(--text);flex:1;min-width:0;">New Song</div>
+      <span id="seDetailKey" style="display:none;flex-shrink:0;" class="chip accent"></span>
+      <span id="seDetailBpm" style="display:none;flex-shrink:0;" class="chip bpm-chip" title="Tap to flash tempo"></span>
     </div>
     <button id="seEditBtn" class="btn ghost" style="padding:6px 14px;font-size:13px;flex-shrink:0;display:none;align-items:center;gap:6px;" onclick="enterSEEditMode()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1543,7 +1547,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.90</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.91</span>
       </div>
 
     </div>
@@ -6402,6 +6406,34 @@ function dbScheduleHide() {
   _dbAutoHideTimer = setTimeout(dbHideList, 3000);
 }
 
+function updateSEHeaderChips(s) {
+  // Update key and BPM chips in both DB panel header and mobile pg-song-edit header
+  const key = s?.key || '';
+  const bpm = s?.bpm || '';
+  // DB panel chips
+  const dbKey = document.getElementById('dbDetailKey');
+  const dbBpm = document.getElementById('dbDetailBpm');
+  if (dbKey) { dbKey.textContent = key; dbKey.style.display = key ? '' : 'none'; }
+  if (dbBpm) {
+    if (bpm) {
+      dbBpm.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${bpm} BPM<span class="bpm-hint">▶</span>`;
+      dbBpm.onclick = () => startBpmFlash(bpm);
+      dbBpm.style.display = '';
+    } else { dbBpm.style.display = 'none'; }
+  }
+  // Mobile header chips
+  const seKey = document.getElementById('seDetailKey');
+  const seBpm = document.getElementById('seDetailBpm');
+  if (seKey) { seKey.textContent = key; seKey.style.display = key ? '' : 'none'; }
+  if (seBpm) {
+    if (bpm) {
+      seBpm.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${bpm} BPM<span class="bpm-hint">▶</span>`;
+      seBpm.onclick = () => startBpmFlash(bpm);
+      seBpm.style.display = '';
+    } else { seBpm.style.display = 'none'; }
+  }
+}
+
 async function openSongModal(id) {
   const onDbPage = pageStack[pageStack.length - 1] === 'pg-db';
 
@@ -6471,6 +6503,7 @@ async function openSongModal(id) {
     if (titleEl) titleEl.textContent = s?.title || 'Edit Song';
     const dbTitle = document.getElementById('dbDetailTitle');
     if (dbTitle) dbTitle.textContent = s?.title || '';
+    updateSEHeaderChips(s);
     renderSETab();
     if (onDbPage && !isMobile()) dbScheduleHide();
   } else {
@@ -6484,6 +6517,7 @@ async function openSongModal(id) {
     if (titleEl) titleEl.textContent = 'New Song';
     const dbTitle = document.getElementById('dbDetailTitle');
     if (dbTitle) dbTitle.textContent = 'New Song';
+    updateSEHeaderChips(null);
     renderSETab();
     requestAnimationFrame(() => {
       const titleInput = document.getElementById('fTitle');
@@ -6742,6 +6776,7 @@ async function saveSong() {
     // update the title display
     const dbTitle = document.getElementById('dbDetailTitle');
     if (dbTitle && window._seCurrentSong?.title) dbTitle.textContent = window._seCurrentSong.title;
+    updateSEHeaderChips(window._seCurrentSong);
     renderSETab();
   } else {
     goBack(); await renderDB(); await syncOut();
