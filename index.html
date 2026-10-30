@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β1.99</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.00</span>
     </div>
   </div>
 </aside>
@@ -1550,7 +1550,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.99</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.00</span>
       </div>
 
     </div>
@@ -1923,21 +1923,54 @@ async function getAudioDownloadUrl(songId) {
 // Load audio — only from local IndexedDB/cache. Never auto-fetches from cloud.
 // User must explicitly tap the download button in the player.
 async function loadAudioHybrid(songId) {
-  const audioKey = `audio_${songId}`;
-  // check memory cache first
-  if (window._audioCache?.[audioKey]?.blobUrl) return window._audioCache[audioKey];
-  // check IndexedDB
-  try {
-    const entry = await dbGet('audio', audioKey);
-    if (entry?.data) {
-      window._audioCache = window._audioCache || {};
-      if (window._audioCache[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-      const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
-      window._audioCache[audioKey] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true };
-      return window._audioCache[audioKey];
+  window._audioCache = window._audioCache || {};
+  // Load multi-audio meta
+  const metaKey = `audio_meta_${songId}`;
+  let meta = null;
+  try { meta = await dbGet('audio', metaKey); } catch(e) {}
+  // Backward-compat: migrate old single-file entry to multi format
+  const oldKey = `audio_${songId}`;
+  if (!meta) {
+    try {
+      const oldEntry = await dbGet('audio', oldKey);
+      if (oldEntry?.data) {
+        const ts = oldEntry.updatedAt || Date.now();
+        const newKey = `audio_${songId}_${ts}`;
+        meta = { id: metaKey, files: [{ key: newKey, name: oldEntry.name, mimeType: oldEntry.mimeType || 'audio/mpeg', ts }], defaultKey: newKey, updatedAt: ts };
+        // migrate: save as new key and write meta
+        await dbPut('audio', { id: newKey, name: oldEntry.name, data: oldEntry.data, mimeType: oldEntry.mimeType || 'audio/mpeg', updatedAt: ts });
+        await dbPut('audio', meta);
+        await dbDel('audio', oldKey);
+      }
+    } catch(e) {}
+  }
+  if (!meta || !meta.files?.length) return null;
+  // Load all files into cache
+  for (const f of meta.files) {
+    if (!window._audioCache[f.key]?.blobUrl) {
+      try {
+        const entry = await dbGet('audio', f.key);
+        if (entry?.data) {
+          const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
+          window._audioCache[f.key] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true };
+        }
+      } catch(e) {}
     }
-  } catch(e) {}
-  return null; // not cached locally — show download button instead
+  }
+  // Store meta in cache for player use
+  window._audioCache[metaKey] = meta;
+  const defKey = meta.defaultKey || meta.files[meta.files.length - 1]?.key;
+  return window._audioCache[defKey] || null;
+}
+
+function getAudioMeta(songId) {
+  return window._audioCache?.[`audio_meta_${songId}`] || null;
+}
+
+function getAudioDefaultKey(songId) {
+  const meta = getAudioMeta(songId);
+  if (!meta || !meta.files?.length) return null;
+  return meta.defaultKey || meta.files[meta.files.length - 1]?.key;
 }
 
 // Check if audio exists in cloud (Firestore files collection)
@@ -3474,15 +3507,12 @@ async function renderSongPage(idx) {
   }
   // load song audio — hybrid: IndexedDB first, then Firebase Storage
   try {
-    const cached = await loadAudioHybrid(s.id);
-    if (!cached) {
-      if (window._audioCache[audioKey]?.blobUrl && !window._audioCache[audioKey]?.fromStorage) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-      delete window._audioCache[audioKey];
-    }
-  } catch(e) { delete window._audioCache[audioKey]; }
+    await loadAudioHybrid(s.id);
+  } catch(e) {}
 
-  // re-read audioEntry now that cache is populated
-  const audioEntry = window._audioCache?.[audioKey] || null;
+  // re-read audioEntry using new multi-file meta
+  const defAudioKey = getAudioDefaultKey(s.id);
+  const audioEntry = defAudioKey ? (window._audioCache?.[defAudioKey] || null) : null;
   // update topbar play button now that we know if audio exists
   updateTopNav(idx);
 
@@ -3567,9 +3597,9 @@ async function renderSongPage(idx) {
     </div>
     <div class="note-area" id="noteArea">
       ${noteTab === 'all'
-        ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + allNotesHtml
+        ? (audioEntry ? buildFullAudioPlayer(defAudioKey, idx) : '') + allNotesHtml
         : noteTab === 'listen'
-        ? (audioEntry ? buildFullAudioPlayer(audioKey, idx) : '') + buildListenContent(s)
+        ? buildAudioSection(s) + buildListenContent(s)
         : noteTab === 'charts'
         ? `<div id="chartsContent" style="padding:16px;">Loading…</div>`
         : buildNoteContent(activeNote, idx, true)}
@@ -3864,37 +3894,96 @@ function buildListenContent(s) {
 function buildFullAudioPlayer(audioKey, idx) {
   const entry = window._audioCache?.[audioKey];
   if (!entry) return '';
-  return `<div class="audio-player-compact" id="audioPlayer" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;">
-    <button class="audio-play-btn" id="audioPlayBtn" onclick="toggleAudio('${audioKey}',${idx})" style="width:26px;height:26px;min-width:26px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <svg viewBox="0 0 24 24" id="audioPlayIcon" fill="#000" style="width:12px;height:12px;"><path d="M8 5v14l11-7z"/></svg>
-    </button>
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:12px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</div>
-      <div style="margin-top:4px;height:10px;background:var(--border2);border-radius:5px;cursor:pointer;" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
-        <div id="audioProgressFill" style="height:100%;width:0%;background:var(--accent);border-radius:5px;transition:width 0.1s linear;"></div>
+  // Detect which song this audioKey belongs to for multi-file support
+  // audioKey may be audio_${songId} (old) or audio_${songId}_${ts} (new)
+  const songId = (() => {
+    const s = currentSetSongs?.[idx];
+    if (s) return s.id;
+    const id = document.getElementById('editSongId')?.value;
+    if (id) return id;
+    return null;
+  })();
+  const meta = songId ? getAudioMeta(songId) : null;
+  const files = meta?.files || [];
+  const selectorHtml = files.length > 1 ? `
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 12px 0;background:var(--surface2);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px;color:var(--text3);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <select id="audioFileSelect" onchange="switchAudioFile(this.value,${idx})"
+        style="flex:1;background:transparent;border:none;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;padding:2px 0;">
+        ${files.map(f => `<option value="${esc(f.key)}" ${f.key===audioKey?'selected':''}>${esc(f.name)}</option>`).join('')}
+      </select>
+    </div>` : '';
+  return `<div class="audio-player-compact" id="audioPlayer" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;">
+    ${selectorHtml}
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;">
+      <button class="audio-play-btn" id="audioPlayBtn" onclick="toggleAudio('${audioKey}',${idx})" style="width:26px;height:26px;min-width:26px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" id="audioPlayIcon" fill="#000" style="width:12px;height:12px;"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(entry.name)}</div>
+        <div style="margin-top:4px;height:10px;background:var(--border2);border-radius:5px;cursor:pointer;" id="audioProgressWrap" onclick="seekAudio(event,'${audioKey}')">
+          <div id="audioProgressFill" style="height:100%;width:0%;background:var(--accent);border-radius:5px;transition:width 0.1s linear;"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace;" id="audioTime">0:00 / 0:00</div>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace;" id="audioTime">0:00 / 0:00</div>
     </div>
   </div>`;
 }
 
-function buildAudioSection(s) {
-  const audioKey = `audio_${s?.id}`;
-  const audioEntry = s ? window._audioCache?.[audioKey] : null;
-  if (audioEntry) {
-    return buildFullAudioPlayer(audioKey, currentSongIdx);
+function switchAudioFile(newKey, idx) {
+  stopAudio();
+  // Update default in meta
+  const s = currentSetSongs?.[idx];
+  const id = s?.id || document.getElementById('editSongId')?.value;
+  if (id) {
+    const metaKey = `audio_meta_${id}`;
+    const meta = window._audioCache?.[metaKey];
+    if (meta) {
+      meta.defaultKey = newKey;
+      dbPut('audio', meta);
+    }
   }
-  return `<div class="audio-upload-zone" onclick="document.getElementById('audioFileInput').click()"
-    ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-    ondragleave="this.style.borderColor=''"
-    ondrop="handleAudioDrop(event,${currentSongIdx})">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--text3);">
-      <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-    </svg>
-    <div style="font-size:14px;color:var(--text2);">Attach audio file</div>
-    <div style="font-size:12px;color:var(--text3);">MP3, WAV, M4A, AAC, OGG · Max 10 MB</div>
-  </div>
-  <input type="file" id="audioFileInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleAudioFile(event,${currentSongIdx})">`;
+  // Re-render the song page or SE tab
+  if (idx >= 0 && currentSetSongs?.[idx]) renderSongPage(idx);
+  else renderSETab();
+}
+
+function buildAudioSection(s) {
+  if (!s) return '';
+  const meta = getAudioMeta(s.id);
+  const files = meta?.files || [];
+  const defKey = getAudioDefaultKey(s.id);
+  const idx = currentSongIdx;
+  const playerHtml = (defKey && window._audioCache?.[defKey])
+    ? buildFullAudioPlayer(defKey, idx) : '';
+  const fileListHtml = files.length > 0 ? `
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+      ${files.map(f => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);">${esc(f.name)}</span>
+          ${f.key === meta.defaultKey ? '<span style="font-size:10px;color:var(--accent);font-family:'DM Mono',monospace;flex-shrink:0;">DEFAULT</span>' : ''}
+          <button onclick="confirmDeleteAudio('${esc(s.id)}','${esc(f.key)}','${esc(f.name)}',${idx})"
+            style="width:24px;height:24px;background:none;border:1px solid var(--border2);border-radius:5px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+            title="Delete this file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>`).join('')}
+    </div>` : '';
+  const addBtnHtml = `
+    <div class="audio-upload-zone" onclick="document.getElementById('audioFileInput').click()"
+      ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+      ondragleave="this.style.borderColor=''"
+      ondrop="handleAudioDrop(event,${idx})"
+      style="${files.length > 0 ? 'padding:12px;' : ''}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:${files.length > 0 ? '20' : '32'}px;height:${files.length > 0 ? '20' : '32'}px;color:var(--text3);">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      <div style="font-size:${files.length > 0 ? '13' : '14'}px;color:var(--text2);">${files.length > 0 ? 'Add another audio file' : 'Attach audio file'}</div>
+      ${files.length === 0 ? '<div style="font-size:12px;color:var(--text3);">MP3, WAV, M4A, AAC, OGG · Max 10 MB</div>' : ''}
+    </div>
+    <input type="file" id="audioFileInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleAudioFile(event,${idx})">`;
+  return playerHtml + fileListHtml + addBtnHtml;
 }
 
 function buildSaveUrlRow(platform, idx) {
@@ -4026,7 +4115,7 @@ function buildNoteContent(text, idx) {
 
   // compact audio player shown at top of notes when audio is attached
   const audioBar = audioEntry
-    ? buildFullAudioPlayer(audioKey, idx)
+    ? buildFullAudioPlayer(defAudioKey, idx)
     : (s && window._cloudAudioMap?.[s.id])
       ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;flex-shrink:0;color:var(--text3);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -5342,32 +5431,79 @@ async function processAudioFile(file, idx) {
     showToast('Attaching audio…');
     const s = currentSetSongs[idx];
     if (!s) return;
-    const audioKey = `audio_${s.id}`;
+    const ts = Date.now();
+    const newKey = `audio_${s.id}_${ts}`;
+    const metaKey = `audio_meta_${s.id}`;
     const arrayBuffer = await f.arrayBuffer();
     stopAudio();
-    await dbPut('audio', { id: audioKey, name: f.name, data: arrayBuffer, mimeType: f.type || 'audio/mpeg', updatedAt: Date.now() });
+    // Save the audio data
+    await dbPut('audio', { id: newKey, name: f.name, data: arrayBuffer, mimeType: f.type || 'audio/mpeg', updatedAt: ts });
+    // Update meta
+    let meta = null;
+    try { meta = await dbGet('audio', metaKey); } catch(e) {}
+    const files = meta?.files || [];
+    files.push({ key: newKey, name: f.name, mimeType: f.type || 'audio/mpeg', ts });
+    meta = { id: metaKey, files, defaultKey: newKey, updatedAt: ts };
+    await dbPut('audio', meta);
     if (fbReady && online) {
-      const path = storagePath('audio', s.id, audioKey);
+      const path = storagePath('audio', s.id, newKey);
       const url = await fbStorageUpload(path, arrayBuffer, f.type || 'audio/mpeg');
-      if (url) await fbSaveFileMeta(s.id, 'audio', audioKey, { name: f.name, mimeType: f.type || 'audio/mpeg', downloadUrl: url, path });
+      if (url) await fbSaveFileMeta(s.id, 'audio', newKey, { name: f.name, mimeType: f.type || 'audio/mpeg', downloadUrl: url, path });
     }
+    // Update cache
+    window._audioCache = window._audioCache || {};
+    const blob = new Blob([arrayBuffer], { type: f.type || 'audio/mpeg' });
+    window._audioCache[newKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType: f.type, local: true };
+    window._audioCache[metaKey] = meta;
     showToast('Audio attached', 'ok');
     await renderSongPage(idx);
   });
 }
 
-async function removeAudio(audioKey, idx) {
+async function confirmDeleteAudio(songId, audioKey, fileName, idx) {
+  const msg = `Delete "${fileName}"?\n\nThis cannot be undone.`;
+  if (!confirm(msg)) return;
+  await removeOneAudioFile(songId, audioKey, idx);
+}
+
+async function removeOneAudioFile(songId, audioKey, idx) {
   stopAudio();
+  // Remove from IndexedDB
   await dbDel('audio', audioKey);
   if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-  delete window._audioCache[audioKey];
-  // delete from Firebase Storage
-  const songId = audioKey.replace('audio_', '');
+  delete window._audioCache?.[audioKey];
+  // Update meta
+  const metaKey = `audio_meta_${songId}`;
+  let meta = null;
+  try { meta = await dbGet('audio', metaKey); } catch(e) {}
+  if (meta) {
+    meta.files = (meta.files || []).filter(f => f.key !== audioKey);
+    if (meta.files.length === 0) {
+      await dbDel('audio', metaKey);
+      delete window._audioCache?.[metaKey];
+    } else {
+      if (meta.defaultKey === audioKey) {
+        meta.defaultKey = meta.files[meta.files.length - 1].key;
+      }
+      meta.updatedAt = Date.now();
+      await dbPut('audio', meta);
+      window._audioCache[metaKey] = meta;
+    }
+  }
+  // Firebase cleanup
   const path = storagePath('audio', songId, audioKey);
   fbStorageDelete(path);
   fbDeleteFileMeta(audioKey);
-  showToast('Audio removed');
-  await renderSongPage(idx);
+  showToast('Audio file deleted');
+  if (idx >= 0 && currentSetSongs?.[idx]) await renderSongPage(idx);
+  else renderSETab();
+}
+
+async function removeAudio(audioKey, idx) {
+  // This is now called for a specific file key (could be audio_${id}_${ts})
+  const s = currentSetSongs?.[idx];
+  const songId = s?.id || audioKey.replace(/^audio_(.+)_\d+$/, '$1').replace(/^audio_/, '');
+  await confirmDeleteAudio(songId, audioKey, window._audioCache?.[audioKey]?.name || 'this file', idx);
 }
 
 function getOrCreateAudio(audioKey) {
@@ -6163,11 +6299,11 @@ function renderSETab() {
   const s = window._seCurrentSong || {};
 
   if (seTab === 'details') {
-    const _audioKey = `audio_${id}`;
-    const _hasLocalAudio = id && window._audioCache?.[_audioKey];
+    const _defAudioKey = id ? getAudioDefaultKey(id) : null;
+    const _hasLocalAudio = _defAudioKey && window._audioCache?.[_defAudioKey];
     const _cloudAudio = id && !_hasLocalAudio && window._cloudAudioMap?.[id];
     const sePlayer = _hasLocalAudio
-      ? buildFullAudioPlayer(_audioKey, currentSongIdx >= 0 ? currentSongIdx : 0)
+      ? buildFullAudioPlayer(_defAudioKey, currentSongIdx >= 0 ? currentSongIdx : 0)
       : _cloudAudio
         ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;flex-shrink:0;color:var(--text3);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -6307,10 +6443,12 @@ function renderSETab() {
       });
     }
     // async audio inject if not cached
-    if (id && !window._audioCache?.[`audio_${id}`]) {
+    if (id && !getAudioDefaultKey(id)) {
       loadAudioHybrid(id).then(entry => {
         if (!entry) return;
-        const playerHtml = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
+        const dk = getAudioDefaultKey(id);
+        if (!dk) return;
+        const playerHtml = buildFullAudioPlayer(dk, currentSongIdx >= 0 ? currentSongIdx : 0);
         const wrap = document.createElement('div');
         wrap.innerHTML = playerHtml;
         body.insertBefore(wrap.firstChild, body.firstChild);
@@ -6440,7 +6578,7 @@ function renderSETab() {
       <div id="fAudioStatus" style="margin-bottom:8px;"></div>
       <button type="button" class="edit-note-btn" onclick="modalAttachAudio()" style="margin-top:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        Attach audio file <span style="font-size:11px;color:var(--text3);margin-left:4px;">Max 10 MB</span>
+        Add audio file <span style="font-size:11px;color:var(--text3);margin-left:4px;">Max 10 MB</span>
       </button>
       <input type="file" id="fAudioInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleModalAudioFile(event)">
       <div class="settings-section-label" style="margin-top:16px;margin-bottom:8px;">Files</div>
@@ -6461,17 +6599,29 @@ function renderSETab() {
       <input type="file" id="fImgInput" accept="image/*" multiple style="display:none" onchange="handleModalImgFile(event)">
       <div id="fImgGrid" style="margin-top:8px;"></div>`;
     if (id) {
-      dbGet('audio', `audio_${id}`).then(async entry => {
+      loadAudioHybrid(id).then(() => {
         const el = document.getElementById('fAudioStatus');
-        if (el && entry) {
-          // load into cache so buildFullAudioPlayer can use it
-          if (!window._audioCache) window._audioCache = {};
-          if (!window._audioCache[`audio_${id}`]) {
-            const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
-            window._audioCache[`audio_${id}`] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType };
-          }
-          el.innerHTML = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
-        }
+        if (!el) return;
+        const meta = getAudioMeta(id);
+        const files = meta?.files || [];
+        const defKey = getAudioDefaultKey(id);
+        const sidx = currentSongIdx >= 0 ? currentSongIdx : 0;
+        // Build player for default file
+        const playerHtml = (defKey && window._audioCache?.[defKey]) ? buildFullAudioPlayer(defKey, sidx) : '';
+        // Build file list with per-file delete
+        const fileListHtml = files.length ? `<div style="display:flex;flex-direction:column;gap:5px;margin-top:${playerHtml?'6':'0'}px;">
+          ${files.map(f => `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);">${esc(f.name)}</span>
+            ${f.key === meta.defaultKey ? '<span style="font-size:10px;color:var(--accent);font-family:'DM Mono',monospace;flex-shrink:0;">DEFAULT</span>' : ''}
+            <button onclick="confirmDeleteAudio('${id}','${f.key}','${esc(f.name)}',-1)"
+              style="width:22px;height:22px;background:none;border:1px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+              title="Delete this file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          </div>`).join('')}
+        </div>` : '';
+        el.innerHTML = playerHtml + fileListHtml;
       });
       dbGet('pdfs', `default_${id}`).then(entry => {
         const el = document.getElementById('fPdfStatus');
@@ -6651,6 +6801,7 @@ async function openSongModal(id) {
   seEditMode = false;
   window._seCurrentSong = null;
   window._modalPendingAudio = null;
+  window._modalPendingAudios = [];
   window._seMyNotesHtml = '';
   window._seMyNotesSpacing = 0;
 
@@ -6876,41 +7027,63 @@ async function handleModalAudioFile(e) {
   checkAndHandleAudioFile(file, async (f) => {
     const songId = document.getElementById('editSongId').value;
     if (songId) {
-      // existing song — save immediately
-      const audioKey = `audio_${songId}`;
+      // existing song — save immediately using multi-file system
+      const ts = Date.now();
+      const newKey = `audio_${songId}_${ts}`;
+      const metaKey = `audio_meta_${songId}`;
       const ab = await f.arrayBuffer();
-      await dbPut('audio', { id: audioKey, name: f.name, data: ab, mimeType: f.type || 'audio/mpeg', updatedAt: Date.now() });
+      await dbPut('audio', { id: newKey, name: f.name, data: ab, mimeType: f.type || 'audio/mpeg', updatedAt: ts });
+      let meta = null;
+      try { meta = await dbGet('audio', metaKey); } catch(e) {}
+      const files = meta?.files || [];
+      files.push({ key: newKey, name: f.name, mimeType: f.type || 'audio/mpeg', ts });
+      meta = { id: metaKey, files, defaultKey: newKey, updatedAt: ts };
+      await dbPut('audio', meta);
       if (fbReady && online) {
-        const path = storagePath('audio', songId, audioKey);
+        const path = storagePath('audio', songId, newKey);
         const url = await fbStorageUpload(path, ab, f.type || 'audio/mpeg');
-        if (url) await fbSaveFileMeta(songId, 'audio', audioKey, { name: f.name, mimeType: f.type || 'audio/mpeg', downloadUrl: url, path });
+        if (url) await fbSaveFileMeta(songId, 'audio', newKey, { name: f.name, mimeType: f.type || 'audio/mpeg', downloadUrl: url, path });
       }
-      if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-      const blob = new Blob([ab], { type: f.type || 'audio/mpeg' });
       window._audioCache = window._audioCache || {};
-      window._audioCache[audioKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType: f.type };
+      const blob = new Blob([ab], { type: f.type || 'audio/mpeg' });
+      window._audioCache[newKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType: f.type };
+      window._audioCache[metaKey] = meta;
       switchSETab('media');
       showToast('Audio saved', 'ok');
     } else {
-      // new song — queue for save
-      window._modalPendingAudio = f;
+      // new song — queue for save (store as array for multi-file support)
+      if (!window._modalPendingAudios) window._modalPendingAudios = [];
+      window._modalPendingAudios.push(f);
+      window._modalPendingAudio = f; // backward compat
       const el = document.getElementById('fAudioStatus');
-      if (el) el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid rgba(232,255,71,0.3);border-radius:var(--radius);font-size:13px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        <span style="flex:1;">${esc(f.name)} <span style="color:var(--accent);font-size:11px;">(will save with song)</span></span>
-      </div>`;
+      if (el) {
+        const pending = window._modalPendingAudios;
+        el.innerHTML = pending.map(pf => `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid rgba(232,255,71,0.3);border-radius:var(--radius);font-size:12px;margin-bottom:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span style="flex:1;">${esc(pf.name)} <span style="color:var(--accent);font-size:11px;">(pending)</span></span>
+        </div>`).join('');
+      }
     }
   });
 }
 
 async function modalRemoveAudio(songId) {
-  const audioKey = `audio_${songId}`;
-  stopAudio();
-  await dbDel('audio', audioKey);
-  if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-  delete window._audioCache?.[audioKey];
-  fbStorageDelete(storagePath('audio', songId, audioKey));
-  fbDeleteFileMeta(audioKey);
+  // Legacy remove — remove all audio files for this song
+  const meta = await dbGet('audio', `audio_meta_${songId}`).catch(() => null);
+  if (meta?.files) {
+    for (const f of meta.files) {
+      await removeOneAudioFile(songId, f.key, -1).catch(() => {});
+    }
+  } else {
+    // old single-file
+    const audioKey = `audio_${songId}`;
+    stopAudio();
+    await dbDel('audio', audioKey);
+    if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
+    delete window._audioCache?.[audioKey];
+    fbStorageDelete(storagePath('audio', songId, audioKey));
+    fbDeleteFileMeta(audioKey);
+  }
   const el = document.getElementById('fAudioStatus');
   if (el) el.innerHTML = '';
   showToast('Audio removed');
@@ -6949,17 +7122,33 @@ async function saveSong() {
     const myNotesSpacing = window._seMyNotesSpacing || 0;
     await dbPut('notes', { id: noteKey, text: myNotesHtml, spacing: myNotesSpacing, updatedAt: Date.now() });
   }
-  // save pending audio if any
-  if (window._modalPendingAudio) {
-    const audioKey = `audio_${id}`;
-    const ab = await window._modalPendingAudio.arrayBuffer();
-    await dbPut('audio', { id: audioKey, name: window._modalPendingAudio.name, data: ab, mimeType: window._modalPendingAudio.type || 'audio/mpeg', updatedAt: Date.now() });
-    if (fbReady && online) {
-      const path = storagePath('audio', id, audioKey);
-      const url = await fbStorageUpload(path, ab, window._modalPendingAudio.type || 'audio/mpeg');
-      if (url) await fbSaveFileMeta(id, 'audio', audioKey, { name: window._modalPendingAudio.name, mimeType: window._modalPendingAudio.type || 'audio/mpeg', downloadUrl: url, path });
+  // save pending audio files if any
+  const pendingFiles = window._modalPendingAudios?.length ? window._modalPendingAudios : (window._modalPendingAudio ? [window._modalPendingAudio] : []);
+  if (pendingFiles.length) {
+    const metaKey = `audio_meta_${id}`;
+    let meta = null;
+    try { meta = await dbGet('audio', metaKey); } catch(e) {}
+    const files = meta?.files || [];
+    let lastKey = null;
+    for (const pf of pendingFiles) {
+      const ts = Date.now();
+      const newKey = `audio_${id}_${ts}`;
+      const ab = await pf.arrayBuffer();
+      await dbPut('audio', { id: newKey, name: pf.name, data: ab, mimeType: pf.type || 'audio/mpeg', updatedAt: ts });
+      files.push({ key: newKey, name: pf.name, mimeType: pf.type || 'audio/mpeg', ts });
+      lastKey = newKey;
+      if (fbReady && online) {
+        const path = storagePath('audio', id, newKey);
+        const url = await fbStorageUpload(path, ab, pf.type || 'audio/mpeg');
+        if (url) await fbSaveFileMeta(id, 'audio', newKey, { name: pf.name, mimeType: pf.type || 'audio/mpeg', downloadUrl: url, path });
+      }
+    }
+    if (lastKey) {
+      meta = { id: metaKey, files, defaultKey: lastKey, updatedAt: Date.now() };
+      await dbPut('audio', meta);
     }
     window._modalPendingAudio = null;
+    window._modalPendingAudios = [];
   }
   seEditMode = false;
   // reset button visibility
