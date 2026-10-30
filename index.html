@@ -1547,7 +1547,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.92</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.93</span>
       </div>
 
     </div>
@@ -2996,59 +2996,131 @@ function openNoteFullscreen(idx) {
   const existing = document.getElementById('noteFullscreenOverlay');
   if (existing) { existing._close(); return; }
 
-  const s = currentSetSongs[idx];
-  if (!s || s.type === 'note') return;
-
   const overlay = document.createElement('div');
   overlay.id = 'noteFullscreenOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:8000;display:flex;flex-direction:column;touch-action:pan-y;';
 
-  // ── TITLE BAR ──
-  const titleBar = document.createElement('div');
-  titleBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 14px;background:var(--surface2);border-bottom:1px solid var(--border2);flex-shrink:0;min-height:44px;gap:8px;';
-  titleBar.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${esc(s.title||'')}</div><button id="fsDismissBtn" style="background:none;border:none;color:var(--text3);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>`;
+  // ── NAV BAR (matches pg-song topbar) ──
+  const navBar = document.createElement('div');
+  navBar.style.cssText = 'display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--surface2);border-bottom:1px solid var(--border2);flex-shrink:0;min-height:48px;';
+
+  // ── SONG HEADER (title + key + bpm, matches song-page-header layout) ──
+  const songHeader = document.createElement('div');
+  songHeader.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 14px 8px;background:var(--surface2);border-bottom:1px solid var(--border2);flex-shrink:0;';
 
   // ── TAB BAR ──
   const tabBar = document.createElement('div');
   tabBar.style.cssText = 'display:flex;align-items:center;border-bottom:2px solid var(--border2);background:var(--surface);flex-shrink:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x;';
-  const tabs = [
-    { key: 'default', label: 'Lyrics' },
-    { key: 'mine', label: 'My Notes' },
-    { key: 'all', label: 'All Notes' },
-    ...(s.groupIds?.length ? [{ key: 'charts', label: 'Charts' }] : []),
-    { key: 'listen', label: 'Media' },
-  ];
-  let activeTab = noteTab;
-  function renderTabBar() {
-    tabBar.innerHTML = tabs.map(t => `<button data-tab="${t.key}" style="padding:10px 16px;border:none;border-radius:0;background:${activeTab===t.key?'var(--surface3)':'none'};color:${activeTab===t.key?'var(--text)':'var(--text3)'};font-family:inherit;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:${activeTab===t.key?'2px solid var(--accent)':'2px solid transparent'};font-weight:${activeTab===t.key?'600':'400'};flex-shrink:0;">${t.label}</button>`).join('');
-    tabBar.querySelectorAll('[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => { activeTab = btn.dataset.tab; renderTabBar(); loadTabContent(); });
-    });
-  }
 
   // ── TOOLBAR ──
   const toolbar = document.createElement('div');
   toolbar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;';
-  toolbar.innerHTML = `
-    <div style="display:flex;align-items:center;gap:4px;">
-      <button id="fsZoomMinus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">−</button>
-      <span class="fs-zoom-label note-zoom-label" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:38px;text-align:center;">${Math.round(noteZoom*100)}%</span>
-      <button id="fsZoomPlus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">+</button>
-    </div>
-    `;
 
   // ── CONTENT ──
   const scrollArea = document.createElement('div');
   scrollArea.id = 'fsNoteArea';
   scrollArea.style.cssText = 'flex:1;overflow-y:auto;padding:20px 24px;-webkit-overflow-scrolling:touch;';
 
-  overlay.appendChild(titleBar);
+  overlay.appendChild(navBar);
+  overlay.appendChild(songHeader);
   overlay.appendChild(tabBar);
   overlay.appendChild(toolbar);
   overlay.appendChild(scrollArea);
   document.body.appendChild(overlay);
 
-  renderTabBar();
+  let currentIdx = idx;
+  let activeTab = noteTab;
+  let fsBpmTimer = null;
+
+  function close() {
+    if (fsBpmTimer) { clearInterval(fsBpmTimer); fsBpmTimer = null; }
+    overlay.remove();
+  }
+  overlay._close = close;
+
+  function renderNavBar(i) {
+    const prev = i > 0;
+    const next = i < currentSetSongs.length - 1;
+    const prevSong = prev ? currentSetSongs[i - 1] : null;
+    const nextSong = next ? currentSetSongs[i + 1] : null;
+    navBar.innerHTML = `
+      <button id="fsNavPrev" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:64px;max-width:100px;height:40px;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;padding:4px 8px;gap:1px;flex-shrink:0;${!prev?'opacity:0.35;pointer-events:none;':''}">
+        <span style="font-size:16px;color:var(--text2);line-height:1;">←</span>
+        <span style="font-size:10px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;text-align:center;">${prevSong ? (prevSong.type==='note' ? '— note —' : esc(prevSong.title||'')) : ''}</span>
+      </button>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;overflow:hidden;">
+        <div id="fsSetName" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.1;"></div>
+        <span style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:0.5px;">${i+1} / ${currentSetSongs.length}</span>
+      </div>
+      <button id="fsNavNext" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:64px;max-width:100px;height:40px;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;padding:4px 8px;gap:1px;flex-shrink:0;${!next?'opacity:0.35;pointer-events:none;':''}">
+        <span style="font-size:16px;color:var(--text2);line-height:1;">→</span>
+        <span style="font-size:10px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;text-align:center;">${nextSong ? (nextSong.type==='note' ? '— note —' : esc(nextSong.title||'')) : ''}</span>
+      </button>
+      <button id="fsDismissBtn" style="background:none;border:none;color:var(--text3);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:4px;">✕</button>
+    `;
+    // set name async
+    if (currentSetId) dbGet('setlists', currentSetId).then(set => {
+      const el = navBar.querySelector('#fsSetName');
+      if (el) el.textContent = set?.name || '';
+    });
+    navBar.querySelector('#fsDismissBtn').addEventListener('click', close);
+    if (prev) navBar.querySelector('#fsNavPrev').addEventListener('click', () => navigateFs(i - 1));
+    if (next) navBar.querySelector('#fsNavNext').addEventListener('click', () => navigateFs(i + 1));
+  }
+
+  function renderSongHeader(s) {
+    const key = s?.key || '';
+    const bpm = s?.bpm || '';
+    songHeader.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,6vw,44px);letter-spacing:1px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.05;">${esc(s?.title||'')}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+        ${key ? `<span class="chip accent" style="font-size:13px;padding:3px 10px;">${esc(key)}</span>` : ''}
+        ${bpm ? `<span id="fsBpmChip" class="chip bpm-chip" title="Tap to flash tempo" style="cursor:pointer;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:11px;height:11px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${bpm} BPM<span class="bpm-hint">▶</span>
+        </span>` : ''}
+      </div>
+    `;
+    if (bpm) {
+      songHeader.querySelector('#fsBpmChip').addEventListener('click', function() {
+        startBpmFlash(bpm, this);
+      });
+    }
+  }
+
+  function renderFsTabBar(s) {
+    const tabs = [
+      { key: 'default', label: 'Lyrics' },
+      { key: 'mine', label: 'My Notes' },
+      { key: 'all', label: 'All Notes' },
+      ...(s?.groupIds?.length ? [{ key: 'charts', label: 'Charts' }] : []),
+      { key: 'listen', label: 'Media' },
+    ];
+    tabBar.innerHTML = tabs.map(t => `<button data-tab="${t.key}" style="padding:10px 16px;border:none;border-radius:0;background:${activeTab===t.key?'var(--surface3)':'none'};color:${activeTab===t.key?'var(--text)':'var(--text3)'};font-family:inherit;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:${activeTab===t.key?'2px solid var(--accent)':'2px solid transparent'};font-weight:${activeTab===t.key?'600':'400'};flex-shrink:0;">${t.label}</button>`).join('');
+    tabBar.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => { activeTab = btn.dataset.tab; renderFsTabBar(s); loadTabContent(s); });
+    });
+  }
+
+  function renderFsToolbar() {
+    toolbar.innerHTML = `
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button id="fsZoomMinus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">−</button>
+        <span class="fs-zoom-label note-zoom-label" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:38px;text-align:center;">${Math.round(noteZoom*100)}%</span>
+        <button id="fsZoomPlus" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:17px;color:var(--text2);">+</button>
+      </div>
+    `;
+    const s = currentSetSongs[currentIdx];
+    toolbar.querySelector('#fsZoomMinus').addEventListener('click', () => {
+      noteZoom = Math.round(Math.max(0.5, noteZoom - 0.1) * 10) / 10;
+      if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
+    });
+    toolbar.querySelector('#fsZoomPlus').addEventListener('click', () => {
+      noteZoom = Math.round(Math.min(3.0, noteZoom + 0.1) * 10) / 10;
+      if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
+    });
+  }
 
   function applyFsZoom() {
     const basePx = 20;
@@ -3061,13 +3133,20 @@ function openNoteFullscreen(idx) {
     toolbar.querySelectorAll('.fs-zoom-label').forEach(el => el.textContent = Math.round(noteZoom * 100) + '%');
   }
 
-  function loadTabContent() {
-    if (activeTab === noteTab) {
+  function loadTabContent(s) {
+    if (activeTab === 'listen') {
+      // Media tab — show without audio player
+      scrollArea.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3);padding:32px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;opacity:0.4;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <div style="font-size:15px;text-align:center;">Media player is hidden in full screen mode.</div>
+        <div style="font-size:13px;text-align:center;opacity:0.7;">Exit full screen to access audio playback.</div>
+      </div>`;
+    } else if (activeTab === noteTab || activeTab === 'default') {
       const noteArea = document.getElementById('noteArea');
       scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
       applyFsZoom();
     } else {
-      switchNoteTab(activeTab, idx);
+      switchNoteTab(activeTab, currentIdx);
       requestAnimationFrame(() => requestAnimationFrame(() => {
         const noteArea = document.getElementById('noteArea');
         scrollArea.innerHTML = noteArea ? noteArea.innerHTML : '';
@@ -3076,20 +3155,30 @@ function openNoteFullscreen(idx) {
     }
   }
 
-  toolbar.querySelector('#fsZoomMinus').addEventListener('click', () => {
-    noteZoom = Math.round(Math.max(0.5, noteZoom - 0.1) * 10) / 10;
-    if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
-  });
-  toolbar.querySelector('#fsZoomPlus').addEventListener('click', () => {
-    noteZoom = Math.round(Math.min(3.0, noteZoom + 0.1) * 10) / 10;
-    if (s?.id) saveSongZoom(s.id); applyNoteZoom(); applyFsZoom();
-  });
+  function navigateFs(newIdx) {
+    const s = currentSetSongs[newIdx];
+    if (!s || s.type === 'note') return;
+    currentIdx = newIdx;
+    // also update the underlying song page so it stays in sync
+    currentSongIdx = newIdx;
+    renderSongPage(newIdx);
+    // re-render fullscreen with new song
+    activeTab = 'default';
+    renderNavBar(newIdx);
+    renderSongHeader(s);
+    renderFsTabBar(s);
+    renderFsToolbar();
+    loadTabContent(s);
+  }
 
-  const close = () => { overlay.remove(); };
-  overlay._close = close;
-  titleBar.querySelector('#fsDismissBtn').addEventListener('click', close);
-
-  loadTabContent();
+  // initial render
+  const s0 = currentSetSongs[idx];
+  if (!s0 || s0.type === 'note') { overlay.remove(); return; }
+  renderNavBar(idx);
+  renderSongHeader(s0);
+  renderFsTabBar(s0);
+  renderFsToolbar();
+  loadTabContent(s0);
 }
 
 function toggleTuningFork() {
