@@ -835,6 +835,9 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
+    <div style="text-align:right;padding:2px 4px 0;">
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β1.97</span>
+    </div>
   </div>
 </aside>
 
@@ -1547,7 +1550,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.95</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β1.97</span>
       </div>
 
     </div>
@@ -6124,7 +6127,7 @@ function openDBLyricsFullscreen() {
   }
 
   if (s.notes) {
-    scrollArea.innerHTML = `<div class="note-display" style="white-space:pre-wrap;font-size:${Math.round(20*zoom)}px;line-height:${1.9*zoom};">${esc(s.notes)}</div>`;
+    scrollArea.innerHTML = `<div class="note-display" style="font-size:${Math.round(20*zoom)}px;line-height:${1.9*zoom};">${s.notes}</div>`;
   } else {
     scrollArea.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3);padding:32px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;opacity:0.4;"><path d="M8 6h8M8 10h8M8 14h5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
