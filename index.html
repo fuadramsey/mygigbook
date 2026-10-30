@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.02</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.03</span>
     </div>
   </div>
 </aside>
@@ -1550,7 +1550,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.02</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.03</span>
       </div>
 
     </div>
@@ -5522,6 +5522,18 @@ async function renameAudioFile(songId, audioKey, currentName, idx) {
     if (window._audioCache?.[metaKey]?.files) {
       const cf = window._audioCache[metaKey].files.find(f => f.key === audioKey);
       if (cf) cf.name = trimmed;
+    }
+    // Patch live player filename div in-place (covers tabs not being re-rendered)
+    const playerEl = document.getElementById('audioPlayer');
+    if (playerEl) {
+      const nameDiv = playerEl.querySelector('div[style*="font-weight:600"]');
+      if (nameDiv) nameDiv.textContent = trimmed;
+      // Also update the dropdown option if present
+      const sel = playerEl.querySelector('#audioFileSelect');
+      if (sel) {
+        const opt = [...sel.options].find(o => o.value === audioKey);
+        if (opt) opt.textContent = trimmed;
+      }
     }
     showToast('File renamed');
     if (idx >= 0 && currentSetSongs?.[idx]) renderSongPage(idx);
