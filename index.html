@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.20</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.21</span>
     </div>
   </div>
 </aside>
@@ -1561,7 +1561,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.20</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.21</span>
       </div>
 
     </div>
@@ -1922,7 +1922,7 @@ const _origConsoleLog = console.log.bind(console);
 console.log = function(...args) {
   _origConsoleLog(...args);
   const line = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-  if (line.includes('[SyncNames]') || line.includes('[AudioDL]')) {
+  if (line.includes('[SyncNames]') || line.includes('[AudioDL]') || line.includes('[Rename]')) {
     window._syncDebugLog.push(line);
   }
 };
