@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.38</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.39</span>
     </div>
   </div>
 </aside>
@@ -1462,6 +1462,16 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
       </button>
 
+      <!-- Debug: Copy audio state -->
+      <button class="settings-row" onclick="copyAudioDebug()">
+        <div class="settings-row-icon" style="color:var(--accent);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <span class="settings-row-label">Copy audio debug log
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Dumps all audio IndexedDB keys + cache state to clipboard</span>
+        </span>
+      </button>
+
       <!-- Debug: Copy sync log -->
       <button class="settings-row" onclick="copyDebugLog()">
         <div class="settings-row-icon" style="color:var(--accent);">
@@ -1561,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.38</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.39</span>
       </div>
 
     </div>
@@ -1936,9 +1946,42 @@ function copyDebugLog() {
   if (!window._syncDebugLog.length) { showToast('No debug log yet — sync first', 'err'); return; }
   const text = window._syncDebugLog.join('\n');
   navigator.clipboard.writeText(text).then(() => showToast('Debug log copied!', 'ok')).catch(() => {
-    // fallback: show in alert
     alert(text);
   });
+}
+
+async function copyAudioDebug() {
+  try {
+    const allAudio = await dbAll('audio');
+    const lines = ['=== AUDIO INDEXEDDB DUMP ===', `Total entries: ${allAudio.length}`, ''];
+    for (const e of allAudio) {
+      const isMeta = e.id.startsWith('audio_meta_');
+      if (isMeta) {
+        lines.push(`META: ${e.id}`);
+        lines.push(`  files: ${JSON.stringify((e.files||[]).map(f => ({ key: f.key, name: f.name, hasLocalData: f.hasLocalData })))}`);
+        lines.push(`  defaultKey: ${e.defaultKey}`);
+      } else {
+        const hasData = !!(e.data);
+        const dataSize = e.data?.byteLength || e.data?.length || 0;
+        lines.push(`FILE: ${e.id}`);
+        lines.push(`  name: ${e.name}, hasData: ${hasData}, dataSize: ${dataSize}, mimeType: ${e.mimeType}`);
+      }
+    }
+    lines.push('');
+    lines.push('=== AUDIO CACHE STATE ===');
+    const cache = window._audioCache || {};
+    for (const [k, v] of Object.entries(cache)) {
+      if (k.startsWith('audio_meta_')) {
+        lines.push(`CACHE META: ${k} → files: ${JSON.stringify((v.files||[]).map(f => ({ key: f.key, name: f.name, hasLocalData: f.hasLocalData })))}`);
+      } else {
+        lines.push(`CACHE FILE: ${k} → blobUrl: ${!!(v.blobUrl)}, downloadUrl: ${!!(v.downloadUrl)}, name: ${v.name}`);
+      }
+    }
+    const text = lines.join('\n');
+    navigator.clipboard.writeText(text).then(() => showToast('Audio debug copied!', 'ok')).catch(() => { alert(text); });
+  } catch(e) {
+    showToast('Debug failed: ' + e.message, 'err');
+  }
 }
 
 async function syncAudioNames() {
@@ -6846,13 +6889,12 @@ function renderSETab() {
         if (keyEl && s.key) keyEl.value = s.key;
       });
     }
-    // async audio inject — always load to ensure blobUrl is set even if meta key exists
-    if (id) {
+    // async audio inject — only when meta key not yet known (first load)
+    if (id && !getAudioDefaultKey(id)) {
       loadAudioHybrid(id).then(entry => {
         if (!entry) return;
         const dk = getAudioDefaultKey(id);
         if (!dk) return;
-        // Only inject player if not already rendered
         if (!body.querySelector('audio')) {
           const playerHtml = buildFullAudioPlayer(dk, currentSongIdx >= 0 ? currentSongIdx : 0);
           const wrap = document.createElement('div');
