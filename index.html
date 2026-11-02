@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.25</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.26</span>
     </div>
   </div>
 </aside>
@@ -1561,7 +1561,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.25</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.26</span>
       </div>
 
     </div>
@@ -5609,7 +5609,41 @@ async function downloadAudioFile(audioKey, fileName) {
       }
     } catch(e) {}
   }
-  if (!blobUrl) { showToast('File not found locally'); return; }
+  // Not local — try fetching from Firebase Storage by path convention
+  if (!blobUrl && fbReady && online && window._fb) {
+    try {
+      showToast('Fetching from cloud…', 'info');
+      const path = `songs/${audioKey.replace(/^audio_([^_]+(?:_[^_]+)?).*$/, (_, songId) => {
+        // extract songId: everything between "audio_" and the optional timestamp suffix
+        const parts = audioKey.slice(6).split('_');
+        // UUID is 5 groups joined by hyphens — reconstruct it
+        return parts.slice(0, 5).join('-');
+      })}/${audioKey.split('_').slice(0, 1)[0]}_${audioKey.split('_').slice(1).join('_')}`;
+      // Simpler: path = songs/{songId}/audio/{audioKey}
+      // songId is the UUID embedded in audioKey: audio_{uuid}_{timestamp} or audio_{uuid}
+      const audioKeyBody = audioKey.slice(6); // strip "audio_"
+      const uuidMatch = audioKeyBody.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
+      const songId = uuidMatch ? uuidMatch[1] : null;
+      if (songId) {
+        const storagePath = `songs/${songId}/audio/${audioKey}`;
+        const ab = await fetchFromStorage(storagePath, null);
+        if (ab) {
+          const mimeType = 'audio/mpeg';
+          await dbPut('audio', { id: audioKey, name: fileName || audioKey, data: ab, mimeType, updatedAt: Date.now() });
+          const blob = new Blob([ab], { type: mimeType });
+          blobUrl = URL.createObjectURL(blob);
+          window._audioCache = window._audioCache || {};
+          window._audioCache[audioKey] = { name: fileName || audioKey, blobUrl, mimeType, local: true };
+          // Re-render to show the player
+          if (currentSongIdx >= 0) renderSongPage(currentSongIdx);
+          else renderSETab();
+        }
+      }
+    } catch(e) {
+      console.warn('[downloadAudioFile] cloud fetch failed:', e.message);
+    }
+  }
+  if (!blobUrl) { showToast('File not found locally or in cloud'); return; }
   const a = document.createElement('a');
   a.href = blobUrl;
   a.download = fileName || audioKey;
