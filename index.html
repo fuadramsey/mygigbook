@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.28</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.29</span>
     </div>
   </div>
 </aside>
@@ -1561,7 +1561,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.28</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.29</span>
       </div>
 
     </div>
@@ -1800,16 +1800,22 @@ async function fbDeleteFileMeta(fileId) {
 async function fetchFromStorage(path, downloadUrl) {
   const fb = window._fb;
 
-  // Get fresh URL from Firebase SDK
-  let url = downloadUrl;
-  try {
-    if (fb?.storageRef && fb?.storage && fb?.getDownloadURL) {
-      const fileRef = fb.storageRef(fb.storage, path);
-      url = await fb.getDownloadURL(fileRef);
+  // Try to get a working URL — prefer stored downloadUrl (already signed), fall back to fresh SDK call
+  let url = (typeof downloadUrl === 'string' && downloadUrl.startsWith('http')) ? downloadUrl : null;
+  if (!url) {
+    try {
+      if (fb?.storageRef && fb?.storage && fb?.getDownloadURL) {
+        const fileRef = fb.storageRef(fb.storage, path);
+        url = await fb.getDownloadURL(fileRef);
+        console.log('[fetchFromStorage] got fresh URL via SDK for path:', path);
+      }
+    } catch(e) {
+      console.warn('[fetchFromStorage] getDownloadURL failed for path:', path, '— code:', e.code, '— msg:', e.message);
+      // e.code === 'storage/object-not-found' means file is NOT in Storage at this path
+      throw new Error('File not in Storage (' + (e.code || e.message) + ')');
     }
-  } catch(e) {
-    console.warn('[fetchFromStorage] getDownloadURL failed, using stored URL:', e.message);
-    url = downloadUrl;
+  } else {
+    console.log('[fetchFromStorage] using stored downloadUrl for path:', path);
   }
 
   if (!url) throw new Error('No download URL available');
@@ -4076,21 +4082,21 @@ function buildAudioSection(s) {
             <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);">${esc(f.name)}</span>
             ${f.key === meta.defaultKey ? `<span style="font-size:10px;color:var(--accent);font-family:'DM Mono',monospace;flex-shrink:0;">DEFAULT</span>` : ''}
             ${isLocal ? `<span style="font-size:10px;color:var(--text3);flex-shrink:0;">✓ local</span>` : `<span style="font-size:10px;color:var(--text3);flex-shrink:0;">cloud only</span>`}
-            <div style="display:flex;gap:8px;flex-shrink:0;">
+            <div style="display:flex;gap:14px;flex-shrink:0;">
               <button onclick="renameAudioFile('${esc(s.id)}','${esc(f.key)}','${esc(f.name)}',${idx})"
-                style="width:32px;height:32px;background:none;border:1px solid var(--border2);border-radius:6px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;"
+                style="width:36px;height:36px;background:none;border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;"
                 title="Rename this file">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </button>
               <button onclick="downloadAudioFile('${esc(f.key)}','${esc(f.name)}')"
-                style="width:32px;height:32px;background:none;border:1px solid var(--border2);border-radius:6px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;"
+                style="width:36px;height:36px;background:none;border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;"
                 title="${isLocal ? 'Save to device' : 'Download to this device'}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               </button>
               <button onclick="confirmDeleteAudio('${esc(s.id)}','${esc(f.key)}','${esc(f.name)}',${idx})"
-                style="width:32px;height:32px;background:none;border:1px solid var(--border2);border-radius:6px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;"
+                style="width:36px;height:36px;background:none;border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;"
                 title="Delete this file">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
               </button>
             </div>
           </div>
@@ -5671,7 +5677,11 @@ async function downloadAudioFile(audioKey, fileName) {
       }
     } catch(e) {
       console.warn('[AudioDL] cloud fetch failed:', e.message);
-      showToast('Cloud fetch failed: ' + e.message, 'err');
+      if (e.message && e.message.includes('object-not-found')) {
+        showToast('Audio file not found in cloud storage — was it uploaded from another device?', 'err');
+      } else {
+        showToast('Cloud fetch failed: ' + e.message, 'err');
+      }
       return;
     }
   }
