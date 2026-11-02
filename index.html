@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.31</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.32</span>
     </div>
   </div>
 </aside>
@@ -1561,7 +1561,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.31</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.32</span>
       </div>
 
     </div>
@@ -2052,7 +2052,7 @@ async function loadAudioHybrid(songId) {
     } catch(e) {}
   }
   if (!meta || !meta.files?.length) return null;
-  // Load all files into cache
+  // Load all files into cache; tag each file with hasLocalData for UI decisions
   for (const f of meta.files) {
     if (!window._audioCache[f.key]?.blobUrl) {
       try {
@@ -2060,8 +2060,13 @@ async function loadAudioHybrid(songId) {
         if (entry?.data) {
           const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
           window._audioCache[f.key] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true };
+          f.hasLocalData = true;
+        } else {
+          f.hasLocalData = false;
         }
-      } catch(e) {}
+      } catch(e) { f.hasLocalData = false; }
+    } else {
+      f.hasLocalData = true; // already in cache with blob = definitely local
     }
   }
   // Store meta in cache for player use
@@ -4074,7 +4079,7 @@ function buildAudioSection(s) {
   const fileListHtml = files.length > 0 ? `
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
       ${files.map(f => {
-        const isLocal = !!(window._audioCache?.[f.key]?.blobUrl);
+        const isLocal = !!(f.hasLocalData || window._audioCache?.[f.key]?.blobUrl);
         return `
         <div style="display:flex;flex-direction:column;gap:6px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
           <div style="display:flex;align-items:center;gap:10px;">
