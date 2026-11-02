@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.40</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.41</span>
     </div>
   </div>
 </aside>
@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.40</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.41</span>
       </div>
 
     </div>
@@ -2103,7 +2103,7 @@ async function loadAudioHybrid(songId) {
         const entry = await dbGet('audio', f.key);
         if (entry?.data) {
           const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
-          window._audioCache[f.key] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true };
+          window._audioCache[f.key] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true, downloadUrl: entry.downloadUrl || null };
           f.hasLocalData = true;
         } else {
           f.hasLocalData = false;
@@ -2165,7 +2165,7 @@ async function downloadAudioForSong(songId, idx) {
     const mimeType = meta.mimeType || 'audio/mpeg';
     const ab = await fetchFromStorage(meta.path || `songs/${songId}/audio/${audioKey}`, meta.downloadUrl);
     // Save audio data under the correct key
-    await dbPut('audio', { id: audioKey, name: meta.name, data: ab, mimeType, updatedAt: Date.now() });
+    await dbPut('audio', { id: audioKey, name: meta.name, data: ab, mimeType, downloadUrl: meta.downloadUrl || null, updatedAt: Date.now() });
     // Ensure audio_meta entry exists so loadAudioHybrid can find this file
     const metaKey = `audio_meta_${songId}`;
     let localMeta = await dbGet('audio', metaKey).catch(() => null);
@@ -5669,34 +5669,44 @@ async function processAudioFile(file, idx) {
   }
   checkAndHandleAudioFile(file, async (f) => {
     showToast('Attaching audio…');
-    const s = currentSetSongs[idx];
+    // Support both setlist context (idx >= 0) and song-database context (idx === -1)
+    const s = (idx >= 0 ? currentSetSongs[idx] : null) || window._seCurrentSong || null;
     if (!s) return;
+    const inSE = idx < 0;
     const ts = Date.now();
     const newKey = `audio_${s.id}_${ts}`;
     const metaKey = `audio_meta_${s.id}`;
     const arrayBuffer = await f.arrayBuffer();
     stopAudio();
+    const mimeType = f.type || 'audio/mpeg';
     // Save the audio data
-    await dbPut('audio', { id: newKey, name: f.name, data: arrayBuffer, mimeType: f.type || 'audio/mpeg', updatedAt: ts });
+    await dbPut('audio', { id: newKey, name: f.name, data: arrayBuffer, mimeType, updatedAt: ts });
     // Update meta
     let meta = null;
     try { meta = await dbGet('audio', metaKey); } catch(e) {}
     const files = meta?.files || [];
-    files.push({ key: newKey, name: f.name, mimeType: f.type || 'audio/mpeg', ts });
+    files.push({ key: newKey, name: f.name, mimeType, ts });
     meta = { id: metaKey, files, defaultKey: newKey, updatedAt: ts };
     await dbPut('audio', meta);
+    // Auto-upload to cloud in background
+    let downloadUrl = null;
     if (fbReady && online) {
       const path = storagePath('audio', s.id, newKey);
-      const url = await fbStorageUpload(path, arrayBuffer, f.type || 'audio/mpeg');
-      if (url) await fbSaveFileMeta(s.id, 'audio', newKey, { name: f.name, mimeType: f.type || 'audio/mpeg', downloadUrl: url, path });
+      downloadUrl = await fbStorageUpload(path, arrayBuffer, mimeType);
+      if (downloadUrl) {
+        await fbSaveFileMeta(s.id, 'audio', newKey, { name: f.name, mimeType, downloadUrl, path });
+        // Persist downloadUrl in IndexedDB so it survives reload
+        await dbPut('audio', { id: newKey, name: f.name, data: arrayBuffer, mimeType, downloadUrl, updatedAt: ts });
+      }
     }
     // Update cache
     window._audioCache = window._audioCache || {};
-    const blob = new Blob([arrayBuffer], { type: f.type || 'audio/mpeg' });
-    window._audioCache[newKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType: f.type, local: true };
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+    window._audioCache[newKey] = { name: f.name, blobUrl: URL.createObjectURL(blob), mimeType, local: true, downloadUrl };
     window._audioCache[metaKey] = meta;
-    showToast('Audio attached', 'ok');
-    await renderSongPage(idx);
+    showToast(downloadUrl ? 'Audio attached and uploaded to cloud' : 'Audio attached (upload to cloud when connected)', 'ok');
+    if (inSE) renderSETab();
+    else await renderSongPage(idx);
   });
 }
 
