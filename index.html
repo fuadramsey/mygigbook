@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.34</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.35</span>
     </div>
   </div>
 </aside>
@@ -1561,7 +1561,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.34</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.35</span>
       </div>
 
     </div>
@@ -2102,20 +2102,38 @@ async function checkAudioInCloud(songId) {
 
 // Download audio for a specific song on demand
 async function downloadAudioForSong(songId, idx) {
-  const audioKey = `audio_${songId}`;
   const btn = document.getElementById(`audioDownloadBtn_${songId}`);
   if (btn) { btn.disabled = true; btn.textContent = 'Downloading…'; }
   try {
     const meta = await checkAudioInCloud(songId);
-    if (!meta) { showToast('Audio not found in cloud', 'err'); return; }
-    const ab = await fetchFromStorage(`songs/${songId}/audio/${meta.fileId}`, meta.downloadUrl);
-    await dbPut('audio', { id: audioKey, name: meta.name, data: ab, mimeType: meta.mimeType || 'audio/mpeg', updatedAt: Date.now() });
+    if (!meta) { showToast('Audio not found in cloud', 'err'); if (btn) { btn.disabled = false; btn.textContent = '↓ Download'; } return; }
+    // Use the correct multi-file key (fileId from Firestore)
+    const audioKey = meta.fileId || `audio_${songId}_${Date.now()}`;
+    const mimeType = meta.mimeType || 'audio/mpeg';
+    const ab = await fetchFromStorage(meta.path || `songs/${songId}/audio/${audioKey}`, meta.downloadUrl);
+    // Save audio data under the correct key
+    await dbPut('audio', { id: audioKey, name: meta.name, data: ab, mimeType, updatedAt: Date.now() });
+    // Ensure audio_meta entry exists so loadAudioHybrid can find this file
+    const metaKey = `audio_meta_${songId}`;
+    let localMeta = await dbGet('audio', metaKey).catch(() => null);
+    if (!localMeta) {
+      localMeta = { id: metaKey, songId, files: [], updatedAt: Date.now() };
+    }
+    if (!localMeta.files) localMeta.files = [];
+    if (!localMeta.files.find(f => f.key === audioKey)) {
+      localMeta.files.push({ key: audioKey, name: meta.name });
+      if (!localMeta.defaultKey) localMeta.defaultKey = audioKey;
+      localMeta.updatedAt = Date.now();
+      await dbPut('audio', localMeta);
+    }
+    // Populate cache with blobUrl
     if (window._audioCache?.[audioKey]?.blobUrl) URL.revokeObjectURL(window._audioCache[audioKey].blobUrl);
-    const blob = new Blob([ab], { type: meta.mimeType || 'audio/mpeg' });
+    const blob = new Blob([ab], { type: mimeType });
     window._audioCache = window._audioCache || {};
-    window._audioCache[audioKey] = { name: meta.name, blobUrl: URL.createObjectURL(blob), mimeType: meta.mimeType, local: true };
+    window._audioCache[audioKey] = { name: meta.name, blobUrl: URL.createObjectURL(blob), mimeType, local: true, downloadUrl: meta.downloadUrl };
     showToast('Audio downloaded', 'ok');
-    // re-render to show the player
+    // Run loadAudioHybrid to set hasLocalData flags, then re-render to show the player
+    await loadAudioHybrid(songId).catch(() => {});
     if (idx >= 0) await renderSongPage(idx);
     else renderSETab();
   } catch(e) {
