@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.41</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.43</span>
     </div>
   </div>
 </aside>
@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.41</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.43</span>
       </div>
 
     </div>
@@ -2135,7 +2135,13 @@ function getAudioMeta(songId) {
 function getAudioDefaultKey(songId) {
   const meta = getAudioMeta(songId);
   if (!meta || !meta.files?.length) return null;
-  return meta.defaultKey || meta.files[meta.files.length - 1]?.key;
+  const fileKeys = meta.files.map(f => f.key);
+  // Prefer a key that has a blobUrl in cache (file is loaded and playable)
+  const withBlob = fileKeys.find(k => window._audioCache?.[k]?.blobUrl);
+  if (withBlob) return withBlob;
+  // Fall back to defaultKey if valid, else last file
+  if (meta.defaultKey && fileKeys.includes(meta.defaultKey)) return meta.defaultKey;
+  return meta.files[meta.files.length - 1]?.key;
 }
 
 // Check if audio exists in cloud (Firestore files collection)
@@ -6762,8 +6768,12 @@ function renderSETab() {
 
   if (seTab === 'details') {
     // Ensure audio is loaded into cache (async — re-renders when done if needed)
-    if (id && !getAudioDefaultKey(id)) {
-      loadAudioHybrid(id).then(entry => { if (entry) renderSETab(); }).catch(() => {});
+    if (id) {
+      const _metaDet = getAudioMeta(id);
+      const _anyBlobDet = _metaDet?.files?.some(f => window._audioCache?.[f.key]?.blobUrl);
+      if (!_anyBlobDet) {
+        loadAudioHybrid(id).then(entry => { if (entry) renderSETab(); }).catch(() => {});
+      }
     }
     const _defAudioKey = id ? getAudioDefaultKey(id) : null;
     const _hasLocalAudio = _defAudioKey && window._audioCache?.[_defAudioKey]?.blobUrl;
@@ -6908,27 +6918,31 @@ function renderSETab() {
         if (keyEl && s.key) keyEl.value = s.key;
       });
     }
-    // async audio inject — only when meta key not yet known (first load)
-    if (id && !getAudioDefaultKey(id)) {
-      loadAudioHybrid(id).then(entry => {
-        if (!entry) return;
-        const dk = getAudioDefaultKey(id);
-        if (!dk) return;
-        if (!body.querySelector('audio')) {
-          const playerHtml = buildFullAudioPlayer(dk, currentSongIdx >= 0 ? currentSongIdx : 0);
-          const wrap = document.createElement('div');
-          wrap.innerHTML = playerHtml;
-          if (wrap.firstChild) body.insertBefore(wrap.firstChild, body.firstChild);
-        }
-      });
+    // async audio inject — only when no file is loaded yet
+    if (id) {
+      const _metaInj = getAudioMeta(id);
+      const _anyBlobInj = _metaInj?.files?.some(f => window._audioCache?.[f.key]?.blobUrl);
+      if (!_anyBlobInj) {
+        loadAudioHybrid(id).then(entry => {
+          if (!entry) return;
+          const dk = getAudioDefaultKey(id);
+          if (!dk) return;
+          if (!body.querySelector('audio')) {
+            const playerHtml = buildFullAudioPlayer(dk, currentSongIdx >= 0 ? currentSongIdx : 0);
+            const wrap = document.createElement('div');
+            wrap.innerHTML = playerHtml;
+            if (wrap.firstChild) body.insertBefore(wrap.firstChild, body.firstChild);
+          }
+        });
+      }
     }
   } else if (seTab === 'mynotes') {
     const myNoteHtml = window._seMyNotesHtml || '';
-    // Always load audio so blobUrl is populated even when meta key already exists
+    // Always load audio so blobUrl is populated — re-run if no file in meta has a blobUrl yet
     if (id) {
-      const _preLoadKey = getAudioDefaultKey(id);
-      const _alreadyHasBlobUrl = _preLoadKey && window._audioCache?.[_preLoadKey]?.blobUrl;
-      if (!_alreadyHasBlobUrl) {
+      const _meta = getAudioMeta(id);
+      const _anyBlobUrl = _meta?.files?.some(f => window._audioCache?.[f.key]?.blobUrl);
+      if (!_anyBlobUrl) {
         loadAudioHybrid(id).then(entry => { if (entry) renderSETab(); }).catch(() => {});
       }
     }
