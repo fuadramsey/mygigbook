@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.43</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.45</span>
     </div>
   </div>
 </aside>
@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.43</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.45</span>
       </div>
 
     </div>
@@ -1635,7 +1635,7 @@ window.addEventListener('popstate', (e) => {
   }
   // If at root, do nothing — stay in the app
 });
-window.addEventListener('online', () => { online=true; updateSyncUI(); });
+window.addEventListener('online', () => { online=true; updateSyncUI(); retryPendingUploads(); });
 window.addEventListener('offline', () => { online=false; updateSyncUI(); });
 
 function updateSyncUI() {
@@ -1831,21 +1831,36 @@ async function fetchFromStorage(path, downloadUrl) {
   if (!url) throw new Error('No download URL available');
 
   // Use XMLHttpRequest — handles Firebase Storage CORS better than fetch()
-  return new Promise((resolve, reject) => {
+  // If the stored URL returns 403 (expired), get a fresh URL via SDK and retry once
+  const doXhr = (xhrUrl) => new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.responseType = 'arraybuffer';
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(xhr.response);
       } else {
-        reject(new Error(`HTTP ${xhr.status}`));
+        reject(Object.assign(new Error(`HTTP ${xhr.status}`), { status: xhr.status }));
       }
     };
     xhr.onerror = () => reject(new Error('Network error — check Firebase Storage CORS settings'));
     xhr.ontimeout = () => reject(new Error('Request timed out'));
     xhr.timeout = 60000;
-    xhr.open('GET', url);
+    xhr.open('GET', xhrUrl);
     xhr.send();
+  });
+  return doXhr(url).catch(async (e) => {
+    // On 403/401, the stored URL may have expired — get a fresh one via SDK and retry
+    if ((e.status === 403 || e.status === 401) && fb?.storageRef && fb?.storage && fb?.getDownloadURL) {
+      console.log('[fetchFromStorage] stored URL returned', e.status, '— fetching fresh URL via SDK');
+      try {
+        const fileRef = fb.storageRef(fb.storage, path);
+        const freshUrl = await fb.getDownloadURL(fileRef);
+        return doXhr(freshUrl);
+      } catch(sdkErr) {
+        throw new Error('File not in Storage (' + (sdkErr.code || sdkErr.message) + ')');
+      }
+    }
+    throw e;
   });
 }
 
@@ -2199,6 +2214,97 @@ async function downloadAudioForSong(songId, idx) {
     showToast('Download failed: ' + (e?.message || e), 'err');
     if (btn) { btn.disabled = false; btn.textContent = '↓ Download'; }
   }
+}
+
+// tapDownloadAudio — called when user taps the "tap to download and play" card
+async function tapDownloadAudio(songId, idx) {
+  const card = document.getElementById(`audioDownloadCard_${songId}`);
+  if (card) {
+    card.style.opacity = '0.6';
+    card.style.pointerEvents = 'none';
+    card.querySelector('div:last-child').textContent = 'Downloading…';
+  }
+  try {
+    await downloadAudioForSong(songId, idx);
+  } catch(e) {
+    if (card) { card.style.opacity = '1'; card.style.pointerEvents = ''; card.querySelector('div:last-child').textContent = 'Tap to download and play'; }
+  }
+}
+
+// autoDownloadAudioOnOpen — silently download all cloud-only files for a song when auto-download is on
+// Returns true if any download happened (caller should re-render)
+async function autoDownloadAudioOnOpen(songId) {
+  if (!autoDownloadFiles || !online || !fbReady) return false;
+  const meta = getAudioMeta(songId);
+  if (!meta?.files?.length) return false;
+  const cloudOnlyFiles = meta.files.filter(f => !f.hasLocalData && !window._audioCache?.[f.key]?.blobUrl);
+  if (!cloudOnlyFiles.length) return false;
+  let anyDownloaded = false;
+  // Also check Firestore for any files not yet in local meta
+  try {
+    const fb = window._fb;
+    if (fb) {
+      const snap = await fb.getDocs(fb.query(fb.collection(fb.db, 'files'), fb.where('songId', '==', songId), fb.where('type', '==', 'audio')));
+      for (const d of snap.docs) {
+        const fmeta = d.data();
+        if (!fmeta.downloadUrl || !fmeta.fileId) continue;
+        const alreadyLocal = window._audioCache?.[fmeta.fileId]?.blobUrl;
+        if (alreadyLocal) continue;
+        try {
+          const mimeType = fmeta.mimeType || 'audio/mpeg';
+          const ab = await fetchFromStorage(fmeta.path || `songs/${songId}/audio/${fmeta.fileId}`, fmeta.downloadUrl);
+          await dbPut('audio', { id: fmeta.fileId, name: fmeta.name, data: ab, mimeType, downloadUrl: fmeta.downloadUrl, updatedAt: Date.now() });
+          const metaKey = `audio_meta_${songId}`;
+          let localMeta = await dbGet('audio', metaKey).catch(() => null);
+          if (!localMeta) localMeta = { id: metaKey, songId, files: [], updatedAt: Date.now() };
+          if (!localMeta.files) localMeta.files = [];
+          if (!localMeta.files.find(f => f.key === fmeta.fileId)) {
+            localMeta.files.push({ key: fmeta.fileId, name: fmeta.name, mimeType });
+            if (!localMeta.defaultKey) localMeta.defaultKey = fmeta.fileId;
+            localMeta.updatedAt = Date.now();
+            await dbPut('audio', localMeta);
+          }
+          if (window._audioCache?.[fmeta.fileId]?.blobUrl) URL.revokeObjectURL(window._audioCache[fmeta.fileId].blobUrl);
+          const blob = new Blob([ab], { type: mimeType });
+          window._audioCache = window._audioCache || {};
+          window._audioCache[fmeta.fileId] = { name: fmeta.name, blobUrl: URL.createObjectURL(blob), mimeType, local: true, downloadUrl: fmeta.downloadUrl };
+          anyDownloaded = true;
+        } catch(e) { console.warn('[autoDownload] failed for', fmeta.fileId, e.message); }
+      }
+    }
+  } catch(e) { console.warn('[autoDownload] Firestore query failed', e); }
+  if (anyDownloaded) await loadAudioHybrid(songId).catch(() => {});
+  return anyDownloaded;
+}
+
+// retryPendingUploads — called when coming back online; silently uploads any local files missing a cloud URL
+async function retryPendingUploads() {
+  if (!fbReady || !online) return;
+  try {
+    const allMeta = (await dbAll('audio')).filter(e => e.id?.startsWith('audio_meta_'));
+    for (const metaEntry of allMeta) {
+      const songId = metaEntry.id.replace('audio_meta_', '');
+      for (const f of (metaEntry.files || [])) {
+        const cached = window._audioCache?.[f.key];
+        const hasCloud = !!(cached?.downloadUrl && cached.downloadUrl.startsWith('http'));
+        if (hasCloud) continue;
+        // Try to get data from IndexedDB
+        const dataEntry = await dbGet('audio', f.key).catch(() => null);
+        if (!dataEntry?.data) continue;
+        const mimeType = dataEntry.mimeType || 'audio/mpeg';
+        try {
+          const path = `songs/${songId}/audio/${f.key}`;
+          const downloadUrl = await fbStorageUpload(path, dataEntry.data, mimeType);
+          if (downloadUrl) {
+            await fbSaveFileMeta(songId, 'audio', f.key, { name: f.name || dataEntry.name, mimeType, downloadUrl, path });
+            await dbPut('audio', { ...dataEntry, downloadUrl, updatedAt: Date.now() });
+            if (window._audioCache?.[f.key]) window._audioCache[f.key].downloadUrl = downloadUrl;
+            console.log('[retryUpload] uploaded', f.key);
+          }
+        } catch(e) { console.warn('[retryUpload] failed for', f.key, e.message); }
+      }
+    }
+  } catch(e) { console.warn('[retryPendingUploads] error', e); }
 }
 
 async function fbPullAll() {
@@ -3698,6 +3804,13 @@ async function renderSongPage(idx) {
     await loadAudioHybrid(s.id);
   } catch(e) {}
 
+  // auto-download cloud-only files if setting is on; re-render after if anything downloaded
+  if (autoDownloadFiles) {
+    autoDownloadAudioOnOpen(s.id).then(downloaded => {
+      if (downloaded && currentSongIdx === idx) renderSongPage(idx);
+    }).catch(() => {});
+  }
+
   // re-read audioEntry using new multi-file meta
   const defAudioKey = getAudioDefaultKey(s.id);
   const audioEntry = defAudioKey ? (window._audioCache?.[defAudioKey] || null) : null;
@@ -3785,12 +3898,12 @@ async function renderSongPage(idx) {
     </div>
     <div class="note-area" id="noteArea">
       ${noteTab === 'all'
-        ? (audioEntry ? buildFullAudioPlayer(defAudioKey, idx) : '') + allNotesHtml
+        ? buildSEAudioPlayer(s.id, defAudioKey, !!(audioEntry)) + allNotesHtml
         : noteTab === 'listen'
         ? buildAudioSection(s) + buildListenContent(s)
         : noteTab === 'charts'
         ? `<div id="chartsContent" style="padding:16px;">Loading…</div>`
-        : buildNoteContent(activeNote, idx, true)}
+        : buildSEAudioPlayer(s.id, defAudioKey, !!(audioEntry)) + buildNoteContent(activeNote, idx, true)}
     </div>
     `;
 
@@ -4145,64 +4258,94 @@ function switchAudioFile(newKey, idx) {
   else renderSETab();
 }
 
+// buildSEAudioPlayer — compact audio player/tap-to-download for SE details & mynotes tabs
+// (not the media tab — that uses buildAudioSection)
+function buildSEAudioPlayer(songId, defAudioKey, hasLocalAudio) {
+  if (!songId) return '';
+  if (hasLocalAudio) {
+    return buildFullAudioPlayer(defAudioKey, currentSongIdx >= 0 ? currentSongIdx : 0);
+  }
+  // No local audio — check if there are any files in meta at all
+  const meta = getAudioMeta(songId);
+  if (!meta?.files?.length) return '';
+  // Show tap-to-download card
+  const defFileMeta = meta.files.find(f => f.key === defAudioKey) || meta.files[meta.files.length - 1];
+  const defFileName = defFileMeta?.name || 'audio file';
+  return `<div id="audioDownloadCard_${songId}"
+    style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;cursor:pointer;text-align:center;"
+    onclick="tapDownloadAudio('${esc(songId)}',-1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:var(--accent);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    <div style="font-size:13px;font-weight:600;color:var(--text1);">${esc(defFileName)}</div>
+    <div style="font-size:12px;color:var(--text3);">Tap to download and play</div>
+  </div>`;
+}
+
 function buildAudioSection(s) {
   if (!s) return '';
   const meta = getAudioMeta(s.id);
   const files = meta?.files || [];
   const defKey = getAudioDefaultKey(s.id);
   const idx = currentSongIdx;
-  const playerHtml = (defKey && window._audioCache?.[defKey]?.blobUrl)
-    ? buildFullAudioPlayer(defKey, idx) : '';
+
+  // Count how many files are local vs cloud-only
+  const localCount = files.filter(f => !!(f.hasLocalData || window._audioCache?.[f.key]?.blobUrl)).length;
+  const cloudOnlyCount = files.length - localCount;
+
+  // Sync status line (single indicator above file list)
+  let syncStatusHtml = '';
+  if (files.length > 0) {
+    if (cloudOnlyCount === 0) {
+      syncStatusHtml = `<div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;color:var(--accent);flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
+        All files downloaded
+      </div>`;
+    } else if (autoDownloadFiles) {
+      syncStatusHtml = `<div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;color:var(--accent);flex-shrink:0;animation:spin 1s linear infinite;"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Syncing…
+      </div>`;
+    } else {
+      syncStatusHtml = `<div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;color:var(--text3);flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        ${cloudOnlyCount} file${cloudOnlyCount > 1 ? 's' : ''} not downloaded
+      </div>`;
+    }
+  }
+
+  // Player or tap-to-download card
+  let playerHtml = '';
+  if (defKey && window._audioCache?.[defKey]?.blobUrl) {
+    playerHtml = buildFullAudioPlayer(defKey, idx);
+  } else if (files.length > 0) {
+    // Find the default file name for the card
+    const defFileMeta = files.find(f => f.key === defKey) || files[files.length - 1];
+    const defFileName = defFileMeta?.name || 'audio file';
+    playerHtml = `<div id="audioDownloadCard_${s.id}"
+      style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;cursor:pointer;text-align:center;"
+      onclick="tapDownloadAudio('${esc(s.id)}',${idx})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:var(--accent);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <div style="font-size:13px;font-weight:600;color:var(--text1);">${esc(defFileName)}</div>
+      <div style="font-size:12px;color:var(--text3);">Tap to download and play</div>
+    </div>`;
+  }
+
   const fileListHtml = files.length > 0 ? `
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
       ${files.map(f => {
-        const hasBlobUrl = !!(window._audioCache?.[f.key]?.blobUrl);
-        const isLocal = !!(f.hasLocalData || hasBlobUrl);
-        // hasCloudUrl: true if Firestore has a valid https downloadUrl for this file
-        const cachedEntry = window._audioCache?.[f.key];
-        const hasCloudUrl = !!(cachedEntry?.downloadUrl && typeof cachedEntry.downloadUrl === 'string' && cachedEntry.downloadUrl.startsWith('http'));
-        // showUpload: local data exists but file is not confirmed in cloud storage
-        const showUpload = isLocal && !hasCloudUrl;
-        // showDownload: no local data (cloud-only stub)
-        const showDownload = !isLocal;
-        console.log('[AudioUI] key:', f.key, 'hasLocalData:', f.hasLocalData, 'blobUrl:', hasBlobUrl, 'isLocal:', isLocal, 'hasCloudUrl:', hasCloudUrl, 'showUpload:', showUpload);
         return `
-        <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-            <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);">${esc(f.name)}</span>
-            ${isLocal ? `<span style="font-size:10px;color:var(--text3);flex-shrink:0;white-space:nowrap;">✓ local</span>` : `<span style="font-size:10px;color:var(--text3);flex-shrink:0;white-space:nowrap;">cloud only</span>`}
-          </div>
-          <div style="display:flex;gap:12px;align-items:center;">
-            <button onclick="renameAudioFile('${esc(s.id)}','${esc(f.key)}','${esc(f.name)}',${idx})"
-              style="width:40px;height:40px;background:none;border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"
-              title="Rename">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button onclick="downloadAudioFile('${esc(f.key)}','${esc(f.name)}')"
-              style="width:40px;height:40px;background:none;border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"
-              title="${isLocal ? 'Save to device' : 'Fetch from cloud'}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            </button>
-            <button onclick="confirmDeleteAudio('${esc(s.id)}','${esc(f.key)}','${esc(f.name)}',${idx})"
-              style="width:40px;height:40px;background:none;border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"
-              title="Delete">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-            </button>
-            ${showUpload ? `
-            <button onclick="uploadAudioToCloud('${esc(s.id)}','${esc(f.key)}','${esc(f.name)}',${idx})"
-              id="uploadBtn_${esc(f.key)}"
-              style="flex:1;height:40px;background:var(--accent);color:#000;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;flex-shrink:0;"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
-              Upload to cloud
-            </button>` : ''}
-            ${showDownload ? `
-            <button onclick="downloadAudioFile('${esc(f.key)}','${esc(f.name)}')"
-              style="flex:1;height:40px;background:var(--accent);color:#000;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download to play
-            </button>` : ''}
-          </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--accent);flex-shrink:0;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);">${esc(f.name)}</span>
+          <button onclick="renameAudioFile('${esc(s.id)}','${esc(f.key)}','${esc(f.name)}',${idx})"
+            style="width:36px;height:36px;background:none;border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+            title="Rename">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button onclick="confirmDeleteAudio('${esc(s.id)}','${esc(f.key)}','${esc(f.name)}',${idx})"
+            style="width:36px;height:36px;background:none;border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+            title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
         </div>`;
       }).join('')}
     </div>` : '';
@@ -4219,7 +4362,7 @@ function buildAudioSection(s) {
       ${files.length === 0 ? '<div style="font-size:12px;color:var(--text3);">MP3, WAV, M4A, AAC, OGG · Max 10 MB</div>' : ''}
     </div>
     <input type="file" id="audioFileInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" style="display:none" onchange="handleAudioFile(event,${idx})">`;
-  return playerHtml + fileListHtml + addBtnHtml;
+  return syncStatusHtml + playerHtml + fileListHtml + addBtnHtml;
 }
 
 function buildSaveUrlRow(platform, idx) {
@@ -4360,18 +4503,7 @@ function buildNoteContent(text, idx) {
   }
 
   // compact audio player shown at top of notes when audio is attached
-  const audioBar = audioEntry
-    ? buildFullAudioPlayer(defAudioKey, idx)
-    : (s && window._cloudAudioMap?.[s.id])
-      ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;flex-shrink:0;color:var(--text3);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          <span style="flex:1;font-size:13px;color:var(--text2);">${esc(window._cloudAudioMap[s.id].name)}</span>
-          <button id="audioDownloadBtn_${s.id}" class="btn ghost" style="padding:4px 12px;font-size:12px;display:flex;align-items:center;gap:5px;" onclick="downloadAudioForSong('${s.id}',${idx})">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download
-          </button>
-        </div>`
-      : '';
+  const audioBar = buildSEAudioPlayer(s?.id, defAudioKey, !!(audioEntry));
 
   const textSection = editingNote
     ? `<div>
@@ -6766,6 +6898,13 @@ function renderSETab() {
   const id = document.getElementById('editSongId')?.value || '';
   const s = window._seCurrentSong || {};
 
+  // Auto-download cloud-only files when setting is on; re-render after if anything downloaded
+  if (id && autoDownloadFiles) {
+    autoDownloadAudioOnOpen(id).then(downloaded => {
+      if (downloaded) renderSETab();
+    }).catch(() => {});
+  }
+
   if (seTab === 'details') {
     // Ensure audio is loaded into cache (async — re-renders when done if needed)
     if (id) {
@@ -6777,24 +6916,7 @@ function renderSETab() {
     }
     const _defAudioKey = id ? getAudioDefaultKey(id) : null;
     const _hasLocalAudio = _defAudioKey && window._audioCache?.[_defAudioKey]?.blobUrl;
-    const _cloudAudio = id && !_hasLocalAudio && window._cloudAudioMap?.[id];
-    const sePlayer = _hasLocalAudio
-      ? buildFullAudioPlayer(_defAudioKey, currentSongIdx >= 0 ? currentSongIdx : 0)
-      : _cloudAudio
-        ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;flex-shrink:0;color:var(--text3);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-            <span style="flex:1;font-size:13px;color:var(--text2);">${esc(_cloudAudio.name)}</span>
-            <button id="audioDownloadBtn_${id}" class="btn ghost" style="padding:4px 12px;font-size:12px;display:flex;align-items:center;gap:5px;" onclick="downloadAudioForSong('${id}',-1)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download
-            </button>
-          </div>`
-        : '';
-    // kick off cloud check if not done yet
-    if (id && !_hasLocalAudio && !window._cloudAudioMap?.[id] && online && fbReady) {
-      window._cloudAudioMap = window._cloudAudioMap || {};
-      checkAudioInCloud(id).then(meta => { if (meta) { window._cloudAudioMap[id] = meta; renderSETab(); } });
-    }
+    const sePlayer = buildSEAudioPlayer(id, _defAudioKey, _hasLocalAudio);
     if (!seEditMode) {
       // READ-ONLY view
       const dbZoomKey = 'mgb_zoom_db_details';
@@ -6938,7 +7060,7 @@ function renderSETab() {
     }
   } else if (seTab === 'mynotes') {
     const myNoteHtml = window._seMyNotesHtml || '';
-    // Always load audio so blobUrl is populated — re-run if no file in meta has a blobUrl yet
+    // Ensure audio is loaded into cache (async — re-renders when done if needed)
     if (id) {
       const _meta = getAudioMeta(id);
       const _anyBlobUrl = _meta?.files?.some(f => window._audioCache?.[f.key]?.blobUrl);
@@ -6948,24 +7070,7 @@ function renderSETab() {
     }
     const _defAudioKey = id ? getAudioDefaultKey(id) : null;
     const _hasLocalAudio = _defAudioKey && window._audioCache?.[_defAudioKey]?.blobUrl;
-    const _cloudAudio = id && !_hasLocalAudio && window._cloudAudioMap?.[id];
-    const sePlayer = _hasLocalAudio
-      ? buildFullAudioPlayer(_defAudioKey, currentSongIdx >= 0 ? currentSongIdx : 0)
-      : _cloudAudio
-        ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px;flex-shrink:0;color:var(--text3);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-            <span style="flex:1;font-size:13px;color:var(--text2);">${esc(_cloudAudio.name)}</span>
-            <button id="audioDownloadBtn_${id}" class="btn ghost" style="padding:4px 12px;font-size:12px;display:flex;align-items:center;gap:5px;" onclick="downloadAudioForSong('${id}',-1)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download
-            </button>
-          </div>`
-        : '';
-    // kick off cloud check if not done yet
-    if (id && !_hasLocalAudio && !window._cloudAudioMap?.[id] && online && fbReady) {
-      window._cloudAudioMap = window._cloudAudioMap || {};
-      checkAudioInCloud(id).then(meta => { if (meta) { window._cloudAudioMap[id] = meta; renderSETab(); } });
-    }
+    const sePlayer = buildSEAudioPlayer(id, _defAudioKey, _hasLocalAudio);
     if (!seEditMode) {
       // READ-ONLY view
       const myNotesZoomKey = 'mgb_zoom_db_mynotes';
@@ -7034,16 +7139,6 @@ function renderSETab() {
         </div>
         <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
       // spacing is stored inline in the HTML spans — no extra apply needed
-    }
-    // async audio inject if not cached
-    if (id && !window._audioCache?.[`audio_${id}`]) {
-      loadAudioHybrid(id).then(entry => {
-        if (!entry) return;
-        const playerHtml = buildFullAudioPlayer(`audio_${id}`, currentSongIdx >= 0 ? currentSongIdx : 0);
-        const wrap = document.createElement('div');
-        wrap.innerHTML = playerHtml;
-        body.insertBefore(wrap.firstChild, body.firstChild);
-      });
     }
   } else if (seTab === 'media') {
     body.innerHTML = `
