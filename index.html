@@ -2124,8 +2124,43 @@ async function loadAudioHybrid(songId) {
           window._audioCache[f.key] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true, downloadUrl: entry.downloadUrl || null };
           if (!f.hasLocalData) { f.hasLocalData = true; metaFlagsDirty = true; }
         } else {
-          console.warn('[loadAudioHybrid] no valid data for key:', f.key, 'entry?.data type:', typeof entry?.data, 'value:', entry?.data);
-          if (f.hasLocalData !== false) { f.hasLocalData = false; metaFlagsDirty = true; }
+          // Key mismatch recovery: file may be stored under a slightly different timestamp key.
+          // Scan all keys with this songId prefix and match by filename.
+          let recovered = false;
+          try {
+            const prefix = `audio_${songId}_`;
+            const allKeys = await new Promise((res, rej) => {
+              const tx = db.transaction('audio', 'readonly');
+              const req = tx.objectStore('audio').getAllKeys();
+              req.onsuccess = () => res(req.result);
+              req.onerror = rej;
+            });
+            const candidates = allKeys.filter(k => typeof k === 'string' && k.startsWith(prefix) && k !== f.key);
+            for (const ck of candidates) {
+              const ce = await dbGet('audio', ck);
+              const ceValid = ce?.data && (ce.data instanceof ArrayBuffer ? ce.data.byteLength > 0 : true);
+              if (ceValid && ce.name === f.name) {
+                // Found the real file — remap the meta key to point to the actual stored key
+                console.log('[loadAudioHybrid] key mismatch recovered:', f.key, '→', ck, 'name:', f.name);
+                const oldKey = f.key;
+                f.key = ck;
+                metaFlagsDirty = true;
+                // If this was defaultKey, update it too
+                if (meta.defaultKey === oldKey) { meta.defaultKey = ck; }
+                const blob = new Blob([ce.data], { type: ce.mimeType || 'audio/mpeg' });
+                window._audioCache[ck] = { name: ce.name, blobUrl: URL.createObjectURL(blob), mimeType: ce.mimeType, local: true, downloadUrl: ce.downloadUrl || null };
+                if (!f.hasLocalData) { f.hasLocalData = true; }
+                recovered = true;
+                break;
+              }
+            }
+          } catch(scanErr) {
+            console.warn('[loadAudioHybrid] key mismatch scan failed:', scanErr);
+          }
+          if (!recovered) {
+            console.warn('[loadAudioHybrid] no valid data for key:', f.key, 'entry?.data type:', typeof entry?.data, 'value:', entry?.data);
+            if (f.hasLocalData !== false) { f.hasLocalData = false; metaFlagsDirty = true; }
+          }
         }
       } catch(e) {
         console.error('[loadAudioHybrid] dbGet threw for key:', f.key, e);
