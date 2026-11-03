@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.52</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.53</span>
     </div>
   </div>
 </aside>
@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.52</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.53</span>
       </div>
 
     </div>
@@ -2124,31 +2124,27 @@ async function loadAudioHybrid(songId) {
           if (!f.hasLocalData) { f.hasLocalData = true; metaFlagsDirty = true; }
         } else {
           // Key mismatch recovery: file may be stored under a slightly different timestamp key.
-          // Scan all keys with this songId prefix and match by filename.
+          // Scan IDB for entries with matching songId prefix and filename; if found, copy the
+          // data under f.key (the meta's key) so nothing else in the system needs to change.
           let recovered = false;
           try {
             const prefix = `audio_${songId}_`;
             const allKeys = await new Promise((res, rej) => {
-              const tx = db.transaction('audio', 'readonly');
-              const req = tx.objectStore('audio').getAllKeys();
+              const req = db.transaction('audio', 'readonly').objectStore('audio').getAllKeys();
               req.onsuccess = () => res(req.result);
-              req.onerror = rej;
+              req.onerror = () => res([]);
             });
             const candidates = allKeys.filter(k => typeof k === 'string' && k.startsWith(prefix) && k !== f.key);
             for (const ck of candidates) {
               const ce = await dbGet('audio', ck);
               const ceValid = ce?.data && (ce.data instanceof ArrayBuffer ? ce.data.byteLength > 0 : true);
               if (ceValid && ce.name === f.name) {
-                // Found the real file — remap the meta key to point to the actual stored key
-                console.log('[loadAudioHybrid] key mismatch recovered:', f.key, '→', ck, 'name:', f.name);
-                const oldKey = f.key;
-                f.key = ck;
-                metaFlagsDirty = true;
-                // If this was defaultKey, update it too
-                if (meta.defaultKey === oldKey) { meta.defaultKey = ck; }
+                // Found the real data — write it under the key the meta expects, so f.key stays valid
+                console.log('[loadAudioHybrid] key mismatch: copying', ck, '→', f.key, 'name:', f.name);
+                await dbPut('audio', { ...ce, id: f.key });
                 const blob = new Blob([ce.data], { type: ce.mimeType || 'audio/mpeg' });
-                window._audioCache[ck] = { name: ce.name, blobUrl: URL.createObjectURL(blob), mimeType: ce.mimeType, local: true, downloadUrl: ce.downloadUrl || null };
-                if (!f.hasLocalData) { f.hasLocalData = true; }
+                window._audioCache[f.key] = { name: ce.name, blobUrl: URL.createObjectURL(blob), mimeType: ce.mimeType, local: true, downloadUrl: ce.downloadUrl || null };
+                if (!f.hasLocalData) { f.hasLocalData = true; metaFlagsDirty = true; }
                 recovered = true;
                 break;
               }
@@ -2157,7 +2153,6 @@ async function loadAudioHybrid(songId) {
             console.warn('[loadAudioHybrid] key mismatch scan failed:', scanErr);
           }
           if (!recovered) {
-            console.warn('[loadAudioHybrid] no valid data for key:', f.key, 'entry?.data type:', typeof entry?.data, 'value:', entry?.data);
             if (f.hasLocalData !== false) { f.hasLocalData = false; metaFlagsDirty = true; }
           }
         }

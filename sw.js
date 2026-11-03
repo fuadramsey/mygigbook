@@ -1,5 +1,5 @@
-// MyGigBook Service Worker — β2.52
-const CACHE = 'mygigbook-202611031940';
+// MyGigBook Service Worker — β2.53
+const CACHE = 'mygigbook-202611032000';
 const ASSETS = ['/mygigbook/','/mygigbook/index.html','/mygigbook/manifest.json','/mygigbook/icon-192.png','/mygigbook/icon-512.png'];
 const HTML_URLS = ['/mygigbook/', '/mygigbook/index.html'];
 
