@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.45</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.46</span>
     </div>
   </div>
 </aside>
@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.45</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.46</span>
       </div>
 
     </div>
@@ -2112,6 +2112,7 @@ async function loadAudioHybrid(songId) {
   }
   if (!meta || !meta.files?.length) return null;
   // Load all files into cache; tag each file with hasLocalData for UI decisions
+  let metaFlagsDirty = false;
   for (const f of meta.files) {
     if (!window._audioCache[f.key]?.blobUrl) {
       try {
@@ -2119,14 +2120,19 @@ async function loadAudioHybrid(songId) {
         if (entry?.data) {
           const blob = new Blob([entry.data], { type: entry.mimeType || 'audio/mpeg' });
           window._audioCache[f.key] = { name: entry.name, blobUrl: URL.createObjectURL(blob), mimeType: entry.mimeType, local: true, downloadUrl: entry.downloadUrl || null };
-          f.hasLocalData = true;
+          if (!f.hasLocalData) { f.hasLocalData = true; metaFlagsDirty = true; }
         } else {
-          f.hasLocalData = false;
+          if (f.hasLocalData !== false) { f.hasLocalData = false; metaFlagsDirty = true; }
         }
-      } catch(e) { f.hasLocalData = false; }
+      } catch(e) { if (f.hasLocalData !== false) { f.hasLocalData = false; metaFlagsDirty = true; } }
     } else {
-      f.hasLocalData = true; // already in cache with blob = definitely local
+      if (!f.hasLocalData) { f.hasLocalData = true; metaFlagsDirty = true; } // already in cache with blob = definitely local
     }
+  }
+  // Persist corrected hasLocalData flags so the sync status indicator is accurate on next render
+  if (metaFlagsDirty) {
+    meta.updatedAt = Date.now();
+    try { await dbPut('audio', meta); } catch(e) {}
   }
   // Store meta in cache for player use
   window._audioCache[metaKey] = meta;
@@ -2248,7 +2254,8 @@ async function autoDownloadAudioOnOpen(songId) {
       for (const d of snap.docs) {
         const fmeta = d.data();
         if (!fmeta.downloadUrl || !fmeta.fileId) continue;
-        const alreadyLocal = window._audioCache?.[fmeta.fileId]?.blobUrl;
+        const alreadyLocal = window._audioCache?.[fmeta.fileId]?.blobUrl ||
+          meta?.files?.find(f => f.key === fmeta.fileId)?.hasLocalData;
         if (alreadyLocal) continue;
         try {
           const mimeType = fmeta.mimeType || 'audio/mpeg';
@@ -4300,10 +4307,22 @@ function buildAudioSection(s) {
         All files downloaded
       </div>`;
     } else if (autoDownloadFiles) {
-      syncStatusHtml = `<div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+      const syncDivId = `syncStatus_${s.id}`;
+      syncStatusHtml = `<div id="${syncDivId}" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;color:var(--accent);flex-shrink:0;animation:spin 1s linear infinite;"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-        Syncing…
+        <span id="${syncDivId}_label">Syncing…</span>
       </div>`;
+      // After 30s still spinning → show failure message
+      setTimeout(() => {
+        const lbl = document.getElementById(`${syncDivId}_label`);
+        const ico = document.querySelector(`#${syncDivId} svg`);
+        if (lbl && lbl.textContent === 'Syncing…') {
+          lbl.textContent = 'Sync failed — tap to retry';
+          if (ico) ico.style.animation = 'none';
+          const div = document.getElementById(syncDivId);
+          if (div) { div.style.cursor = 'pointer'; div.style.color = 'var(--text2)'; div.onclick = () => autoDownloadAudioOnOpen(s.id).then(d => { if (d && currentSongIdx === s._idx) renderSongPage(currentSongIdx); }).catch(() => {}); }
+        }
+      }, 30000);
     } else {
       syncStatusHtml = `<div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;color:var(--text3);flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
