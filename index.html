@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.53</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.54</span>
     </div>
   </div>
 </aside>
@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.53</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.54</span>
       </div>
 
     </div>
@@ -2276,21 +2276,23 @@ async function tapDownloadAudio(songId, idx) {
 // Returns true if any file was loaded or downloaded (caller should re-render)
 async function autoDownloadAudioOnOpen(songId) {
   if (!autoDownloadFiles) return false;
+  // Snapshot which keys already have a blobUrl before we do anything
+  const hadBlobBefore = new Set(
+    Object.keys(window._audioCache || {}).filter(k => window._audioCache[k]?.blobUrl)
+  );
   // Always run loadAudioHybrid first — it corrects hasLocalData flags from actual IndexedDB state
   // and populates _audioCache with blob URLs for any files that are already local
-  const freshResult = await loadAudioHybrid(songId).catch(() => null);
+  await loadAudioHybrid(songId).catch(() => null);
   const meta = getAudioMeta(songId);
   if (!meta?.files?.length) return false;
 
+  // Did loadAudioHybrid add any new blobUrls that weren't there before?
+  const newlyLoaded = meta.files.some(f => window._audioCache?.[f.key]?.blobUrl && !hadBlobBefore.has(f.key));
+
   // Check if all files are now local after the fresh load
   const stillMissing = meta.files.filter(f => !f.hasLocalData && !window._audioCache?.[f.key]?.blobUrl);
-  // If nothing is missing, return true so caller re-renders with correct player
-  // (don't rely on freshResult — loadAudioHybrid returns null if the default key has no blob,
-  //  even when other files loaded fine; check the cache directly instead)
-  if (!stillMissing.length) {
-    const anyInCache = meta.files.some(f => window._audioCache?.[f.key]?.blobUrl);
-    return anyInCache;
-  }
+  // If nothing is missing and nothing newly loaded, no re-render needed
+  if (!stillMissing.length) return newlyLoaded;
 
   // Need network to download the missing ones
   if (!online || !fbReady) return false;
@@ -3858,7 +3860,8 @@ async function renderSongPage(idx) {
     await loadAudioHybrid(s.id);
   } catch(e) {}
 
-  // auto-download cloud-only files if setting is on; re-render after if anything downloaded
+  // auto-download cloud-only files if setting is on; re-render after if anything NEW was downloaded
+  // (autoDownloadAudioOnOpen skips its internal loadAudioHybrid call if cache already populated)
   if (autoDownloadFiles) {
     autoDownloadAudioOnOpen(s.id).then(downloaded => {
       if (downloaded && currentSongIdx === idx) renderSongPage(idx);
