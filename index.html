@@ -159,7 +159,7 @@ body.hc .tab-sidebar-btn.active { background: rgba(255,255,255,0.1); color: #fff
 body.hc .side-rail .rail-btn.active { background: rgba(255,255,255,0.1); color: #ffffff; }
 body.hc .nav-btn.active { color: #ffffff; }
 body.hc .song-page-title { font-size: clamp(26px,5vw,45px); letter-spacing: 2px; }
-body.hc .note-display { font-size: 17px; line-height: 1.8; }
+body.hc .note-display { font-size: 17px; line-height: 1.15; }
 body.hc .set-row { border: 1px solid rgba(255,255,255,0.15); margin-bottom: 6px; }
 body.hc .song-row { border: 1px solid rgba(255,255,255,0.1); margin-bottom: 4px; }
 body.hc .admin-badge { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); color: #ffffff; }
@@ -370,7 +370,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .listen-confirm-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--text); font-family: 'DM Mono', monospace; min-width: 0; }
 .listen-confirm-row input::placeholder { color: var(--text3); }
 .note-content { padding: 16px; }
-.note-display { font-family: 'DM Mono', monospace; font-size: 20px; line-height: 1.9; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 100px; }
+.note-display { font-family: 'DM Mono', monospace; font-size: 20px; line-height: 1.0; color: var(--text); word-break: break-word; min-height: 100px; }
+.note-display p, .note-display div { margin: 0; padding: 0; }
 .note-display.empty { color: var(--text3); font-style: italic; }
 .note-edit-area { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; resize: none; min-height: 200px; }
 .note-edit-area:focus { outline: none; border-color: rgba(220,38,38,0.4); }
@@ -383,7 +384,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .rte-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); font-size: 12px; font-family: 'DM Mono', monospace; padding: 2px 6px; cursor: pointer; height: 28px; }
 .rte-highlight-btn { width: 30px; height: 28px; border: 1px solid transparent; border-radius: 6px; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; flex-shrink: 0; }
 .rte-highlight-btn:hover { background: var(--surface3); }
-.rte-body { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.4; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 12px; min-height: 200px; outline: none; word-break: break-word; }
+.rte-body { width: 100%; font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.15; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 12px; min-height: 200px; outline: none; word-break: break-word; }
 .rte-body p, .rte-body div { margin: 0; padding: 0; }
 .rte-body br.Apple-interchange-newline { display: none; }
 .rte-body > br:last-child { display: none; }
@@ -839,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.63</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.68</span>
     </div>
   </div>
 </aside>
@@ -1610,7 +1611,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.63</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.68</span>
       </div>
 
     </div>
@@ -3408,7 +3409,7 @@ function openSEMyNotesFullscreen() {
       <button id="fsMyNotesDismiss" style="background:none;border:none;color:var(--text3);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:16px 18px;-webkit-overflow-scrolling:touch;">
-      <div id="fsMyNotesContent" class="note-display" style="white-space:pre-wrap;font-size:${Math.round(20*zoom)}px;line-height:${1.9*zoom};">${html}</div>
+      <div id="fsMyNotesContent" class="note-display" style="white-space:pre-wrap;font-size:${Math.round(20*zoom)}px;line-height:${1.15*zoom};">${html}</div>
     </div>`;
   document.body.appendChild(overlay);
   function updateZoom() {
@@ -3416,7 +3417,7 @@ function openSEMyNotesFullscreen() {
     const lbl = document.getElementById('fsMyNotesZoomLabel');
     const content = document.getElementById('fsMyNotesContent');
     if (lbl) lbl.textContent = Math.round(zoom*100)+'%';
-    if (content) { content.style.fontSize = Math.round(20*zoom)+'px'; content.style.lineHeight = (1.9*zoom)+''; }
+    if (content) { content.style.fontSize = Math.round(20*zoom)+'px'; content.style.lineHeight = (1.15*zoom)+''; }
   }
   overlay._close = () => { overlay.remove(); };
   document.getElementById('fsMyNotesDismiss').onclick = overlay._close;
@@ -6030,14 +6031,50 @@ async function confirmAudioDeleteAction() {
   await removeOneAudioFile(p.songId, p.audioKey, p.idx);
 }
 
-// Make Enter in any .rte-body insert a line break instead of <p>/<div>.
-// CSS zeroes out margins on p/div inside .rte-body so there's no gap.
+// Seed empty .rte-body with a <br> on focus so the first Enter works correctly.
+document.addEventListener('focus', function(e) {
+  const area = e.target.closest('.rte-body');
+  if (!area) return;
+  if (area.innerHTML === '' || area.innerHTML === '<br>') {
+    if (area.innerHTML === '') {
+      area.innerHTML = '<br>';
+      // Move cursor to start
+      const range = document.createRange();
+      range.setStart(area, 0);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
+}, true);
+
+// Make Enter in any .rte-body insert a <br> instead of <p>/<div>.
+// Uses Range API so the first Enter always creates a visible new line.
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Enter') return;
   const area = e.target.closest('.rte-body');
   if (!area) return;
   e.preventDefault();
-  document.execCommand('insertLineBreak');
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  const br = document.createElement('br');
+  range.insertNode(br);
+  // Always insert a sentinel <br> after so the cursor is visible on the new line.
+  // If one already exists right after, reuse it; otherwise insert a fresh one.
+  let sentinel = br.nextSibling;
+  if (!sentinel || sentinel.nodeName !== 'BR') {
+    sentinel = document.createElement('br');
+    br.parentNode.insertBefore(sentinel, br.nextSibling);
+  }
+  // Place cursor between the two <br>s (i.e. on the new blank line).
+  const newRange = document.createRange();
+  newRange.setStartBefore(sentinel);
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
 }, true);
 
 // Delegated click handler for audio file buttons (uses data attributes to avoid
@@ -7077,7 +7114,7 @@ function openDBLyricsFullscreen() {
 
   function applyZoom() {
     const fs = `${Math.round(20 * zoom)}px`;
-    const lh = `${1.9 * zoom}`;
+    const lh = `${1.15 * zoom}`;
     scrollArea.querySelectorAll('.note-display').forEach(el => {
       el.style.setProperty('font-size', fs, 'important');
       el.style.lineHeight = lh;
@@ -7090,7 +7127,7 @@ function openDBLyricsFullscreen() {
   }
 
   if (s.notes) {
-    scrollArea.innerHTML = `<div class="note-display" style="font-size:${Math.round(20*zoom)}px;line-height:${1.9*zoom};">${s.notes}</div>`;
+    scrollArea.innerHTML = `<div class="note-display" style="font-size:${Math.round(20*zoom)}px;line-height:${1.15*zoom};">${s.notes}</div>`;
   } else {
     scrollArea.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3);padding:32px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;opacity:0.4;"><path d="M8 6h8M8 10h8M8 14h5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
