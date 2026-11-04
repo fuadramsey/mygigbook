@@ -836,7 +836,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.54</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.55</span>
     </div>
   </div>
 </aside>
@@ -1571,7 +1571,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.54</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.55</span>
       </div>
 
     </div>
@@ -2192,11 +2192,17 @@ function getAudioDefaultKey(songId) {
   const meta = getAudioMeta(songId);
   if (!meta || !meta.files?.length) return null;
   const fileKeys = meta.files.map(f => f.key);
-  // Prefer a key that has a blobUrl in cache (file is loaded and playable)
+  // Respect meta.defaultKey first — this is what switchAudioFile sets when the user picks a file
+  if (meta.defaultKey && fileKeys.includes(meta.defaultKey)) {
+    // If the default key is playable (has a blob), use it
+    if (window._audioCache?.[meta.defaultKey]?.blobUrl) return meta.defaultKey;
+    // Default key exists in meta but isn't loaded yet — still return it so the
+    // tap-to-download card shows the right file name
+    return meta.defaultKey;
+  }
+  // No valid defaultKey — fall back to any loaded file, then last in list
   const withBlob = fileKeys.find(k => window._audioCache?.[k]?.blobUrl);
   if (withBlob) return withBlob;
-  // Fall back to defaultKey if valid, else last file
-  if (meta.defaultKey && fileKeys.includes(meta.defaultKey)) return meta.defaultKey;
   return meta.files[meta.files.length - 1]?.key;
 }
 
