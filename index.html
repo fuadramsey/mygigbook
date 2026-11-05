@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.88</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.89</span>
     </div>
   </div>
 </aside>
@@ -1641,7 +1641,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.88</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.89</span>
       </div>
 
     </div>
@@ -9297,11 +9297,13 @@ async function adminDeleteUserConfirmed(username) {
   }
 
   try {
-    // 1. Remove from local user registry and add to deleted blocklist
+    // 1. Remove from local user registry, add to deleted blocklist, and immediately push to Firestore
     let users = getUsers();
     users = users.filter(u => u.username !== username);
     saveUsers(users);
     markUserDeleted(username);
+    // Push updated user list to Firestore right away so the deleted user is blocked on other devices immediately
+    if (online && fbReady) await pushUsersToFirestore(users);
 
     // 2. Delete all notes by this user from IDB
     const allNotes = await dbAll('notes');
@@ -9873,11 +9875,24 @@ async function confirmJoinGroup() {
   const errEl = document.getElementById('joinGroupError');
   errEl.style.display = 'none';
   if (!code) { errEl.textContent = 'Please enter a code.'; errEl.style.display = 'block'; return; }
-  // Block deleted users from joining
+  // Block deleted users — check local blocklist first (fast), then verify against Firestore users collection
   if (isUserDeleted(currentUser)) { closeJoinGroupModal(); doLogout(); return; }
-  // Block users not in the user registry (shouldn't happen but belt-and-suspenders)
-  const users = getUsers();
-  if (!users.find(u => u.username === currentUser)) { closeJoinGroupModal(); doLogout(); return; }
+  if (online && fbReady && window._fb) {
+    try {
+      const fb = window._fb;
+      const userDoc = await fb.getDocs(fb.query(
+        fb.collection(fb.db, 'users'),
+        fb.where('username', '==', currentUser)
+      ));
+      if (userDoc.empty) {
+        // User has been deleted by admin on another device
+        markUserDeleted(currentUser);
+        closeJoinGroupModal();
+        doLogout();
+        return;
+      }
+    } catch(e) { /* network error — fall through, local check already passed */ }
+  }
   // Pull latest groups from Firestore to find the matching code
   let matchedGroup = null;
   try {
