@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.82</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.83</span>
     </div>
   </div>
 </aside>
@@ -1054,6 +1054,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
             <div style="flex:1;display:flex;">
               <button class="note-tab active" id="se-tab-details" onclick="switchSETab('details')" >Lyrics</button>
               <button class="note-tab" id="se-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
+              <button class="note-tab" id="se-tab-allnotes" onclick="switchSETab('allnotes')" >All Notes</button>
               <button class="note-tab" id="se-tab-media" onclick="switchSETab('media')" >Media</button>
               <button class="note-tab" id="se-tab-charts" onclick="switchSETab('charts')" >Charts</button>
             </div>
@@ -1117,6 +1118,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
     <div style="flex:1;display:flex;">
       <button class="note-tab active" id="sep-tab-details" onclick="switchSETab('details')" >Lyrics</button>
       <button class="note-tab" id="sep-tab-mynotes" onclick="switchSETab('mynotes')" >My Notes</button>
+      <button class="note-tab" id="sep-tab-allnotes" onclick="switchSETab('allnotes')" >All Notes</button>
       <button class="note-tab" id="sep-tab-media" onclick="switchSETab('media')" >Media</button>
       <button class="note-tab" id="sep-tab-charts" onclick="switchSETab('charts')" >Charts</button>
     </div>
@@ -1658,7 +1660,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.82</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.83</span>
       </div>
 
     </div>
@@ -2465,10 +2467,7 @@ async function fbPullAll() {
       fb.getDocs(fb.collection(fb.db,'songs')),
       fb.getDocs(fb.collection(fb.db,'setlists')),
       fb.getDocs(fb.collection(fb.db,'groups')),
-      fb.getDocs(fb.query(fb.collection(fb.db,'notes'),
-        fb.where('id', '>=', (currentUser||'me') + '_'),
-        fb.where('id', '<',  (currentUser||'me') + '_￿')
-      ))
+      fb.getDocs(fb.collection(fb.db,'notes'))
     ]);
     // merge by updatedAt — most recent wins; skip soft-deleted docs
     const merge = async (snap, store) => {
@@ -7068,7 +7067,7 @@ function switchSETab(tab) {
   sePersistCurrentTab();
   seTab = tab;
   // update both DB panel tabs and pg-song-edit tabs
-  ['details','mynotes','media','charts'].forEach(t => {
+  ['details','mynotes','allnotes','media','charts'].forEach(t => {
     const btn1 = document.getElementById(`se-tab-${t}`);
     const btn2 = document.getElementById(`sep-tab-${t}`);
     if (btn1) btn1.classList.toggle('active', t === tab);
@@ -7198,7 +7197,7 @@ function openDBLyricsFullscreen() {
   header.querySelector('#dbFsDismissBtn').addEventListener('click', close);
 }
 
-function renderSETab() {
+async function renderSETab() {
   // use whichever tab body is currently visible (pg-song-edit on mobile, DB panel on desktop)
   const body = (() => {
     const sepBody = document.getElementById('sepTabBody');
@@ -7447,6 +7446,22 @@ function renderSETab() {
         </div>
         <div class="rte-body" id="seMyNotes" contenteditable="true" style="min-height:calc(100vh - 280px);border-radius:0 0 var(--radius) var(--radius);" onpaste="rtePaste3(event)">${myNoteHtml}</div>`;
       // spacing is stored inline in the HTML spans — no extra apply needed
+    }
+  } else if (seTab === 'allnotes') {
+    // gather all users' notes for this song from IDB
+    const allNotes = await dbAll('notes');
+    const songNotes = allNotes.filter(n => n.id.endsWith('_' + id));
+    if (!songNotes.length) {
+      body.innerHTML = `<div style="color:var(--text3);font-style:italic;font-size:14px;margin-top:8px;">No notes from any users yet.</div>`;
+    } else {
+      body.innerHTML = songNotes.map(n => {
+        const noteUser = n.id.replace('_' + id, '');
+        const isMe = noteUser === (currentUser || 'me');
+        return `<div style="margin-bottom:20px;">
+          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:'DM Mono',monospace;color:${isMe?'var(--accent)':'var(--text3)'};margin-bottom:6px;">${esc(noteUser)}${isMe?' (you)':''}</div>
+          <div class="note-display">${n.text ? n.text : '<span style="color:var(--text3);font-style:italic">No notes.</span>'}</div>
+        </div>`;
+      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:16px 0">');
     }
   } else if (seTab === 'media') {
     body.innerHTML = `
