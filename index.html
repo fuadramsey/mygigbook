@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.83</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.85</span>
     </div>
   </div>
 </aside>
@@ -1660,7 +1660,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.83</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.85</span>
       </div>
 
     </div>
@@ -1784,6 +1784,7 @@ function fmtSyncTime(ts) {
 
 async function fbPushAll(extraDeletedIds = new Set()) {
   if (!fbReady || !online) return;
+  if (isUserDeleted(currentUser)) { doLogout(); return; }
   const fb = window._fb;
   if (!fb) return;
   try {
@@ -2489,6 +2490,7 @@ async function fbPullAll() {
 }
 
 async function syncOut() {
+  if (isUserDeleted(currentUser)) { doLogout(); return; }
   // cross-tab sync via BroadcastChannel (always)
   if (bc) {
     const [songs, sets] = await Promise.all([dbAll('songs'), dbAll('setlists')]);
@@ -2514,6 +2516,7 @@ async function syncIn() {
 
 async function manualSync() {
   if (!online) { showToast('No internet connection', 'err'); return; }
+  if (isUserDeleted(currentUser)) { doLogout(); return; }
   if (syncInProgress) return;
   // show first-time audio download prompt if needed
   if (!localStorage.getItem(AUTO_DOWNLOAD_PROMPTED_KEY)) {
@@ -8754,6 +8757,21 @@ function updateSidebarName() {
 const ADMIN_USERNAME = 'admin';
 const USERS_KEY = 'stageset_users_v1';
 const SESSION_KEY = 'stageset_session_v1';
+const DELETED_USERS_KEY = 'mgb_deleted_users_v1';
+
+function markUserDeleted(username) {
+  try {
+    const list = JSON.parse(localStorage.getItem(DELETED_USERS_KEY) || '[]');
+    if (!list.includes(username)) { list.push(username); localStorage.setItem(DELETED_USERS_KEY, JSON.stringify(list)); }
+  } catch(e) {}
+}
+function isUserDeleted(username) {
+  if (!username) return false;
+  try {
+    const list = JSON.parse(localStorage.getItem(DELETED_USERS_KEY) || '[]');
+    return list.includes(username);
+  } catch(e) { return false; }
+}
 
 // Hash a password with SHA-256 using Web Crypto
 // Falls back to plain text if crypto.subtle is unavailable (non-HTTPS)
@@ -9116,8 +9134,8 @@ function renderAdminUsers() {
           <button class="sm-btn" title="Reset password" onclick="adminResetPassword('${esc(u.username)}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
           </button>
-          ${!u.isAdmin ? `<button class="sm-btn" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="adminRemoveUser('${esc(u.username)}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          ${!u.isAdmin ? `<button class="sm-btn" title="Delete user" style="color:var(--red);border-color:rgba(255,68,68,0.3)" onclick="adminRemoveUser('${esc(u.username)}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </button>` : ''}
         </div>
       </div>
@@ -9256,11 +9274,128 @@ function copyFallback(text, btn) {
 }
 
 function adminRemoveUser(username) {
-  let users = getUsers();
-  users = users.filter(u => u.username !== username);
-  saveUsers(users);
-  renderAdminUsers();
-  showToast(`User removed`, 'ok');
+  // Build confirmation modal
+  const existing = document.getElementById('deleteUserConfirmModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'deleteUserConfirmModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);max-width:420px;width:100%;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,0.4);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="width:22px;height:22px;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div style="font-size:16px;font-weight:700;color:var(--red);">Delete User</div>
+      </div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:12px;">
+        You are about to permanently delete <strong style="color:var(--text1);">${esc(username)}</strong>. This cannot be undone.
+      </div>
+      <div style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;line-height:1.8;margin-bottom:20px;padding:12px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);">
+        <div style="margin-bottom:4px;color:var(--text2);font-weight:600;letter-spacing:1px;text-transform:uppercase;font-size:10px;">What will be deleted:</div>
+        <div>✗ All notes by ${esc(username)}</div>
+        <div>✗ Their private group</div>
+        <div>✗ Their group memberships</div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);color:var(--text3);">Songs &amp; setlists they created will be kept (ownership removed)</div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="document.getElementById('deleteUserConfirmModal').remove()" style="padding:8px 18px;background:none;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:inherit;font-size:13px;color:var(--text2);">Cancel</button>
+        <button onclick="adminDeleteUserConfirmed('${esc(username)}')" style="padding:8px 18px;background:var(--red);border:none;border-radius:var(--radius);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:#fff;">Delete ${esc(username)}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  // close on backdrop click
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function adminDeleteUserConfirmed(username) {
+  const modal = document.getElementById('deleteUserConfirmModal');
+  if (modal) {
+    // Show spinner state
+    const btn = modal.querySelector('button[onclick^="adminDeleteUserConfirmed"]');
+    if (btn) { btn.textContent = 'Deleting…'; btn.disabled = true; }
+  }
+
+  try {
+    // 1. Remove from local user registry and add to deleted blocklist
+    let users = getUsers();
+    users = users.filter(u => u.username !== username);
+    saveUsers(users);
+    markUserDeleted(username);
+
+    // 2. Delete all notes by this user from IDB
+    const allNotes = await dbAll('notes');
+    const userNotes = allNotes.filter(n => n.id && n.id.startsWith(username + '_'));
+    for (const note of userNotes) await dbDel('notes', note.id);
+
+    // 3. Find and delete their private group; remove from other groups' members
+    const allGroups = await dbAll('groups');
+    for (const g of allGroups) {
+      if (g.createdBy === username && g.isPrivate) {
+        // Delete private group entirely
+        await dbDel('groups', g.id);
+        localStorage.removeItem(PRIVATE_GROUP_KEY + username);
+        if (online && fbReady && window._fb) {
+          const fb = window._fb;
+          try { await fb.setDoc(fb.doc(fb.db, 'groups', g.id), { _deleted: true, id: g.id, updatedAt: Date.now() }); } catch(e) {}
+        }
+      } else if ((g.members || []).includes(username)) {
+        // Remove from shared group membership
+        const updated = { ...g, members: g.members.filter(m => m !== username), updatedAt: Date.now() };
+        await dbPut('groups', updated);
+        if (online && fbReady && window._fb) {
+          const fb = window._fb;
+          try { await fb.setDoc(fb.doc(fb.db, 'groups', g.id), updated); } catch(e) {}
+        }
+      }
+    }
+
+    // 4. Orphan songs/setlists created by this user (remove createdBy)
+    const allSongs = await dbAll('songs');
+    for (const s of allSongs) {
+      if (s.createdBy === username) {
+        const updated = { ...s, createdBy: null, updatedAt: Date.now() };
+        await dbPut('songs', updated);
+        if (online && fbReady && window._fb) {
+          const fb = window._fb;
+          try { await fb.setDoc(fb.doc(fb.db, 'songs', s.id), updated); } catch(e) {}
+        }
+      }
+    }
+    const allSets = await dbAll('setlists');
+    for (const s of allSets) {
+      if (s.createdBy === username) {
+        const updated = { ...s, createdBy: null, updatedAt: Date.now() };
+        await dbPut('setlists', updated);
+        if (online && fbReady && window._fb) {
+          const fb = window._fb;
+          try { await fb.setDoc(fb.doc(fb.db, 'setlists', s.id), updated); } catch(e) {}
+        }
+      }
+    }
+
+    // 5. Delete user notes from Firestore
+    if (online && fbReady && window._fb) {
+      const fb = window._fb;
+      try {
+        const noteSnap = await fb.getDocs(fb.query(
+          fb.collection(fb.db, 'notes'),
+          fb.where('id', '>=', username + '_'),
+          fb.where('id', '<',  username + '_￿')
+        ));
+        for (const d of noteSnap.docs) {
+          await fb.setDoc(fb.doc(fb.db, 'notes', d.id), { _deleted: true, id: d.id, updatedAt: Date.now() });
+        }
+      } catch(e) { console.warn('Firestore note cleanup error:', e); }
+    }
+
+    if (modal) modal.remove();
+    renderAdminUsers();
+    showToast(`${username} deleted`, 'ok');
+  } catch(e) {
+    console.error('Delete user error:', e);
+    showToast('Delete failed: ' + (e?.message || e), 'err');
+    if (modal) modal.remove();
+  }
 }
 
 // ── POST-LOGIN INIT ──
