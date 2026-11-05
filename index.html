@@ -847,7 +847,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.98</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β3.00</span>
     </div>
   </div>
 </aside>
@@ -1103,6 +1103,168 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 </nav>
 
 <!-- SONG EDIT MODAL -->
+<!-- ── GETTING STARTED PAGE ── -->
+<div class="page" id="pg-getting-started">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);">Getting Started</span>
+  </div>
+  <div style="overflow-y:auto;height:calc(100% - var(--top-h));padding:16px 16px 40px;">
+
+    <!-- Welcome -->
+    <div style="text-align:center;padding:24px 0 20px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:3px;color:var(--accent);">MyGigBook</div>
+      <div style="font-size:14px;color:var(--text2);margin-top:4px;">Band Setlist Manager</div>
+    </div>
+
+    <!-- Section helper macro -->
+    <!-- INSTALL -->
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Install the App</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">MyGigBook is a Progressive Web App. Install it to your home screen for the best experience — it works offline once installed.</div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">1</span>
+          <span><strong style="color:var(--text);">iOS (Safari):</strong> Tap the Share button → <em>Add to Home Screen</em></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">2</span>
+          <span><strong style="color:var(--text);">Android (Chrome):</strong> Tap the menu (⋮) → <em>Add to Home Screen</em> or <em>Install App</em></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">3</span>
+          <span><strong style="color:var(--text);">Desktop:</strong> Click the install icon in the browser address bar</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT -->
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Your Account</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">Create a username when you first open the app. This is your identity — bandmates will see it on shared notes and groups. You can find your username anytime in Settings.</div>
+    </div>
+
+    <!-- SONGS -->
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Song Database</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">All your songs live in the database. Tap <strong style="color:var(--text);">Songs</strong> in the bottom nav to manage them.</div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-size:18px;line-height:1;">＋</span>
+          <span>Tap the <strong style="color:var(--text);">+</strong> button to add a new song — enter the title, key, BPM, and artist</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-size:18px;line-height:1;">✎</span>
+          <span>Tap a song to open it. Add <strong style="color:var(--text);">lyrics</strong>, upload <strong style="color:var(--text);">charts</strong> (PDF or image), and link <strong style="color:var(--text);">Spotify / YouTube</strong></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-size:18px;line-height:1;">◎</span>
+          <span>Use the <strong style="color:var(--text);">progress bar</strong> on each song to track how rehearsed it is</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETLISTS -->
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Setlists</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">Build ordered setlists for gigs and rehearsals. Tap <strong style="color:var(--text);">Setlists</strong> in the bottom nav.</div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">1</span>
+          <span>Tap <strong style="color:var(--text);">+</strong> to create a new setlist and give it a name</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">2</span>
+          <span>Add songs from your database, then <strong style="color:var(--text);">drag to reorder</strong> them</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">3</span>
+          <span>Tap a song in the set to view its lyrics, notes, and charts</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">4</span>
+          <span>Tap the <strong style="color:var(--text);">progress icon</strong> in the set header to hide progress bars for a cleaner stage view</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULLSCREEN -->
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Fullscreen Mode</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">Designed for use on stage — large text, minimal distractions. Tap the fullscreen icon on any song in a setlist to enter.</div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-size:18px;line-height:1;">←→</span>
+          <span>Use the <strong style="color:var(--text);">← →</strong> arrows to navigate between songs</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-size:18px;line-height:1;">⊟</span>
+          <span>Switch between <strong style="color:var(--text);">Lyrics</strong>, <strong style="color:var(--text);">My Notes</strong>, and <strong style="color:var(--text);">All Notes</strong> tabs — the app remembers your tab choice per song</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-size:18px;line-height:1;">＋−</span>
+          <span>Use the <strong style="color:var(--text);">+ −</strong> buttons to adjust text size</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Notes</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">Each song in a setlist has three note tabs:</div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:14px;min-width:68px;">Lyrics</span>
+          <span>The song's main text — shared across the whole group</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:14px;min-width:68px;">My Notes</span>
+          <span>Private notes visible only to you — cues, reminders, key changes</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:14px;min-width:68px;">All Notes</span>
+          <span>See every bandmate's notes for the song side by side</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GROUPS -->
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Groups</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">Groups let your whole band share songs, setlists, and notes.</div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">1</span>
+          <span>Go to <strong style="color:var(--text);">Settings → Groups</strong> and tap <strong style="color:var(--text);">Create Group</strong></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">2</span>
+          <span>Share the <strong style="color:var(--text);">invite code</strong> with bandmates. They tap <strong style="color:var(--text);">Join Group</strong> and enter the code</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);">
+          <span style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:16px;line-height:1.2;min-width:20px;">3</span>
+          <span>Sync (<strong style="color:var(--text);">↑↓</strong>) to push and pull shared content across all devices</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYNC -->
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Syncing</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">Everything is stored locally first — the app works offline. Tap the <strong style="color:var(--text);">↑↓</strong> sync button in the top bar to push your changes and pull updates from your group. Changes queue up automatically when you're offline and sync the next time you're connected.</div>
+    </div>
+
+    <!-- ADMIN -->
+    <div style="margin-bottom:32px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;">Admin</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">Log in as <strong style="color:var(--text);">admin</strong> to access the Admin panel in Settings. From there you can view all registered users and remove accounts. Deleting a user removes all their notes, removes them from groups, and rotates group invite codes so they cannot rejoin.</div>
+    </div>
+
+  </div>
+</div>
+
 <div class="page" id="pg-song-edit">
   <div class="topbar" style="gap:6px;">
     <button class="back-btn" onclick="tryCloseSongPage()">
@@ -1630,6 +1792,11 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       </button>
 
       <div class="settings-section-label" style="margin-top:8px">Support</div>
+      <button class="settings-row" onclick="closeSettings();showPage('pg-getting-started')">
+        <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></div>
+        <span class="settings-row-label">Getting Started</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
       <button class="settings-row" onclick="closeSettings();openBugReport()">
         <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg></div>
         <span class="settings-row-label">Submit a Bug</span>
@@ -1648,7 +1815,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.98</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β3.00</span>
       </div>
 
     </div>
