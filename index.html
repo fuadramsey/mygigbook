@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.76</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.78</span>
     </div>
   </div>
 </aside>
@@ -1658,7 +1658,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.76</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.78</span>
       </div>
 
     </div>
@@ -9322,6 +9322,24 @@ async function postLoginInit() {
         await manualSync();
         // push current user list to Firestore so all devices are in sync
         pushUsersToFirestore(getUsers());
+        // after sync, check if user is now in a non-private group they weren't in before
+        // (e.g. they joined via invite code on another device, or were just added by an owner)
+        const privateGroupId = getPrivateGroupId();
+        const wasOnPrivate = !activeGroupFilter || activeGroupFilter === privateGroupId;
+        if (wasOnPrivate && !currentIsAdmin) {
+          const allGroups = await dbAll('groups');
+          const newAssigned = allGroups.filter(g =>
+            !g.isPrivate && g.id !== privateGroupId &&
+            (g.createdBy === currentUser || (g.members||[]).includes(currentUser))
+          );
+          if (newAssigned.length > 0) {
+            activeGroupFilter = newAssigned[0].id;
+            localStorage.setItem(GROUP_FILTER_KEY + '_' + (currentUser||'me'), newAssigned[0].id);
+            await updateGroupFilterChips();
+            await renderSetsList();
+            await renderDB();
+          }
+        }
       } else if (attempts < 30) {
         setTimeout(function() { trySync(attempts + 1); }, 500);
       }
@@ -9561,11 +9579,13 @@ async function updateGroupFilterChips() {
     { chipId: 'groupFilterChip', labelId: 'groupFilterLabel' },
     { chipId: 'groupFilterChipDb', labelId: 'groupFilterLabelDb' }
   ];
-  let label = 'All';
+  let label = 'Groups';
   let group = null;
+  const privateGroupId = getPrivateGroupId();
+  const isOnPrivate = !activeGroupFilter || activeGroupFilter === privateGroupId;
   if (activeGroupFilter) {
     group = await dbGet('groups', activeGroupFilter);
-    label = group?.name || 'Group';
+    label = (group?.isPrivate || isOnPrivate) ? 'Groups' : (group?.name || 'Group');
   }
   for (const { chipId, labelId } of chips) {
     const chip = document.getElementById(chipId);
@@ -9573,13 +9593,13 @@ async function updateGroupFilterChips() {
     if (!chip || !lbl) continue;
     chip.style.display = 'flex';
     lbl.textContent = label;
-    if (activeGroupFilter) {
+    if (activeGroupFilter && !isOnPrivate) {
       chip.style.background = 'rgba(232,255,71,0.12)';
       chip.style.border = '1px solid rgba(232,255,71,0.35)';
       chip.style.color = 'var(--accent)';
     } else {
       chip.style.background = 'none';
-      chip.style.border = '1px solid var(--border)';
+      chip.style.border = '1px solid var(--border2)';
       chip.style.color = 'var(--text3)';
     }
   }
