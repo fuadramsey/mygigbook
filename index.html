@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.93</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.94</span>
     </div>
   </div>
 </aside>
@@ -1641,7 +1641,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.93</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.94</span>
       </div>
 
     </div>
@@ -3507,9 +3507,20 @@ function openNoteFullscreen(idx) {
   document.body.appendChild(overlay);
 
   let currentIdx = idx;
-  const FS_TAB_KEY = 'mgb_fs_tab_v1';
-  const _storedFsTab = localStorage.getItem(FS_TAB_KEY);
-  let activeTab = (_storedFsTab && ['default','mine','all'].includes(_storedFsTab)) ? _storedFsTab : 'mine';
+  // Per-song tab memory: { [songId]: 'default'|'mine'|'all' }
+  const FS_TAB_KEY = 'mgb_fs_tabs_v1';
+  let fsSongTabs = {};
+  try { fsSongTabs = JSON.parse(localStorage.getItem(FS_TAB_KEY) || '{}'); } catch(e) {}
+  const VALID_FS_TABS = ['default','mine','all'];
+  function getFsTab(songId) {
+    const t = fsSongTabs[songId];
+    return (t && VALID_FS_TABS.includes(t)) ? t : 'mine';
+  }
+  function setFsTab(songId, tab) {
+    fsSongTabs[songId] = tab;
+    try { localStorage.setItem(FS_TAB_KEY, JSON.stringify(fsSongTabs)); } catch(e) {}
+  }
+  let activeTab = getFsTab(currentSetSongs[idx]?.id);
   let fsBpmTimer = null;
 
   function close() {
@@ -3581,7 +3592,7 @@ function openNoteFullscreen(idx) {
       btn.addEventListener('click', () => {
         activeTab = btn.dataset.tab;
         noteTab = activeTab;
-        try { localStorage.setItem(FS_TAB_KEY, activeTab); } catch(e) {}
+        setFsTab(s.id, activeTab);
         renderFsTabBar(s);
         loadTabContent(s);
       });
@@ -3639,8 +3650,8 @@ function openNoteFullscreen(idx) {
     // also update the underlying song page so it stays in sync
     currentSongIdx = newIdx;
     renderSongPage(newIdx);
-    // re-render fullscreen with new song — preserve the current tab selection
-    // (activeTab is already set; no reset needed)
+    // restore this song's last-used tab (or default to 'mine')
+    activeTab = getFsTab(s.id);
     renderNavBar(newIdx);
     renderSongHeader(s);
     renderFsTabBar(s);
