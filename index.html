@@ -847,7 +847,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β3.00</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β3.02</span>
     </div>
   </div>
 </aside>
@@ -1767,15 +1767,10 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       </div>
 
       <div class="settings-section-label" style="margin-top:8px">Data</div>
-      <button class="settings-row" onclick="closeSettings();exportCSV()">
+      <button class="settings-row" onclick="closeSettings();openExportModal()">
         <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-        <span class="settings-row-label">Export Songs to CSV</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
-      </button>
-      <button class="settings-row" onclick="closeSettings();exportAttachments()">
-        <div class="settings-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/></svg></div>
-        <span class="settings-row-label">Export Attachments
-          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Download all images &amp; PDFs as a ZIP file</span>
+        <span class="settings-row-label">Export
+          <span style="display:block;font-size:11px;color:var(--text3);font-weight:400;">Songs CSV, attachments, or audio</span>
         </span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3)"><path d="M9 18l6-6-6-6"/></svg>
       </button>
@@ -1815,7 +1810,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β3.00</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β3.02</span>
       </div>
 
     </div>
@@ -10849,254 +10844,250 @@ function csvUnescape(val) {
   return val.replace(/\\n/g, '\n');
 }
 
-async function exportAttachments() {
-  const modal = document.getElementById('exportAttachmentsModal');
-  const label = document.getElementById('exportAttachLabel');
-  const bar = document.getElementById('exportAttachBar');
-  const countEl = document.getElementById('exportAttachCount');
-  const setProgress = (pct, msg, detail) => {
-    if (bar) bar.style.width = pct + '%';
-    if (label) label.textContent = msg;
-    if (countEl) countEl.textContent = detail || '';
+// ── EXPORT ──
+
+async function openExportModal() {
+  const modal = document.getElementById('exportModal');
+  const chipsEl = document.getElementById('exportGroupChips');
+  const progressEl = document.getElementById('exportProgress');
+  const runBtn = document.getElementById('exportRunBtn');
+
+  // Reset state
+  progressEl.style.display = 'none';
+  runBtn.disabled = false;
+  runBtn.textContent = 'Export';
+
+  // Load groups user belongs to
+  const allGroups = await dbAll('groups');
+  const userGroups = allGroups.filter(g =>
+    g.createdBy === currentUser || (g.members||[]).includes(currentUser)
+  );
+
+  // Build chips: "My Songs" + one per group
+  const chips = [{ id: '__mine', label: 'My Songs' }, ...userGroups.map(g => ({ id: g.id, label: g.name }))];
+  chipsEl.innerHTML = chips.map(c => `
+    <button type="button"
+      data-export-scope="${esc(c.id)}"
+      onclick="toggleExportChip(this)"
+      class="export-scope-chip export-scope-chip--on"
+      style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--accent);background:rgba(var(--accent-rgb,232,255,71),0.12);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;">
+      ${esc(c.label)}
+    </button>`).join('');
+
+  // Update checkbox label borders on change
+  ['exportTypeCSV','exportTypeAttach','exportTypeAudio'].forEach(id => {
+    const cb = document.getElementById(id);
+    const lbl = document.getElementById(id + 'Label');
+    if (!cb || !lbl) return;
+    const sync = () => { lbl.style.borderColor = cb.checked ? 'var(--accent)' : 'transparent'; };
+    sync();
+    cb.onchange = sync;
+  });
+
+  modal.classList.remove('hidden');
+}
+
+function toggleExportChip(btn) {
+  const on = btn.classList.toggle('export-scope-chip--on');
+  btn.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+  btn.style.background = on ? 'rgba(var(--accent-rgb,232,255,71),0.12)' : 'transparent';
+  btn.style.color = on ? 'var(--accent)' : 'var(--text3)';
+}
+
+async function runExport() {
+  const wantCSV    = document.getElementById('exportTypeCSV').checked;
+  const wantAttach = document.getElementById('exportTypeAttach').checked;
+  const wantAudio  = document.getElementById('exportTypeAudio').checked;
+
+  if (!wantCSV && !wantAttach && !wantAudio) {
+    showToast('Select at least one export type', 'err'); return;
+  }
+
+  // Collect selected scope IDs
+  const selectedScopes = [...document.querySelectorAll('.export-scope-chip--on')]
+    .map(b => b.dataset.exportScope);
+  if (!selectedScopes.length) {
+    showToast('Select at least one group or My Songs', 'err'); return;
+  }
+
+  const wantMine   = selectedScopes.includes('__mine');
+  const groupIds   = selectedScopes.filter(s => s !== '__mine');
+
+  const progressEl = document.getElementById('exportProgress');
+  const labelEl    = document.getElementById('exportProgressLabel');
+  const barEl      = document.getElementById('exportProgressBar');
+  const detailEl   = document.getElementById('exportProgressDetail');
+  const runBtn     = document.getElementById('exportRunBtn');
+
+  const setProgress = (pct, msg, detail = '') => {
+    barEl.style.width = pct + '%';
+    labelEl.textContent = msg;
+    detailEl.textContent = detail;
   };
-  if (modal) modal.classList.remove('hidden');
+
+  progressEl.style.display = 'block';
+  runBtn.disabled = true;
+  runBtn.textContent = 'Exporting…';
+  setProgress(0, 'Gathering songs…');
+
   try {
-    setProgress(5, 'Loading ZIP library...', '');
-    if (!window.JSZip) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-        script.onload = resolve;
-        script.onerror = () => reject(new Error('Failed to load JSZip'));
-        document.head.appendChild(script);
-      });
-    }
-    setProgress(10, 'Gathering files...', '');
+    // Build accessible song map filtered by scope
     const allSongs = await dbAll('songs');
-    const userGroups = (await dbAll('groups')).filter(g =>
-      g.createdBy === currentUser || (g.members||[]).includes(currentUser)
-    );
-    const userGroupIds = new Set(userGroups.map(g => g.id));
-    const accessibleSongs = allSongs.filter(s => {
-      if (currentIsAdmin) return true;
-      if (s.createdBy === currentUser) return true;
-      if (s.groupIds && s.groupIds.length) return s.groupIds.some(gid => userGroupIds.has(gid));
-      return false;
-    });
+    const allGroups = await dbAll('groups');
+    const userGroupMap = {};
+    allGroups.forEach(g => { userGroupMap[g.id] = g; });
+
     const songMap = {};
-    accessibleSongs.forEach(s => { songMap[s.id] = s; });
+    allSongs.forEach(s => {
+      if (currentIsAdmin) { songMap[s.id] = s; return; }
+      const isMine = s.createdBy === currentUser;
+      const songGroupIds = s.groupIds || [];
+      const inSelectedGroup = groupIds.some(gid => songGroupIds.includes(gid));
+      if (wantMine && isMine) { songMap[s.id] = s; return; }
+      if (inSelectedGroup) { songMap[s.id] = s; }
+    });
 
-    const [allPdfs, allImages] = await Promise.all([dbAll('pdfs'), dbAll('images')]);
-
-    const getSongIdFromPdfKey = (id) => id.replace(/^default_/, '').replace(/^[^_]+_/, '');
-    const getSongIdFromImgKey = (id) => {
-      const parts = id.split('_');
-      if (parts[0] === 'img') {
-        // img_default_songId_uid or img_user_songId_uid
-        return parts.slice(2, parts.length - 1).join('_') || parts[2];
-      }
-      return null;
+    const date = new Date().toISOString().slice(0, 10);
+    const sanitize = str => (str || 'untitled').replace(/[\/\\:*?"<>|]/g, '_').trim().slice(0, 60);
+    const usedNames = {};
+    const uniqueName = (name) => {
+      if (!usedNames[name]) { usedNames[name] = 1; return name; }
+      const ext = name.includes('.') ? name.slice(name.lastIndexOf('.')) : '';
+      const base = ext ? name.slice(0, name.lastIndexOf('.')) : name;
+      usedNames[name]++;
+      return `${base} (${usedNames[name]})${ext}`;
     };
 
-    const pdfFiles = allPdfs.filter(f => {
-      const sid = getSongIdFromPdfKey(f.id);
-      return songMap[sid] && f.data;
-    });
-    const imageFiles = allImages.filter(f => {
-      const sid = getSongIdFromImgKey(f.id);
-      return sid && songMap[sid] && f.data;
-    });
+    const downloads = [];
 
-    const total = pdfFiles.length + imageFiles.length;
-    if (total === 0) {
-      if (modal) modal.classList.add('hidden');
-      showToast('No attachments found to export', 'err');
+    // ── CSV ──
+    if (wantCSV) {
+      setProgress(5, 'Building CSV…');
+      const songList = Object.values(songMap).sort((a,b) => (a.title||'').localeCompare(b.title));
+      if (songList.length) {
+        const header = CSV_COLUMNS.join(',');
+        const rows = songList.map(s => CSV_COLUMNS.map(col => csvEscape(s[col])).join(','));
+        const csv = [header, ...rows].join('\r\n');
+        downloads.push({ blob: new Blob([csv], { type: 'text/csv;charset=utf-8;' }), name: `MyGigBook-songs-${date}.csv` });
+        setProgress(15, 'CSV ready', `${songList.length} songs`);
+      } else {
+        setProgress(15, 'CSV — no songs matched scope');
+      }
+    }
+
+    // ── ZIP (attachments + audio) ──
+    if (wantAttach || wantAudio) {
+      setProgress(20, 'Loading ZIP library…');
+      if (!window.JSZip) {
+        await new Promise((resolve, reject) => {
+          const sc = document.createElement('script');
+          sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+          sc.onload = resolve;
+          sc.onerror = () => reject(new Error('Failed to load JSZip'));
+          document.head.appendChild(sc);
+        });
+      }
+      const zip = new window.JSZip();
+      let fileCount = 0;
+
+      if (wantAttach) {
+        setProgress(25, 'Adding PDFs…');
+        const allPdfs = await dbAll('pdfs');
+        for (const entry of allPdfs) {
+          if (!entry.data) continue;
+          const parts = entry.id.split('_');
+          const songId = parts[parts.length - 1];
+          if (!songMap[songId]) continue;
+          const songName = sanitize(songMap[songId].title);
+          const fileName = sanitize(entry.name || 'document');
+          const ext = fileName.toLowerCase().endsWith('.pdf') ? '' : '.pdf';
+          zip.folder('PDFs').file(uniqueName(`${songName} — ${fileName}${ext}`), entry.data);
+          fileCount++;
+          setProgress(25, `Adding PDFs…`, `${fileCount} files`);
+        }
+
+        setProgress(45, 'Adding images…');
+        const allImages = await dbAll('images');
+        for (const entry of allImages) {
+          if (!entry.data) continue;
+          const parts = entry.id.split('_');
+          const songId = parts[parts.length - 2];
+          if (!songMap[songId]) continue;
+          const songName = sanitize(songMap[songId].title);
+          const fileName = sanitize(entry.name || 'image');
+          const mimeExt = (entry.mimeType||'').includes('png') ? '.png' : (entry.mimeType||'').includes('gif') ? '.gif' : '.jpg';
+          const hasExt = /\.(png|jpg|jpeg|gif|webp)$/i.test(fileName);
+          zip.folder('Images').file(uniqueName(`${songName} — ${fileName}${hasExt ? '' : mimeExt}`), entry.data);
+          fileCount++;
+          setProgress(45, `Adding images…`, `${fileCount} files`);
+        }
+      }
+
+      if (wantAudio) {
+        setProgress(65, 'Adding audio…');
+        const allAudio = await dbAll('audio');
+        for (const entry of allAudio) {
+          if (!entry.data || entry.id.startsWith('audio_meta_')) continue;
+          const songId = entry.id.replace(/^audio_/, '').replace(/^[^_]+_/, '');
+          if (!songMap[songId]) continue;
+          const songName = sanitize(songMap[songId].title);
+          const fileName = sanitize(entry.name || 'audio');
+          const mimeExt = (entry.mimeType||'').includes('ogg') ? '.ogg'
+            : (entry.mimeType||'').includes('wav') ? '.wav'
+            : (entry.mimeType||'').includes('aac') ? '.aac' : '.mp3';
+          const hasExt = /\.(mp3|m4a|aac|ogg|wav|flac)$/i.test(fileName);
+          zip.folder('Audio').file(uniqueName(`${songName} — ${fileName}${hasExt ? '' : mimeExt}`), entry.data);
+          fileCount++;
+          setProgress(65, `Adding audio…`, `${fileCount} files`);
+        }
+      }
+
+      if (fileCount > 0) {
+        setProgress(80, 'Compressing…', `${fileCount} files`);
+        const zipBlob = await zip.generateAsync(
+          { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
+          m => setProgress(80 + Math.round(m.percent * 0.15), 'Compressing…', `${Math.round(m.percent)}%`)
+        );
+        downloads.push({ blob: zipBlob, name: `MyGigBook-files-${date}.zip` });
+      } else {
+        setProgress(95, 'No matching files found for ZIP');
+      }
+    }
+
+    setProgress(100, 'Done!', `${downloads.length} file${downloads.length !== 1 ? 's' : ''} ready`);
+
+    if (!downloads.length) {
+      showToast('Nothing to export — no matching data found', 'err');
+      runBtn.disabled = false;
+      runBtn.textContent = 'Export';
       return;
     }
 
-    const zip = new window.JSZip();
-    const date = new Date().toISOString().slice(0, 10);
-    const sanitize = str => (str || 'Unknown').replace(/[/\\?%*:|"<>]/g, '-');
-    let done = 0;
-
-    const pdfsFolder = zip.folder('PDFs');
-    for (const f of pdfFiles) {
-      const sid = getSongIdFromPdfKey(f.id);
-      const songTitle = sanitize(songMap[sid] && songMap[sid].title);
-      const fileName = songTitle + ' -- ' + sanitize(f.name || f.id) + '.pdf';
-      pdfsFolder.file(fileName, f.data);
-      done++;
-      const pct = 10 + Math.round((done / total) * 80);
-      setProgress(pct, 'Adding file ' + done + ' of ' + total + '...', f.name || fileName);
+    // Trigger downloads
+    for (const { blob, name } of downloads) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
     }
 
-    const imgsFolder = zip.folder('Images');
-    for (const f of imageFiles) {
-      const sid = getSongIdFromImgKey(f.id);
-      const songTitle = sanitize(songMap[sid] && songMap[sid].title);
-      const ext = (f.mimeType || 'image/jpeg').split('/')[1] || 'jpg';
-      const fileName = songTitle + ' -- ' + sanitize(f.name || f.id) + '.' + ext;
-      imgsFolder.file(fileName, f.data);
-      done++;
-      const pct = 10 + Math.round((done / total) * 80);
-      setProgress(pct, 'Adding file ' + done + ' of ' + total + '...', f.name || fileName);
-    }
+    showToast(`Exported ${downloads.length} file${downloads.length !== 1 ? 's' : ''}`, 'ok');
+    setTimeout(() => document.getElementById('exportModal').classList.add('hidden'), 1200);
 
-    setProgress(92, 'Compressing...', total + ' files');
-    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-    setProgress(100, 'Done!', total + ' files exported');
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'MyGigBook-attachments-' + date + '.zip';
-    a.click();
-    URL.revokeObjectURL(url);
-
-    setTimeout(() => {
-      if (modal) modal.classList.add('hidden');
-      showToast('Exported ' + total + ' attachment' + (total !== 1 ? 's' : ''), 'ok');
-    }, 1200);
   } catch(e) {
-    if (modal) modal.classList.add('hidden');
-    console.error('Export attachments error:', e);
-    showToast('Export failed: ' + (e && e.message || e), 'err');
-  }
-}
-
-async function exportCSV() {
-  if (!songs.length) { showToast('No songs to export', 'err'); return; }
-
-  // sort by title
-  songs.sort((a,b) => a.title.localeCompare(b.title));
-
-  const header = CSV_COLUMNS.join(',');
-  const rows = songs.map(s =>
-    CSV_COLUMNS.map(col => csvEscape(s[col])).join(',')
-  );
-  const csv = [header, ...rows].join('\r\n');
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const date = new Date().toISOString().slice(0,10);
-  a.href = url;
-  a.download = `MyGigBook-songs-${date}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast(`Exported ${songs.length} songs`, 'ok');
-}
-
-// ── EXPORT ATTACHMENTS ──
-async function exportAttachments() {
-  showToast('Preparing export…');
-
-  // Load JSZip on demand
-  if (!window.JSZip) {
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-      s.onload = resolve;
-      s.onerror = () => reject(new Error('Failed to load JSZip'));
-      document.head.appendChild(s);
-    });
-  }
-
-  const zip = new window.JSZip();
-
-  // Get all accessible songs
-  const allSongs = await dbAll('songs');
-  const userGroups = (await dbAll('groups')).filter(g =>
-    g.createdBy === currentUser || (g.members||[]).includes(currentUser)
-  );
-  const userGroupIds = new Set(userGroups.map(g => g.id));
-  const accessibleSongs = allSongs.filter(s => {
-    if (currentIsAdmin) return true;
-    if (s.createdBy === currentUser) return true;
-    if (s.groupIds?.length) return s.groupIds.some(gid => userGroupIds.has(gid));
-    return false;
-  });
-  const songMap = {};
-  accessibleSongs.forEach(s => songMap[s.id] = s);
-
-  // Sanitize a name for use in a filename
-  function sanitize(str) {
-    return (str || 'untitled').replace(/[\/\\:*?"<>|]/g, '_').trim().slice(0, 60);
-  }
-
-  let count = 0;
-  const usedNames = {};
-
-  function uniqueName(base, ext) {
-    let name = base + ext;
-    if (!usedNames[name]) { usedNames[name] = 1; return name; }
-    usedNames[name]++;
-    return `${base} (${usedNames[name]})${ext}`;
-  }
-
-  // Export PDFs
-  const allPdfs = await dbAll('pdfs');
-  for (const entry of allPdfs) {
-    if (!entry.data) continue;
-    // pdfKey format: "default_{songId}" or "{user}_{songId}"
-    const parts = entry.id.split('_');
-    const songId = parts[parts.length - 1];
-    const song = songMap[songId];
-    if (!song) continue;
-    const songName = sanitize(song.title);
-    const fileName = sanitize(entry.name || 'document');
-    const ext = fileName.toLowerCase().endsWith('.pdf') ? '' : '.pdf';
-    const zipName = uniqueName(`${songName} — ${fileName}${ext}`.replace(/\.pdf\.pdf$/, '.pdf'), '');
-    zip.folder('PDFs').file(zipName, entry.data);
-    count++;
-  }
-
-  // Export Images
-  const allImages = await dbAll('images');
-  for (const entry of allImages) {
-    if (!entry.data) continue;
-    // imageKey format: "img_default_{songId}_{uid}" or "img_{user}_{songId}_{uid}"
-    const parts = entry.id.split('_');
-    // songId is second-to-last part
-    const songId = parts[parts.length - 2];
-    const song = songMap[songId];
-    if (!song) continue;
-    const songName = sanitize(song.title);
-    const fileName = sanitize(entry.name || 'image');
-    const mimeExt = (entry.mimeType || '').includes('png') ? '.png' : (entry.mimeType || '').includes('gif') ? '.gif' : '.jpg';
-    const hasExt = /\.(png|jpg|jpeg|gif|webp)$/i.test(fileName);
-    const zipName = uniqueName(`${songName} — ${fileName}${hasExt ? '' : mimeExt}`, '');
-    zip.folder('Images').file(zipName, entry.data);
-    count++;
-  }
-
-  if (count === 0) {
-    showToast('No attachments found to export', 'err');
-    return;
-  }
-
-  showToast(`Zipping ${count} file${count !== 1 ? 's' : ''}…`);
-
-  try {
-    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
-      (meta) => {
-        if (meta.percent % 20 < 1) showToast(`Zipping… ${Math.round(meta.percent)}%`);
-      }
-    );
-    const date = new Date().toISOString().slice(0, 10);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `MyGigBook-attachments-${date}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    showToast(`Exported ${count} file${count !== 1 ? 's' : ''}`, 'ok');
-  } catch(e) {
+    console.error('Export error:', e);
+    setProgress(0, 'Export failed: ' + (e?.message || e));
+    runBtn.disabled = false;
+    runBtn.textContent = 'Retry';
     showToast('Export failed: ' + (e?.message || e), 'err');
   }
 }
+
+// Keep old name as alias for any lingering references
+function exportAttachments() { openExportModal(); }
+function exportCSV() { openExportModal(); }
 
 // ── IMPORT ──
 let importParsedSongs = [];
@@ -11980,18 +11971,59 @@ init().catch(console.error);
   </div>
 </div>
 
-<!-- EXPORT ATTACHMENTS PROGRESS MODAL -->
-<div class="modal-overlay hidden" id="exportAttachmentsModal" style="z-index:500;">
-  <div class="modal-sheet" style="max-width:360px;">
+<!-- EXPORT MODAL -->
+<div class="modal-overlay hidden" id="exportModal" style="z-index:600;">
+  <div class="modal-sheet" style="max-width:380px;width:100%;">
     <div class="modal-header">
-      <span class="modal-title">Exporting Attachments</span>
+      <span class="modal-title">Export</span>
+      <button class="modal-close" onclick="document.getElementById('exportModal').classList.add('hidden')" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--text2);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-    <div class="modal-body" style="padding:20px 16px;">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;" id="exportAttachLabel">Preparing…</div>
-      <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-        <div id="exportAttachBar" style="height:100%;background:var(--accent);border-radius:3px;width:0%;transition:width 0.3s;"></div>
+    <div class="modal-body" style="padding:16px;">
+
+      <!-- What to export -->
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);font-weight:600;margin-bottom:10px;">What to export</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;">
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;border:1.5px solid transparent;transition:border-color 0.15s;" id="exportTypeCSVLabel">
+          <input type="checkbox" id="exportTypeCSV" checked style="accent-color:var(--accent);width:16px;height:16px;">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--text);">Songs CSV</div>
+            <div style="font-size:11px;color:var(--text3);">Song list with title, key, BPM, notes…</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;border:1.5px solid transparent;transition:border-color 0.15s;" id="exportTypeAttachLabel">
+          <input type="checkbox" id="exportTypeAttach" checked style="accent-color:var(--accent);width:16px;height:16px;">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--text);">Attachments</div>
+            <div style="font-size:11px;color:var(--text3);">PDFs &amp; images stored on this device</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;border:1.5px solid transparent;transition:border-color 0.15s;" id="exportTypeAudioLabel">
+          <input type="checkbox" id="exportTypeAudio" checked style="accent-color:var(--accent);width:16px;height:16px;">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--text);">Audio</div>
+            <div style="font-size:11px;color:var(--text3);">Audio files downloaded to this device</div>
+          </div>
+        </label>
       </div>
-      <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;" id="exportAttachCount"></div>
+
+      <!-- Group scope -->
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);font-weight:600;margin-bottom:10px;">Songs from</div>
+      <div id="exportGroupChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
+        <!-- populated by openExportModal() -->
+      </div>
+
+      <!-- Progress (hidden until running) -->
+      <div id="exportProgress" style="display:none;margin-bottom:16px;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;" id="exportProgressLabel">Preparing…</div>
+        <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;">
+          <div id="exportProgressBar" style="height:100%;background:var(--accent);border-radius:3px;width:0%;transition:width 0.25s;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:4px;" id="exportProgressDetail"></div>
+      </div>
+
+      <button id="exportRunBtn" onclick="runExport()" style="width:100%;padding:12px;background:var(--accent);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.02em;">Export</button>
     </div>
   </div>
 </div>
