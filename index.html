@@ -91,6 +91,7 @@
   --border: rgba(255,255,255,0.08);
   --border2: rgba(255,255,255,0.15);
   --accent: #e8ff47;
+  --accent-muted: rgba(232,255,71,0.14);
   --text: #f0f0f0;
   --text2: #888;
   --text3: #444;
@@ -142,6 +143,7 @@ body.hc {
   --border: rgba(255,255,255,0.25);
   --border2: rgba(255,255,255,0.45);
   --accent: #ffffff;
+  --accent-muted: rgba(255,255,255,0.18);
   --text: #ffffff;
   --text2: #dddddd;
   --text3: #aaaaaa;
@@ -173,6 +175,7 @@ body.dim {
   --border: rgba(255,255,255,0.06);
   --border2: rgba(255,255,255,0.1);
   --accent: #a78bfa;
+  --accent-muted: rgba(167,139,250,0.16);
   --text: #c4bdd8;
   --text2: #8b82a0;
   --text3: #5a5370;
@@ -197,19 +200,19 @@ body.dim .markup-tool-btn.active { background: rgba(167,139,250,0.12); border-co
 body.palette-ocean {
   --bg: #0c1a2e; --surface: #0f2340; --surface2: #132d50; --surface3: #1a3a62;
   --border: rgba(56,189,248,0.1); --border2: rgba(56,189,248,0.18);
-  --accent: #38bdf8; --text: #bae6fd; --text2: #7dd3fc; --text3: #4a9cc4;
+  --accent: #38bdf8; --accent-muted: rgba(56,189,248,0.16); --text: #bae6fd; --text2: #7dd3fc; --text3: #4a9cc4;
   --green: #34d399; --red: #f87171;
 }
 body.palette-ember {
   --bg: #1a0a00; --surface: #2a1200; --surface2: #3d1a00; --surface3: #4f2200;
   --border: rgba(251,146,60,0.1); --border2: rgba(251,146,60,0.2);
-  --accent: #fb923c; --text: #fed7aa; --text2: #fdba74; --text3: #c2753a;
+  --accent: #fb923c; --accent-muted: rgba(251,146,60,0.18); --text: #fed7aa; --text2: #fdba74; --text3: #c2753a;
   --green: #4ade80; --red: #f87171;
 }
 body.palette-forest {
   --bg: #071a0e; --surface: #0d2618; --surface2: #133220; --surface3: #1a4028;
   --border: rgba(74,222,128,0.08); --border2: rgba(74,222,128,0.15);
-  --accent: #4ade80; --text: #bbf7d0; --text2: #86efac; --text3: #3d9960;
+  --accent: #4ade80; --accent-muted: rgba(74,222,128,0.16); --text: #bbf7d0; --text2: #86efac; --text3: #3d9960;
   --green: #4ade80; --red: #f87171;
 }
 /* neon = default dark, already styled */
@@ -332,9 +335,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .set-stat-lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin-top: 1px; }
 .song-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; user-select: none; }
 .song-row:active { background: var(--surface2); }
-.song-row.set-current { background: var(--accent-muted, rgba(255,255,255,0.07)); border-left: 4px solid var(--accent); }
-.song-row.set-current .song-row-title { color: var(--accent); }
-.song-row.set-current .song-num { color: var(--accent); }
+.song-row.set-current { background: var(--accent-muted); border-left: 4px solid var(--accent); box-shadow: inset 0 0 0 1px var(--accent-muted); }
+.song-row.set-current .song-row-title { color: var(--accent); font-weight: 600; }
+.song-row.set-current .song-num { color: var(--accent); font-weight: 700; }
 .set-progress-hidden .song-progress-bar { display: none; }
 .song-row.dragging { opacity: 0.35; }
 .song-row.drag-over { border-top: 2px solid var(--accent); }
@@ -844,7 +847,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.97</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.98</span>
     </div>
   </div>
 </aside>
@@ -1645,7 +1648,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.97</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.98</span>
       </div>
 
     </div>
