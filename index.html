@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.90</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.91</span>
     </div>
   </div>
 </aside>
@@ -1641,7 +1641,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.90</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.91</span>
       </div>
 
     </div>
@@ -3577,7 +3577,7 @@ function openNoteFullscreen(idx) {
     ];
     tabBar.innerHTML = tabs.map(t => `<button data-tab="${t.key}" style="padding:10px 16px;border:none;border-radius:0;background:${activeTab===t.key?'var(--surface3)':'none'};color:${activeTab===t.key?'var(--text)':'var(--text3)'};font-family:inherit;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:${activeTab===t.key?'2px solid var(--accent)':'2px solid transparent'};font-weight:${activeTab===t.key?'600':'400'};flex-shrink:0;">${t.label}</button>`).join('');
     tabBar.querySelectorAll('[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => { activeTab = btn.dataset.tab; renderFsTabBar(s); loadTabContent(s); });
+      btn.addEventListener('click', () => { activeTab = btn.dataset.tab; noteTab = activeTab; renderFsTabBar(s); loadTabContent(s); });
     });
   }
 
@@ -3810,7 +3810,9 @@ function updateTuningUI() {
 
 
 async function openSongPage(idx) {
-  noteTab='mine'; editingNote=false;
+  // Keep the last-used tab; reset only if it was 'listen' (media shouldn't be the default on navigation)
+  if (noteTab === 'listen') noteTab = 'default';
+  editingNote=false;
   currentSongIdx = idx;
   await renderSongPage(idx);
   showPage('pg-song');
