@@ -332,7 +332,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .set-stat-lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin-top: 1px; }
 .song-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; user-select: none; }
 .song-row:active { background: var(--surface2); }
-.song-row.set-current { background: var(--surface3); border-left: 3px solid var(--accent); }
+.song-row.set-current { background: var(--accent-muted, rgba(255,255,255,0.07)); border-left: 4px solid var(--accent); }
+.song-row.set-current .song-row-title { color: var(--accent); }
+.song-row.set-current .song-num { color: var(--accent); }
+.set-progress-hidden .song-progress-bar { display: none; }
 .song-row.dragging { opacity: 0.35; }
 .song-row.drag-over { border-top: 2px solid var(--accent); }
 .song-num { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text3); width: 22px; text-align: right; flex-shrink: 0; }
@@ -841,7 +844,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.96</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.97</span>
     </div>
   </div>
 </aside>
@@ -1642,7 +1645,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.96</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.97</span>
       </div>
 
     </div>
@@ -3083,9 +3086,21 @@ async function renderSetDetail() {
     const p=s.duration.split(':'); return a+(+p[0]||0)*60+(+p[1]||0);
   }, 0);
   const min=Math.floor(totalSec/60), sec=totalSec%60;
+  const _pbHidden = localStorage.getItem('mgb_set_progress_hidden') === '1';
+  const cont2 = document.getElementById('setDetailSongs');
+  if (cont2) cont2.classList.toggle('set-progress-hidden', _pbHidden);
   document.getElementById('setHeaderStrip').innerHTML =
     `<div class="set-stat"><div class="set-stat-val">${songItems.length}</div><div class="set-stat-lbl">Songs</div></div>`+
-    (totalSec?`<div class="set-stat"><div class="set-stat-val">${min}:${String(sec).padStart(2,'0')}</div><div class="set-stat-lbl">Runtime</div></div>`:'');
+    (totalSec?`<div class="set-stat"><div class="set-stat-val">${min}:${String(sec).padStart(2,'0')}</div><div class="set-stat-lbl">Runtime</div></div>`:'')+
+    `<div style="flex:1"></div>`+
+    `<button id="toggleProgressBtn" onclick="toggleSetProgress()" title="${_pbHidden?'Show':'Hide'} progress bars"
+      style="display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:8px;color:${_pbHidden?'var(--text3)':'var(--accent)'};">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+        <rect x="3" y="10" width="18" height="4" rx="2"/>
+        <rect x="3" y="10" width="${_pbHidden?'0':'11'}" height="4" rx="2" fill="currentColor" stroke="none" style="transition:width 0.2s;"/>
+      </svg>
+      <span style="font-size:9px;letter-spacing:0.5px;text-transform:uppercase;font-family:'DM Sans',sans-serif;">${_pbHidden?'Progress':'Progress'}</span>
+    </button>`;
 
   const emp = document.getElementById('setDetailEmpty');
   const cont = document.getElementById('setDetailSongs');
@@ -3131,6 +3146,22 @@ async function renderSetDetail() {
         </div>
       </div>`;
   }).join('');
+}
+
+function toggleSetProgress() {
+  const hidden = localStorage.getItem('mgb_set_progress_hidden') === '1';
+  const next = !hidden;
+  localStorage.setItem('mgb_set_progress_hidden', next ? '1' : '0');
+  const cont = document.getElementById('setDetailSongs');
+  if (cont) cont.classList.toggle('set-progress-hidden', next);
+  const btn = document.getElementById('toggleProgressBtn');
+  if (btn) {
+    btn.title = next ? 'Show progress bars' : 'Hide progress bars';
+    btn.style.color = next ? 'var(--text3)' : 'var(--accent)';
+    // update the fill rect width
+    const fillRect = btn.querySelector('rect:last-child');
+    if (fillRect) fillRect.setAttribute('width', next ? '0' : '11');
+  }
 }
 
 function newSetlist() {
