@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.91</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.92</span>
     </div>
   </div>
 </aside>
@@ -1641,7 +1641,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.91</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.92</span>
       </div>
 
     </div>
@@ -3620,10 +3620,12 @@ function openNoteFullscreen(idx) {
       </div>`;
       return;
     }
-    // Ensure the underlying page is on the correct tab before cloning
-    if (activeTab !== noteTab) {
-      await switchNoteTab(activeTab, currentIdx);
-    }
+    // Always force the underlying page to render the correct tab before cloning.
+    // The check `activeTab !== noteTab` was insufficient: noteTab may already match
+    // but renderSongPage may not have run yet for this song/tab combination,
+    // leaving #noteArea stale or empty.
+    noteTab = activeTab;
+    await renderSongPage(currentIdx);
     const noteArea = document.getElementById('noteArea');
     if (noteArea) {
       const clone = noteArea.cloneNode(true);
