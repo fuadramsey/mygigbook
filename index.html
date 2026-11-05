@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.92</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.93</span>
     </div>
   </div>
 </aside>
@@ -1641,7 +1641,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.92</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.93</span>
       </div>
 
     </div>
@@ -3507,7 +3507,9 @@ function openNoteFullscreen(idx) {
   document.body.appendChild(overlay);
 
   let currentIdx = idx;
-  let activeTab = noteTab;
+  const FS_TAB_KEY = 'mgb_fs_tab_v1';
+  const _storedFsTab = localStorage.getItem(FS_TAB_KEY);
+  let activeTab = (_storedFsTab && ['default','mine','all'].includes(_storedFsTab)) ? _storedFsTab : 'mine';
   let fsBpmTimer = null;
 
   function close() {
@@ -3568,16 +3570,21 @@ function openNoteFullscreen(idx) {
   }
 
   function renderFsTabBar(s) {
+    // Charts and Media are hidden in fullscreen — not useful on stage
     const tabs = [
       { key: 'default', label: 'Lyrics' },
       { key: 'mine', label: 'My Notes' },
       { key: 'all', label: 'All Notes' },
-      ...(s?.groupIds?.length ? [{ key: 'charts', label: 'Charts' }] : []),
-      { key: 'listen', label: 'Media' },
     ];
     tabBar.innerHTML = tabs.map(t => `<button data-tab="${t.key}" style="padding:10px 16px;border:none;border-radius:0;background:${activeTab===t.key?'var(--surface3)':'none'};color:${activeTab===t.key?'var(--text)':'var(--text3)'};font-family:inherit;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:${activeTab===t.key?'2px solid var(--accent)':'2px solid transparent'};font-weight:${activeTab===t.key?'600':'400'};flex-shrink:0;">${t.label}</button>`).join('');
     tabBar.querySelectorAll('[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => { activeTab = btn.dataset.tab; noteTab = activeTab; renderFsTabBar(s); loadTabContent(s); });
+      btn.addEventListener('click', () => {
+        activeTab = btn.dataset.tab;
+        noteTab = activeTab;
+        try { localStorage.setItem(FS_TAB_KEY, activeTab); } catch(e) {}
+        renderFsTabBar(s);
+        loadTabContent(s);
+      });
     });
   }
 
@@ -3611,19 +3618,7 @@ function openNoteFullscreen(idx) {
   }
 
   async function loadTabContent(s) {
-    // Media/listen tab — always show placeholder (never show audio player in fullscreen)
-    if (activeTab === 'listen') {
-      scrollArea.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3);padding:32px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;opacity:0.4;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        <div style="font-size:15px;text-align:center;">Media player is hidden in full screen mode.</div>
-        <div style="font-size:13px;text-align:center;opacity:0.7;">Exit full screen to access audio playback.</div>
-      </div>`;
-      return;
-    }
     // Always force the underlying page to render the correct tab before cloning.
-    // The check `activeTab !== noteTab` was insufficient: noteTab may already match
-    // but renderSongPage may not have run yet for this song/tab combination,
-    // leaving #noteArea stale or empty.
     noteTab = activeTab;
     await renderSongPage(currentIdx);
     const noteArea = document.getElementById('noteArea');
@@ -3644,8 +3639,8 @@ function openNoteFullscreen(idx) {
     // also update the underlying song page so it stays in sync
     currentSongIdx = newIdx;
     renderSongPage(newIdx);
-    // re-render fullscreen with new song
-    activeTab = 'default';
+    // re-render fullscreen with new song — preserve the current tab selection
+    // (activeTab is already set; no reset needed)
     renderNavBar(newIdx);
     renderSongHeader(s);
     renderFsTabBar(s);
