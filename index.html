@@ -840,7 +840,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
       <span id="sidebarNameLabel" style="font-size:13px">Set name</span>
     </button>
     <div style="text-align:right;padding:2px 4px 0;">
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.78</span>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;opacity:0.6;">β2.79</span>
     </div>
   </div>
 </aside>
@@ -1658,7 +1658,7 @@ textarea.form-input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
       <!-- Version -->
       <div style="padding:16px 16px 20px;text-align:center;border-top:1px solid var(--border);margin-top:8px;">
-        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.78</span>
+        <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:1px;">MyGigBook β2.79</span>
       </div>
 
     </div>
@@ -2817,7 +2817,7 @@ async function renderSetsList() {
       .map(g => g.id)
     );
     sets = sets.filter(s => {
-      if (!s.createdBy || s.createdBy === currentUser) return true;
+      if (s.createdBy === currentUser) return true;
       return (s.groupIds||[]).some(gid => userGroupIds.has(gid));
     });
   }
@@ -2895,7 +2895,7 @@ async function bulkDeleteSets() {
 
 async function selectAllSets() {
   let sets = await dbAll('setlists');
-  sets = sets.filter(s => !s.createdBy || s.createdBy === currentUser);
+  sets = sets.filter(s => s.createdBy === currentUser);
   sets.forEach(s => selectedSetIds.add(s.id));
   renderSetsList();
 }
@@ -2986,7 +2986,7 @@ async function executeBulkDelete() {
 
 async function selectAllSongs() {
   let songs = await dbAll('songs');
-  songs = songs.filter(s => !s.createdBy || s.createdBy === currentUser);
+  songs = songs.filter(s => s.createdBy === currentUser);
   songs.forEach(s => selectedSongIds.add(s.id));
   renderDB();
 }
@@ -3017,6 +3017,21 @@ let pendingDeleteSetId = null;
 async function deleteSet(id) {
   const set = await dbGet('setlists', id);
   if (!set) return;
+  // only the setlist creator or an admin can delete
+  if (!currentIsAdmin && set.createdBy && set.createdBy !== currentUser) {
+    // group owners can also delete setlists shared in their group
+    if (set.groupIds?.length) {
+      const groups = await Promise.all(set.groupIds.map(gid => dbGet('groups', gid)));
+      const isCreatorOfAny = groups.filter(Boolean).some(g => g.createdBy === currentUser);
+      if (!isCreatorOfAny) {
+        showToast('Only the setlist creator or group owner can delete this setlist', 'err');
+        return;
+      }
+    } else {
+      showToast('Only the setlist creator can delete this setlist', 'err');
+      return;
+    }
+  }
   pendingDeleteSetId = id;
   document.getElementById('confirmDeleteName').textContent = set.name;
   document.getElementById('confirmDeleteModal').classList.remove('hidden');
@@ -6727,7 +6742,7 @@ async function renderPicker() {
   const userGroupIds2 = new Set(userGroups2.map(g => g.id));
   songs = songs.filter(s => {
     if (currentIsAdmin) return true;
-    if (!s.createdBy || s.createdBy === currentUser) return true;
+    if (s.createdBy === currentUser) return true;
     if (s.groupIds?.length) return s.groupIds.some(gid => userGroupIds2.has(gid));
     return false;
   });
@@ -6860,7 +6875,7 @@ async function renderDB() {
   // ungrouped songs created by others are NOT visible
   songs = songs.filter(s => {
     if (currentIsAdmin) return true;
-    if (!s.createdBy || s.createdBy === currentUser) return true; // own songs
+    if (s.createdBy === currentUser) return true; // own songs
     if (s.groupIds?.length) return s.groupIds.some(gid => userGroupIds.has(gid));
     return false;
   });
@@ -6937,7 +6952,7 @@ async function renderDB() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--accent);"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         </div>
         <div class="sm-btn" title="Add to current set" onclick="quickAdd('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
-        <div class="sm-btn" title="Delete" onclick="deleteSong('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></div>
+        ${(currentIsAdmin || !s.createdBy || s.createdBy === currentUser) ? `<div class="sm-btn" title="Delete" onclick="deleteSong('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></div>` : ''}
       </div>` : ''}
     </div>`;
   }).join('');
@@ -8045,13 +8060,18 @@ let pendingDeleteSongId = null;
 async function deleteSong(id) {
   const song = await dbGet('songs', id);
   if (!song) return;
-  // if song belongs to any groups, only group creators can delete it
-  if (song.groupIds?.length) {
-    const groups = await Promise.all(song.groupIds.map(gid => dbGet('groups', gid)));
-    const validGroups = groups.filter(Boolean);
-    const isCreatorOfAny = validGroups.some(g => g.createdBy === currentUser);
-    if (!isCreatorOfAny) {
-      showToast('Only the group creator can delete this song', 'err');
+  // only the song creator or an admin can delete
+  if (!currentIsAdmin && song.createdBy && song.createdBy !== currentUser) {
+    // group owners can also delete songs shared in their group
+    if (song.groupIds?.length) {
+      const groups = await Promise.all(song.groupIds.map(gid => dbGet('groups', gid)));
+      const isCreatorOfAny = groups.filter(Boolean).some(g => g.createdBy === currentUser);
+      if (!isCreatorOfAny) {
+        showToast('Only the song creator or group owner can delete this song', 'err');
+        return;
+      }
+    } else {
+      showToast('Only the song creator can delete this song', 'err');
       return;
     }
   }
@@ -10518,7 +10538,7 @@ async function exportAttachments() {
     const userGroupIds = new Set(userGroups.map(g => g.id));
     const accessibleSongs = allSongs.filter(s => {
       if (currentIsAdmin) return true;
-      if (!s.createdBy || s.createdBy === currentUser) return true;
+      if (s.createdBy === currentUser) return true;
       if (s.groupIds && s.groupIds.length) return s.groupIds.some(gid => userGroupIds.has(gid));
       return false;
     });
@@ -10651,7 +10671,7 @@ async function exportAttachments() {
   const userGroupIds = new Set(userGroups.map(g => g.id));
   const accessibleSongs = allSongs.filter(s => {
     if (currentIsAdmin) return true;
-    if (!s.createdBy || s.createdBy === currentUser) return true;
+    if (s.createdBy === currentUser) return true;
     if (s.groupIds?.length) return s.groupIds.some(gid => userGroupIds.has(gid));
     return false;
   });
